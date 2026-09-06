@@ -122,7 +122,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(0.0..=1.0)
                         .speed(0.01),
                 );
-                ui.label(format!("{:.2}", settings.kv_cache_ratio));
+                ui.small(i18n::t(i18n::Key::HintKvCacheRatio, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvCacheRatio, lang));
             });
 
