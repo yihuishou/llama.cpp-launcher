@@ -1,16 +1,12 @@
 # LLama Launcher — Root
 
-## 项目概述
+**Generated:** 2026-09-06
+**Commit:** 52d2ab6
+**Branch:** main
 
-llama.cpp 桌面启动器。Rust + eframe/egui 0.33 GUI，管理 llama-server/RPC、预设系统、Windows 开机自启和快捷方式。单 binary，无
-Cargo workspace。
+## OVERVIEW
 
-## 技术栈
-
-- Rust 2021, egui 0.33.3, eframe 0.33.3
-- serde + serde_json (配置/预设)
-- rfd (文件对话框), log + env_logger, shortcuts-rs
-- Windows优先: winit, winres, CREATE_NO_WINDOW
+llama.cpp 桌面启动器。Rust + eframe/egui 0.33 GUI，管理 llama-server/RPC、预设系统、Windows 开机自启和快捷方式。单 binary，无 Cargo workspace。
 
 ## STRUCTURE
 
@@ -18,12 +14,20 @@ Cargo workspace。
 root/
 ├── Cargo.toml              # 单 binary, llama_cpp_launcher.exe
 ├── build.rs                # Windows icon / manifest (winres)
-├── src/main.rs             # 入口: eframe + CJK字体 + env_logger
+├── src/main.rs             # 入口: eframe + CJK字体 + env_logger + 日志配置
 ├── src/app.rs              # LlamaLauncherApp: UI路由/菜单/状态/开机自启
 ├── src/config/             # AppSettings/Preset/GpuLayersMode/默认值与读写
 ├── src/engine/             # llama-server / rpc-server 进程管理与日志聚合
-├── src/ui/                 # 8 个 egui 面板 (server/rpc/model/params/log/rpc_log/presets/cmds)
-└── src/i18n.rs             # i18n::t(Key, lang)，zh/en key→文案映射
+├── src/ui/                 # 11 个 egui 面板 (server/rpc/model/params/mcp/log/rpc_log/commands/presets/settings)
+├── src/i18n.rs             # i18n::t(Key, lang)，zh/en key→文案映射
+├── src/downloader.rs       # llama.cpp 下载器（官方/镜像源，变体选择）
+├── src/updater.rs          # 应用自更新（Windows 热更新）
+├── src/theme.rs            # 主题系统（Fluent3 Light/Dark，accent color）
+├── src/kv_cache.rs         # KV 缓存空间计算与最大上下文估算
+├── src/geo.rs              # 地理位置检测（下载源智能选择）
+├── src/net_proxy.rs        # 网络代理支持
+├── src/spacing_debugger.rs # UI 间距调试工具
+└── src/shortcut.rs         # Windows 快捷方式 (.lnk) 创建
 ```
 
 ## WHERE TO LOOK
@@ -36,6 +40,10 @@ root/
 | i18n键映射 (zh/en)                  | src/i18n.rs            | Key enum + t() 函数，所有 UI 文本入口       |
 | Windows快捷方式 (.lnk)               | src/shortcut.rs        | shortcuts-rs 封装                    |
 | App结构、菜单与标签路由                    | src/app.rs             | LlamaLauncherApp::ui, tab_selected |
+| llama.cpp 下载                      | src/downloader.rs      | 官方/镜像源，变体选择，进度跟踪             |
+| 应用自更新                          | src/updater.rs         | Windows 热更新，版本检查                 |
+| 主题系统                           | src/theme.rs           | Fluent3 主题，accent color，深色/浅色     |
+| KV缓存计算                         | src/kv_cache.rs        | GGUF 元数据解析，空间估算               |
 
 ## CODE MAP (核心符号)
 
@@ -54,10 +62,13 @@ root/
 | ServerManager                                                         | struct+impl | engine/server.rs   | llama-server 生命周期、日志、launch_command             |
 | RpcManager                                                            | struct+impl | engine/rpc.rs      | rpc-server 生命周期、连接状态                            |
 | parse_tags                                                            | fn          | ui/model_panel.rs  | 文件名→9色彩色标签（参数量/量化/版本/训练方法/精度/LoRA/上下文长度/架构/模型名） |
-| is_param_size, is_quantization, is_training_method, is_context_length | fn          | ui/model_panel.rs  | 标签分类判定辅助函数                                      |
 | render_file_list                                                      | fn          | ui/model_panel.rs  | 按 FileMode(Main/Mmproj/Dflash) 过滤并渲染文件列表        |
-| auto_detect_model_dir                                                 | fn          | ui/model_panel.rs  | 自动检测 model/models 目录（不区分大小写）                    |
-| log_panel::rpc_ui                                                     | fn          | ui/log_panel.rs    | RPC 运行日志面板入口                                  |
+| log_panel::ui / rpc_ui                                                | fn          | ui/log_panel.rs    | 服务器/RPC 运行日志面板入口                                |
+| download_in_background                                                | fn          | downloader.rs      | 后台下载线程入口                                          |
+| run_download                                                          | fn          | downloader.rs      | 完整下载流程（获取版本→下载→解压→定位二进制）                  |
+| apply_theme                                                           | fn          | theme.rs           | 应用主题到全局视觉样式                                     |
+| calc_kv_cache_space                                                   | fn          | kv_cache.rs        | 计算 KV 缓存空间需求                                       |
+| create_desktop_shortcut                                               | fn          | shortcut.rs        | 创建桌面快捷方式（Windows .lnk / Linux .desktop）        |
 
 ## 模型标签系统（9 色方案）
 
