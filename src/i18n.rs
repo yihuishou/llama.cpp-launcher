@@ -20,6 +20,8 @@ pub enum Key {
     MenuItemLoadConfig,
     MenuItemAutoStart,
     MenuItemSilentStart,
+    LinuxCompatMode,
+    LinuxCompatModeDesc,
     MenuItemAbout,
     MenuItemCreateShortcut,
 
@@ -802,6 +804,10 @@ impl Key {
             (Key::MenuItemAutoStart, &Language::En) => "Auto Start",
             (Key::MenuItemSilentStart, &Language::Zh) => "静默启动",
             (Key::MenuItemSilentStart, &Language::En) => "Silent Start",
+            (Key::LinuxCompatMode, &Language::Zh) => "Linux 兼容模式",
+            (Key::LinuxCompatMode, &Language::En) => "Linux Compat Mode",
+            (Key::LinuxCompatModeDesc, &Language::Zh) => "远程桌面环境强制软件渲染，防止 NVIDIA 驱动崩溃",
+            (Key::LinuxCompatModeDesc, &Language::En) => "Force software rendering in remote desktop to prevent NVIDIA driver crashes",
 
             (Key::MenuItemAbout, &Language::Zh) => "关于",
             (Key::MenuItemAbout, &Language::En) => "About",

@@ -64,18 +64,47 @@ fn init_logger() {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
 
-    // 读取配置，获取 log_to_file 设置
+    // 读取配置，获取 log_to_file 和 linux_compat_mode 设置
     let config_path = exe_dir.join("llama_cpp_launcher_settings.json");
-    let log_enabled = if config_path.exists() {
+    let (log_enabled, linux_compat_mode) = if config_path.exists() {
         match std::fs::read_to_string(&config_path) {
-            Ok(content) => serde_json::from_str::<crate::config::settings::AppSettings>(&content)
-                .map(|s| s.log_to_file)
-                .unwrap_or(false),
-            Err(_) => false,
+            Ok(content) => {
+                match serde_json::from_str::<crate::config::settings::AppSettings>(&content) {
+                    Ok(s) => (s.log_to_file, s.linux_compat_mode),
+                    Err(_) => (false, true),
+                }
+            }
+            Err(_) => (false, true),
         }
     } else {
-        false
+        (false, true)
     };
+
+    // Linux 兼容模式：检测远程桌面环境并强制软件渲染
+    #[cfg(target_os = "linux")]
+    if linux_compat_mode {
+        let is_remote = env::var("XDG_SESSION_TYPE")
+            .unwrap_or_default()
+            .contains("remote")
+            || env::var("SESSIONNAME")
+                .unwrap_or_default()
+                .to_uppercase()
+                .contains("RDP")
+            || env::var("XRDP_SESSION").is_ok()
+            || env::var("VNCDESKTOP").is_ok()
+            || env::var("X2GO_SESSION").is_ok()
+            || env::var("REMOTEDESKTOP").is_ok()
+            || (env::var("XDG_SESSION_TYPE").unwrap_or_default() == "x11"
+                && env::var("DISPLAY").unwrap_or_default().is_empty());
+
+        if is_remote {
+            env::set_var("GALLIUM_DRIVER", "llvmpipe");
+            env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
+            log::info!("检测到远程桌面环境，已启用软件渲染（llvmpipe）");
+        }
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = linux_compat_mode;
 
     // 根据配置决定是否初始化文件日志器
     if log_enabled {

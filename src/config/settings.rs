@@ -414,6 +414,10 @@ fn default_log_to_file() -> bool {
     false
 }
 
+fn default_linux_compat_mode() -> bool {
+    true
+}
+
 fn default_dark_mode() -> bool {
     true
 }
@@ -2068,6 +2072,10 @@ pub struct AppSettings {
     #[serde(default)]
     pub silent_start: bool,
 
+    // Linux 兼容模式（远程桌面环境强制软件渲染，防止 NVIDIA 驱动崩溃）
+    #[serde(default = "default_linux_compat_mode")]
+    pub linux_compat_mode: bool,
+
     // 文件日志开关（默认开启）
     #[serde(default = "default_log_to_file")]
     pub log_to_file: bool,
@@ -2347,6 +2355,7 @@ impl Default for AppSettings {
             max_log_lines: default_max_log_lines(),
             auto_start: false,
             silent_start: false,
+            linux_compat_mode: default_linux_compat_mode(),
             log_to_file: default_log_to_file(),
             dark_mode: true,
             theme_mode: "auto".to_string(),

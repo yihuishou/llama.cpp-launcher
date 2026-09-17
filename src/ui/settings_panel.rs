@@ -127,6 +127,29 @@ pub fn ui(
                 }
             }
 
+            // Linux 兼容模式（仅在 Linux 平台显示）
+            #[cfg(target_os = "linux")]
+            {
+                ui.add_space(4.0);
+                let mut compat = settings.linux_compat_mode;
+                if widgets::toggle(
+                    ui,
+                    &mut compat,
+                    i18n::t(i18n::Key::LinuxCompatMode, lang),
+                    accent,
+                ) {
+                    settings.linux_compat_mode = compat;
+                    let _ = settings_manager.save(settings);
+                }
+                if settings.linux_compat_mode {
+                    ui.label(
+                        egui::RichText::new(i18n::t(i18n::Key::LinuxCompatModeDesc, lang))
+                            .small()
+                            .color(ui.visuals().weak_text_color()),
+                    );
+                }
+            }
+
             ui.add_space(6.0);
             ui.horizontal_wrapped(|ui| {
                 if ui
