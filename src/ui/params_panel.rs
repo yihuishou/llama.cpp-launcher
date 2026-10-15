@@ -202,7 +202,26 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // ── 显存预留 --fit-target ──
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelFitTarget, lang));
-                ui.add(egui::TextEdit::singleline(&mut settings.fit_target).desired_width(180.0));
+                // 数字输入：解析首个值（多卡值为逗号分隔，其余段保留不动）
+                let (first, rest) = {
+                    let mut parts = settings.fit_target.splitn(2, ',');
+                    (
+                        parts.next().unwrap_or("").trim(),
+                        parts.next().map(|s| s.trim().to_string()),
+                    )
+                };
+                let mut fit_target_num = first.parse::<u32>().unwrap_or(1024);
+                let response = ui.add(
+                    egui::DragValue::new(&mut fit_target_num)
+                        .range(0..=1048576)
+                        .speed(64),
+                );
+                if response.changed() {
+                    settings.fit_target = match &rest {
+                        Some(r) if !r.is_empty() => format!("{},{}", fit_target_num, r),
+                        _ => fit_target_num.to_string(),
+                    };
+                }
                 ui.label("MiB");
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpFitTarget, lang));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -832,7 +851,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     helper::help_button_inline(ui, i18n::t(i18n::Key::AdvCacheRamValueHint, lang));
                     ui.add(
                         egui::DragValue::new(&mut settings.cache_ram)
-                            .range(0..=1048576)
+                            .range(-1..=1048576)
                             .speed(512),
                     );
                 });

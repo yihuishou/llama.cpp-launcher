@@ -234,7 +234,7 @@ fn default_cache_ram_enabled() -> bool {
     false // --cache-ram 启用开关 (prompt cache 内存上限)
 }
 
-fn default_cache_ram() -> usize {
+fn default_cache_ram() -> i32 {
     32768 // --cache-ram N (MiB, -1 不限, 0 禁用)
 }
 
@@ -803,7 +803,7 @@ pub struct Preset {
     #[serde(default = "default_cache_ram_enabled")]
     pub cache_ram_enabled: bool, // --cache-ram 启用开关 (prompt cache 内存上限)
     #[serde(default = "default_cache_ram")]
-    pub cache_ram: usize, // --cache-ram N (MiB, -1 不限, 0 禁用)
+    pub cache_ram: i32, // --cache-ram N (MiB, -1 不限, 0 禁用)
     #[serde(default = "default_no_host")]
     pub no_host: bool, // --no-host (绕过 host buffer 以使用额外缓冲区)
     #[serde(default = "default_rope_scaling")]
@@ -1811,7 +1811,7 @@ pub struct AppSettings {
     #[serde(default = "default_cache_ram_enabled")]
     pub cache_ram_enabled: bool, // --cache-ram 启用开关 (prompt cache 内存上限)
     #[serde(default = "default_cache_ram")]
-    pub cache_ram: usize, // --cache-ram N (MiB, -1 不限, 0 禁用)
+    pub cache_ram: i32, // --cache-ram N (MiB, -1 不限, 0 禁用)
     #[serde(default = "default_no_host")]
     pub no_host: bool, // --no-host (绕过 host buffer 以使用额外缓冲区)
     #[serde(default = "default_rope_scaling")]
