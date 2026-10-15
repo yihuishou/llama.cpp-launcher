@@ -4,6 +4,7 @@ use crate::engine::server::ServerManager;
 use crate::i18n;
 use crate::ui::preset_share::{ParamsExport, PresetShareUi};
 use crate::ui::widgets;
+use fluent_egui::winui;
 
 /// 预设面板对 app 层的动作请求（面板只发请求，执行在 app 层完成）
 #[derive(Debug, PartialEq)]
@@ -67,8 +68,11 @@ pub fn ui(
             // 保存预设区域
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelPresetName, lang));
-                ui.text_edit_singleline(&mut settings.new_preset_name);
-                if ui.button(i18n::t(i18n::Key::BtnSavePreset, lang)).clicked() {
+                ui.add(winui::FluentTextEdit::new(&mut settings.new_preset_name));
+                if ui
+                    .add(winui::AccentButton::new(i18n::t(i18n::Key::BtnSavePreset, lang)))
+                    .clicked()
+                {
                     let trimmed = settings.new_preset_name.trim().to_string();
                     if !trimmed.is_empty() {
                         let exists = settings.presets.iter().any(|p| p.name == trimmed);
@@ -88,7 +92,7 @@ pub fn ui(
                 }
 
                 if ui
-                    .small_button(i18n::t(i18n::Key::BtnExportParams, lang))
+                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnExportParams, lang)))
                     .clicked()
                 {
                     let params = ParamsExport::from_settings(settings);
@@ -111,7 +115,7 @@ pub fn ui(
                 }
 
                 if ui
-                    .small_button(i18n::t(i18n::Key::BtnImportParams, lang))
+                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnImportParams, lang)))
                     .clicked()
                 {
                     if let Some(path) = rfd::FileDialog::new()
@@ -173,7 +177,7 @@ pub fn ui(
                                 }
 
                                 if ui
-                                    .small_button(i18n::t(i18n::Key::BtnApplyPreset, lang))
+                                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnApplyPreset, lang)))
                                     .clicked()
                                 {
                                     load_index = Some(i);
@@ -184,9 +188,11 @@ pub fn ui(
                                     .as_ref()
                                     .is_some_and(|name| *name == preset.name);
                                 if ui
-                                    .checkbox(
-                                        &mut is_auto,
-                                        i18n::t(i18n::Key::CheckboxAutoStartPreset, lang),
+                                    .add(
+                                        winui::FluentCheckBox::new(
+                                            &mut is_auto,
+                                            i18n::t(i18n::Key::CheckboxAutoStartPreset, lang),
+                                        ),
                                     )
                                     .changed()
                                 {
@@ -200,7 +206,7 @@ pub fn ui(
                                 }
 
                                 if ui
-                                    .small_button(i18n::t(i18n::Key::BtnRenamePreset, lang))
+                                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnRenamePreset, lang)))
                                     .clicked()
                                 {
                                     settings.rename_preset_index = Some(i);
@@ -208,7 +214,7 @@ pub fn ui(
                                 }
 
                                 if ui
-                                    .small_button(i18n::t(i18n::Key::BtnDeletePreset, lang))
+                                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnDeletePreset, lang)))
                                     .clicked()
                                 {
                                     delete_index = Some(i);
@@ -220,7 +226,7 @@ pub fn ui(
                                     // ⚙ 配置：同帧直接 open_for（快照设置+应用预设参数），
                                     // 窗口由本函数尾部的 config_window 同帧渲染，无跨帧依赖
                                     if ui
-                                        .small_button(i18n::t(i18n::Key::BtnConfigPreset, lang))
+                                        .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnConfigPreset, lang)))
                                         .on_hover_text(i18n::t(i18n::Key::ConfigBtnTip, lang))
                                         .clicked()
                                     {
@@ -249,7 +255,7 @@ pub fn ui(
                                 // ── 启动类按钮（与前面按钮竖分隔线隔开；统一 small 尺寸） ──
                                 ui.separator();
                                 if ui
-                                    .small_button(i18n::t(i18n::Key::BtnStartServer, lang))
+                                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnStartServer, lang)))
                                     .on_hover_text(i18n::t(i18n::Key::StartServerTip, lang))
                                     .clicked()
                                 {
@@ -258,10 +264,9 @@ pub fn ui(
                                 }
                                 let rpc_ok =
                                     rpc_manager.check_rpc_server(&settings.rpc_server_path);
-                                // 启动 RPC：标准字号（比 small_button 大一号，便于点击）
                                 let rpc_btn = ui.add_enabled(
                                     rpc_ok,
-                                    egui::Button::new(i18n::t(i18n::Key::BtnStartRpc, lang)),
+                                    winui::FluentButton::new(i18n::t(i18n::Key::BtnStartRpc, lang)),
                                 );
                                 if rpc_btn
                                     .on_hover_text(i18n::t(i18n::Key::StartRpcTip, lang))
@@ -274,7 +279,7 @@ pub fn ui(
                                 // ── Linux 服务文件按钮 ──
                                 ui.separator();
                                 if ui
-                                    .small_button(i18n::t(i18n::Key::BtnLinuxServiceFile, lang))
+                                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnLinuxServiceFile, lang)))
                                     .on_hover_text(i18n::t(i18n::Key::LinuxServiceFileHint, lang))
                                     .clicked()
                                 {
@@ -328,12 +333,12 @@ pub fn ui(
                                     .fixed_size([150.0, 0.0])
                                     .show(ui.ctx(), |ui| {
                                         ui.label(i18n::t(i18n::Key::LabelPresetName, lang));
-                                        ui.text_edit_singleline(
+                                        ui.add(winui::FluentTextEdit::new(
                                             &mut settings.rename_preset_new_name,
-                                        );
+                                        ));
                                         ui.horizontal(|ui| {
                                             if ui
-                                                .button(i18n::t(i18n::Key::BtnConfirm, lang))
+                                                .add(winui::AccentButton::new(i18n::t(i18n::Key::BtnConfirm, lang)))
                                                 .clicked()
                                             {
                                                 let trimmed = settings
@@ -347,7 +352,7 @@ pub fn ui(
                                                 settings.rename_preset_new_name.clear();
                                             }
                                             if ui
-                                                .button(i18n::t(i18n::Key::BtnCancel, lang))
+                                                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnCancel, lang)))
                                                 .clicked()
                                             {
                                                 settings.rename_preset_index = None;
@@ -457,7 +462,10 @@ pub fn ui(
                     } else {
                         &i18n::t(i18n::Key::BtnCopyServiceFile, lang)
                     };
-                    if ui.button(copy_label).clicked() {
+                    if ui
+                        .add(winui::FluentButton::new(copy_label))
+                        .clicked()
+                    {
                         ui.ctx().copy_text(content.to_string());
                         settings.linux_service_file_copied = true;
                     }
@@ -468,7 +476,7 @@ pub fn ui(
 
                     // 保存为文件
                     if ui
-                        .button(i18n::t(i18n::Key::BtnSaveServiceFile, lang))
+                        .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnSaveServiceFile, lang)))
                         .clicked()
                     {
                         if let Some(path) = rfd::FileDialog::new()
