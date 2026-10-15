@@ -1,6 +1,7 @@
 use crate::config::settings::{parse_mcp_servers, AppSettings};
 use crate::i18n;
 use crate::ui::widgets;
+use fluent_egui::winui;
 
 /// MCP 管理面板：
 /// 读取用户已有的 Cursor-compatible mcpServers 配置 → 可视化 → 启用/禁用 →
@@ -28,7 +29,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             ui.horizontal(|ui| {
                 if ui
-                    .button(i18n::t(i18n::Key::BtnEditMcpConfig, lang))
+                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnEditMcpConfig, lang)))
                     .clicked()
                 {
                     settings.mcp_editor_text = settings.mcp_config_json.clone();
@@ -188,7 +189,10 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
                 .show(ui, |ui| {
                     ui.add_space(6.0);
                     ui.horizontal(|ui| {
-                        if ui.button(i18n::t(i18n::Key::BtnMcpSave, lang)).clicked() {
+                        if ui
+                            .add(winui::AccentButton::new(i18n::t(i18n::Key::BtnMcpSave, lang)))
+                            .clicked()
+                        {
                             match parse_mcp_servers(&settings.mcp_editor_text) {
                                 Ok(servers) => {
                                     // 保存原始配置；为新出现的 server 默认启用，已有状态保持不变
@@ -211,7 +215,10 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
                                 }
                             }
                         }
-                        if ui.button(i18n::t(i18n::Key::BtnMcpCancel, lang)).clicked() {
+                        if ui
+                            .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnMcpCancel, lang)))
+                            .clicked()
+                        {
                             close_after_save = true;
                             settings.mcp_editor_error.clear();
                         }
