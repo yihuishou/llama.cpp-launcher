@@ -846,6 +846,12 @@ if !self.icon_fonts_loaded {
             self.spacing_debugger.visualize(&ctx);
         }
     }
+
+    /// 透明窗口依赖全透明清屏色才能透出 Mica 材质；egui 0.35 的默认实现是
+    /// 不透明深灰 from_rgba_unmultiplied(12, 12, 12, 180)，不覆盖则材质不可见。
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        [0.0, 0.0, 0.0, 0.0]
+    }
 }
 
 impl Drop for LlamaLauncherApp {

@@ -149,9 +149,7 @@ fn main() -> eframe::Result {
         .clone()
         .with_app_id("com.yihuishou.llama_cpp_launcher")
         .with_inner_size(default_size)
-        // Mica/Acrylic 背景需要透明窗口，但一旦 backdrop 同步失败（Win10、虚拟机、
-        // 基础显示适配器）窗口就会变成全黑，故在用户实测确认前保持不透明
-        .with_transparent(false);
+        .with_transparent(true);
     if let Some(icon) = load_window_icon() {
         options.viewport = options.viewport.with_icon(icon);
     }
@@ -159,7 +157,20 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "llama.cpp launcher",
         options,
-        Box::new(move |cc| Ok(Box::new(LlamaLauncherApp::new(cc, start_minimized)))),
+        Box::new(move |cc| {
+            match cc.winit_window() {
+                Some(window) => {
+                    let status = fluent_egui::winui::sync_window_backdrop(
+                        window,
+                        fluent_egui::winui::FluentTheme::Light,
+                        fluent_egui::winui::BackdropKind::Auto,
+                    );
+                    log::info!("[backdrop] status={:?}", status);
+                }
+                None => log::warn!("[backdrop] 未取到 winit 窗口句柄，材质未应用"),
+            }
+            Ok(Box::new(LlamaLauncherApp::new(cc, start_minimized)))
+        }),
     )
 }
 
