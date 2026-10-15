@@ -117,7 +117,7 @@ pub fn card_with_header_notice<R>(
 /// - `title`：已 i18n 化的标题文本（调用方负责 t(Key, lang)）
 /// - `width`：固定宽度（会被夹到屏幕内）
 /// - `max_height`：整个对话框的最大高度（会被夹到屏幕内）
-/// - `content`：中央内容区，超出高度时内部纵向滚动
+/// - `content`：中央内容区，超出高度时内部纵向滚动；第二参数为内容区可用高度（已扣除内边距），调用方可据此将控件撑满
 /// - `footer`：底部按钮区；返回 true 表示该对话框应关闭
 ///
 /// 返回 true 表示应关闭（点了 × / 按 Esc / 点了遮罩 / footer 返回 true）
@@ -135,7 +135,7 @@ pub fn dialog<C, F>(
     footer: F,
 ) -> bool
 where
-    C: FnOnce(&mut egui::Ui),
+    C: FnOnce(&mut egui::Ui, f32),
     F: FnOnce(&mut egui::Ui) -> bool,
 {
     let id = egui::Id::new(id_salt);
@@ -150,11 +150,9 @@ where
     // 宽度夹到屏幕内（与库 ContentDialog 相同，下限 160）
     let max_w = (ctx.content_rect().width() - 32.0).max(160.0);
     let width = width.clamp(160.0_f32.min(max_w), max_w);
-    // 整体高度同样夹到屏幕内；54 标题栏 + 60 底部按钮区的最小预留 = 114
+    // 整体高度同样夹到屏幕内；标题栏为动态高度（最小 18+32=50），按 标题栏 + 60 底部按钮区至少 114 预留
     let max_avail_h = (ctx.content_rect().height() - 32.0).max(114.0);
     let max_h = max_height.clamp(114.0_f32.min(max_avail_h), max_avail_h);
-    // 内容区高度上限 = 总高 - 54(标题栏) - 60(底部按钮区预留)
-    let content_max_h = (max_h - 54.0 - 60.0).max(80.0);
 
     let frame = egui::Frame::new()
         .fill(p.card_bg)
@@ -173,17 +171,23 @@ where
         .frame(frame)
         .show(ctx, |ui| {
             ui.set_width(width);
-            // 标题栏：高 54，标题距左 20，关闭按钮 32×32 靠右
-            let (header_rect, _) = ui.allocate_exact_size(Vec2::new(width, 54.0), Sense::hover());
+            // 标题栏（WinUI3 官方度量）：上边距 18、左右边距 24、下边距 0（紧贴分隔线）
+            let title_font = FontId::proportional(20.0);
+            let title_row_h = ui.fonts_mut(|f| f.row_height(&title_font));
+            // 行高至少容纳 32x32 关闭按钮；上下各 12px 内边距（合计 24 → 标题栏高 56，与官方 MaxHeight 一致），标题与按钮因此垂直居中
+            let title_row_h = title_row_h.max(32.0);
+            let header_h = title_row_h + 24.0;
+            let (header_rect, _) = ui.allocate_exact_size(Vec2::new(width, header_h), Sense::hover());
+            let title_center_y = header_rect.top() + header_h / 2.0;
             ui.painter().text(
-                Pos2::new(header_rect.left() + 20.0, header_rect.center().y),
+                Pos2::new(header_rect.left() + 24.0, title_center_y),
                 Align2::LEFT_CENTER,
                 title,
-                FontId::proportional(20.0),
+                title_font,
                 p.text_primary,
             );
             let close_rect = Rect::from_center_size(
-                Pos2::new(header_rect.right() - 22.0, header_rect.center().y),
+                Pos2::new(header_rect.right() - 24.0 - 16.0, title_center_y),
                 Vec2::splat(32.0),
             );
             let close_resp = ui.interact(close_rect, id.with("close"), Sense::click());
@@ -214,13 +218,25 @@ where
                 ],
                 egui::Stroke::new(1.0, p.card_border),
             );
-            // 内容区：超出 content_max_h 时内部纵向滚动
-            egui::ScrollArea::vertical()
-                .id_salt(id)
-                .auto_shrink([false, false])
-                .max_height(content_max_h)
-                .show(ui, content);
-            // 底部按钮区：分隔线 + Margin::symmetric(16, 14) 内边距
+            // 内容区：WinUI3 官方左右内边距 24 + 上下内边距 12；超出 content_view_h 时内部纵向滚动
+            // 视口高度 = 总高 - 标题栏(动态) - 60(底部按钮区预留) - 24(内容区垂直内边距)
+            let content_view_h = (max_h - header_h - 60.0 - 24.0).max(80.0);
+            egui::Frame::new()
+                .inner_margin(egui::Margin::symmetric(24, 12))
+                .show(ui, |ui| {
+                    // 浮动滚动条不占布局宽度（默认滚动条会吃掉右侧 10px），保证左右内边距严格对称
+                    ui.style_mut().spacing.scroll = egui::style::ScrollStyle::floating();
+                    egui::ScrollArea::vertical()
+                        .id_salt(id)
+                        .auto_shrink([false, false])
+                        .max_height(content_view_h)
+                        .show(ui, |ui| {
+                            // 短内容也占满整个视口
+                            ui.set_min_height(content_view_h);
+                            content(ui, content_view_h);
+                        });
+                });
+            // 底部按钮区：分隔线 + Margin::symmetric(24, 14) 内边距（WinUI3 官方左右内边距 24）
             ui.painter().line_segment(
                 [
                     Pos2::new(ui.min_rect().left(), ui.cursor().top()),
@@ -229,9 +245,10 @@ where
                 egui::Stroke::new(1.0, p.card_border),
             );
             egui::Frame::new()
-                .inner_margin(egui::Margin::symmetric(16, 14))
+                .inner_margin(egui::Margin::symmetric(24, 14))
                 .show(ui, |ui| {
-                    ui.set_min_width(width - 32.0);
+                    // 减去左右各 24px 内边距：必须与上方 Frame 的 margin 同步，否则内容区挤不下会溢出撑宽弹窗
+                    ui.set_min_width(width - 48.0);
                     footer(ui)
                 })
                 .inner

@@ -173,7 +173,9 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
         i18n::t(i18n::Key::TitleMcpEditor, lang),
         560.0,
         ctx.content_rect().height() * 0.8,
-        |ui| {
+        |ui, avail_h| {
+            // 记录绘制提示/错误行之前的光标 y，用于推算编辑器行数
+            let start_y = ui.cursor().top();
             ui.small(i18n::t(i18n::Key::HintMcpEditorTip, lang));
             if !settings.mcp_editor_error.is_empty() {
                 ui.add_space(4.0);
@@ -186,10 +188,14 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
                     .color(ui.visuals().error_fg_color),
                 );
             }
+            // 可用高度扣除已占用的提示/错误行高度后推算行数，让编辑器撑满内容区
+            let used_h = ui.cursor().top() - start_y;
+            let row_h = ui.text_style_height(&egui::TextStyle::Monospace);
+            let rows = (((avail_h - used_h) / row_h).floor() as usize).max(6);
             ui.add(
                 egui::TextEdit::multiline(&mut settings.mcp_editor_text)
                     .desired_width(f32::INFINITY)
-                    .desired_rows(14)
+                    .desired_rows(rows)
                     .font(egui::TextStyle::Monospace),
             );
         },
