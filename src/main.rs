@@ -142,19 +142,19 @@ fn main() -> eframe::Result {
     // 使用统一的主窗口尺寸
     let default_size = egui::vec2(1300.0, 800.0);
 
-    let viewport = egui::ViewportBuilder::default()
+    let mut options = fluent_egui::winui::native_options("llama.cpp launcher");
+    // 库默认 app_id 为 "fluent-egui"，沿用会让 Windows 以错误标识登记本应用
+    options.viewport = options
+        .viewport
+        .clone()
+        .with_app_id("com.yihuishou.llama_cpp_launcher")
         .with_inner_size(default_size)
-        .with_title("llama.cpp launcher");
-    let viewport = if let Some(icon) = load_window_icon() {
-        viewport.with_icon(icon)
-    } else {
-        viewport
-    };
-
-    let options = eframe::NativeOptions {
-        viewport,
-        ..Default::default()
-    };
+        // Mica/Acrylic 背景需要透明窗口，但一旦 backdrop 同步失败（Win10、虚拟机、
+        // 基础显示适配器）窗口就会变成全黑，故在用户实测确认前保持不透明
+        .with_transparent(false);
+    if let Some(icon) = load_window_icon() {
+        options.viewport = options.viewport.with_icon(icon);
+    }
 
     eframe::run_native(
         "llama.cpp launcher",
