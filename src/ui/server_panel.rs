@@ -3,6 +3,7 @@ use crate::engine::server::ServerManager;
 use crate::i18n;
 use crate::ui::helper;
 use crate::ui::widgets;
+use fluent_egui::winui;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
@@ -36,14 +37,14 @@ pub fn ui(
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelServerPath, lang));
                 let mut server_path_str = settings.server_path.to_string_lossy().to_string();
-                let response = ui.text_edit_singleline(&mut server_path_str);
+                let response = ui.add(winui::FluentTextEdit::new(&mut server_path_str));
                 if response.changed() {
                     settings.server_path = std::path::PathBuf::from(&server_path_str);
                 }
             });
 
             ui.horizontal(|ui| {
-                if ui.button(i18n::t(i18n::Key::BtnBrowse, lang)).clicked() {
+                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowse, lang))).clicked() {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title(i18n::t(i18n::Key::DialogSelectServer, lang))
                         .add_filter(i18n::t(i18n::Key::FilterExecutable, lang), &["exe"])
@@ -52,7 +53,7 @@ pub fn ui(
                         settings.server_path = path;
                     }
                 }
-                if ui.button(i18n::t(i18n::Key::BtnAutoDetect, lang)).clicked() {
+                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnAutoDetect, lang))).clicked() {
                     if let Some(path) = settings_manager.auto_detect_server_path() {
                         settings.server_path = path;
                     } else {
@@ -78,7 +79,7 @@ pub fn ui(
                 }
 
                 if ui
-                    .button(i18n::t(i18n::Key::BtnCheckVersion, lang))
+                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnCheckVersion, lang)))
                     .clicked()
                 {
                     settings.llama_version = get_local_llama_version(&settings.server_path);
@@ -251,10 +252,10 @@ pub fn ui(
                     || settings.download_variant == "cuda133")
             {
                 ui.horizontal(|ui| {
-                    ui.checkbox(
+                    ui.add(winui::FluentCheckBox::new(
                         &mut settings.download_cuda_lib,
                         i18n::t(i18n::Key::CudaLibDownloadLabel, lang),
-                    );
+                    ));
                 });
             }
 
@@ -263,7 +264,7 @@ pub fn ui(
                 if ui
                     .add_enabled(
                         platform_supported && !busy,
-                        egui::Button::new(i18n::t(i18n::Key::BtnDownloadLlamaCpp, lang)),
+                        winui::FluentButton::new(i18n::t(i18n::Key::BtnDownloadLlamaCpp, lang)),
                     )
                     .clicked()
                 {
@@ -281,7 +282,7 @@ pub fn ui(
                 if ui
                     .add_enabled(
                         !settings.server_path.to_string_lossy().is_empty() && !checking,
-                        egui::Button::new(if checking {
+                        winui::FluentButton::new(if checking {
                             i18n::t(i18n::Key::StatusChecking, lang)
                         } else {
                             i18n::t(i18n::Key::BtnCheckUpdate, lang)
@@ -344,9 +345,8 @@ pub fn ui(
                                 }
                             })
                             .unwrap_or(0.0);
-                        ui.add(
-                            egui::ProgressBar::new(ratio).text(format!("{:.1}%", ratio * 100.0)),
-                        );
+                        ui.small(format!("{:.1}%", ratio * 100.0));
+                        ui.add(winui::FluentProgressBar::new(ratio).show_percentage(false));
                     });
                 }
                 crate::downloader::DownloadState::Success(_) => {
@@ -377,16 +377,17 @@ pub fn ui(
     widgets::card(ui, i18n::t(i18n::Key::SectionNetwork, lang), accent, |ui| {
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelHost, lang));
-            ui.text_edit_singleline(&mut settings.host);
+            ui.add(winui::FluentTextEdit::new(&mut settings.host));
             ui.label(i18n::t(i18n::Key::LabelPort, lang));
-            ui.add(egui::DragValue::new(&mut settings.port).range(1..=65535));
+            let mut port = settings.port as f64;
+            ui.add(winui::NumberBox::new(&mut port).range(1.0..=65535.0).width(90.0));
+            settings.port = port as _;
         });
 
         ui.horizontal(|ui| {
             if ui
                 .add(
-                    egui::Button::new(i18n::t(i18n::Key::BtnHostLocal, lang))
-                        .min_size(egui::vec2(40.0, 20.0)),
+                    winui::FluentButton::new(i18n::t(i18n::Key::BtnHostLocal, lang)).min_width(40.0),
                 )
                 .clicked()
             {
@@ -394,8 +395,7 @@ pub fn ui(
             }
             if ui
                 .add(
-                    egui::Button::new(i18n::t(i18n::Key::BtnHostAny, lang))
-                        .min_size(egui::vec2(50.0, 20.0)),
+                    winui::FluentButton::new(i18n::t(i18n::Key::BtnHostAny, lang)).min_width(50.0),
                 )
                 .clicked()
             {
@@ -406,7 +406,9 @@ pub fn ui(
         // 并行槽位
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelParallelSlots, lang));
-            ui.add(egui::DragValue::new(&mut settings.parallel_slots).range(-1..=1024));
+            let mut slots = settings.parallel_slots as f64;
+            ui.add(winui::NumberBox::new(&mut slots).range(-1.0..=1024.0).width(90.0));
+            settings.parallel_slots = slots as _;
             if settings.parallel_slots == 0 {
                 settings.parallel_slots = 1;
             }
@@ -414,7 +416,7 @@ pub fn ui(
 
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelAlias, lang));
-            ui.text_edit_singleline(&mut settings.alias);
+            ui.add(winui::FluentTextEdit::new(&mut settings.alias));
         });
     });
 
@@ -517,9 +519,9 @@ pub fn ui(
                     ui.separator();
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelAddEndpoint, lang));
-                        let response = ui.text_edit_singleline(&mut settings.rpc_endpoint_input);
+                        let response = ui.add(winui::FluentTextEdit::new(&mut settings.rpc_endpoint_input));
                         if ui
-                            .button(i18n::t(i18n::Key::BtnAddEndpoint, lang))
+                            .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnAddEndpoint, lang)))
                             .clicked()
                             || (response.lost_focus()
                                 && ui.input(|i| i.key_pressed(egui::Key::Enter)))
@@ -548,10 +550,10 @@ pub fn ui(
                                 }
                             }
                         }
-                        ui.checkbox(
+                        ui.add(winui::FluentCheckBox::new(
                             &mut settings.rpc_endpoint_multi_gpu,
                             i18n::t(i18n::Key::CheckboxMultiGpuNode, lang),
-                        );
+                        ));
                     });
 
                     // 添加本机 RPC 客户端按钮
@@ -560,7 +562,7 @@ pub fn ui(
                     if ui
                         .add_enabled(
                             !already_added,
-                            egui::Button::new(i18n::t(i18n::Key::BtnAddLocalRpcClient, lang)),
+                            winui::FluentButton::new(i18n::t(i18n::Key::BtnAddLocalRpcClient, lang)),
                         )
                         .clicked()
                     {
@@ -611,36 +613,36 @@ pub fn ui(
             // API Key
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelApiKey, lang));
-                ui.text_edit_singleline(&mut settings.api_key);
+                ui.add(winui::FluentTextEdit::new(&mut settings.api_key));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpApiKey, lang));
             });
             // API Prefix
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelApiPrefix, lang));
-                ui.text_edit_singleline(&mut settings.api_prefix);
+                ui.add(winui::FluentTextEdit::new(&mut settings.api_prefix));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpApiPrefix, lang));
             });
             // API Key File
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvApiKeyFile, lang));
-                ui.text_edit_singleline(&mut settings.api_key_file);
+                ui.add(winui::FluentTextEdit::new(&mut settings.api_key_file));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvApiKeyFileHint, lang));
             });
             // CORS Origins
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelCorsOrigins, lang));
-                ui.text_edit_singleline(&mut settings.cors_origins);
+                ui.add(winui::FluentTextEdit::new(&mut settings.cors_origins));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCorsOrigins, lang));
             });
             // SSL 证书 / 私钥
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelSslCertFile, lang));
                 let mut cert_str = settings.ssl_cert_file.to_string_lossy().to_string();
-                let resp = ui.text_edit_singleline(&mut cert_str);
+                let resp = ui.add(winui::FluentTextEdit::new(&mut cert_str));
                 if resp.changed() {
                     settings.ssl_cert_file = PathBuf::from(&cert_str);
                 }
-                if ui.button(i18n::t(i18n::Key::BtnBrowseCert, lang)).clicked() {
+                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowseCert, lang))).clicked() {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title(i18n::t(i18n::Key::LabelSslCertFile, lang))
                         .add_filter("PEM", &["pem", "crt", "cer"])
@@ -654,11 +656,11 @@ pub fn ui(
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelSslKeyFile, lang));
                 let mut key_str = settings.ssl_key_file.to_string_lossy().to_string();
-                let resp = ui.text_edit_singleline(&mut key_str);
+                let resp = ui.add(winui::FluentTextEdit::new(&mut key_str));
                 if resp.changed() {
                     settings.ssl_key_file = PathBuf::from(&key_str);
                 }
-                if ui.button(i18n::t(i18n::Key::BtnBrowseCert, lang)).clicked() {
+                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowseCert, lang))).clicked() {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title(i18n::t(i18n::Key::LabelSslKeyFile, lang))
                         .add_filter("PEM", &["pem", "key"])
