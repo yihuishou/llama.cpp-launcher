@@ -459,8 +459,6 @@ pub fn ui(
         accent,
         |ui| {
             ui.add_space(8.0);
-            ui.separator();
-            ui.add_space(4.0);
 
                 // Git 仓库
                 ui.label(i18n::t(i18n::Key::BuildGitRepo, lang));
