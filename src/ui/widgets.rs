@@ -430,7 +430,7 @@ pub fn theme_toggle_button(ui: &mut Ui, dark: bool, _accent: Color32) -> bool {
 
 /// 主题色选择器的单个色块。
 /// - 未选中：纯色圆形
-/// - 选中：外环 + 内部白色勾（对齐 HTML .color-swatch.active 样式）
+/// - 选中：内部白色勾（无外环高亮）
 pub fn color_swatch(
     ui: &mut Ui,
     color: Color32,
@@ -446,14 +446,6 @@ pub fn color_swatch(
     painter.circle_filled(center, radius, color);
 
     if selected {
-        // 外环（对应 HTML border-color: var(--text-primary) + box-shadow 双层环效果）
-        let ring_radius = size / 2.0 - 0.5;
-        painter.circle_stroke(
-            center,
-            ring_radius,
-            Stroke::new(1.5_f32, ui.visuals().text_color()),
-        );
-
         // 白色勾 ✓（深色色块用白勾；浅色色块用深勾——这里统一白色+阴影模拟）
         let check_color = if accent_for_check {
             Color32::WHITE
