@@ -90,8 +90,11 @@ impl LlamaLauncherApp {
         let server_manager = ServerManager::new();
         let rpc_manager = RpcManager::new();
 
-        // 全局 UI 放大 1.3 倍（从 1.5 降到 1.3，用户要求更紧凑美观）
-        cc.egui_ctx.set_zoom_factor(1.3);
+        // UI 放大倍率（1.5 → 1.3 → 1.2 逐步下调）。
+        // WinUI 3 控件尺寸改由 fluent-egui 提供后，倍率会整体放大它们：
+        // 库实测 interact_size 为 40x32、FluentButton 高 32，
+        // 1.2 倍下即约 48x38 / 38，与 WinUI 3 的视觉基准偏离过大。
+        cc.egui_ctx.set_zoom_factor(1.2);
 
         let mut last_system_dark = None;
         // 如果为跟随系统模式，启动时检测一次
@@ -166,7 +169,7 @@ impl LlamaLauncherApp {
             title_bar_color_set: false,
             last_system_dark,
             winui_installed: false,
-        icon_fonts_loaded: false,
+            icon_fonts_loaded: false,
         }
     }
 
@@ -527,9 +530,9 @@ impl LlamaLauncherApp {
 impl eframe::App for LlamaLauncherApp {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         if !self.winui_installed {
-// set_fonts 本帧内不生效，同帧读回的 definitions 仍是旧值，
-// 叠加 iconflow 会抹掉 install() 注册的 Segoe Fluent Icons，
-// 令图标类控件在 epaint 内 panic —— 故拆到下一帧再叠加。
+            // set_fonts 本帧内不生效，同帧读回的 definitions 仍是旧值，
+            // 叠加 iconflow 会抹掉 install() 注册的 Segoe Fluent Icons，
+            // 令图标类控件在 epaint 内 panic —— 故拆到下一帧再叠加。
             fluent_egui::winui::install(
                 ctx,
                 fluent_egui::winui::ThemeConfig::new(fluent_egui::winui::FluentTheme::Light),
@@ -706,12 +709,11 @@ impl eframe::App for LlamaLauncherApp {
                     });
                 });
         }
-
-        }
+    }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-// 字体表在帧边界才落地，首帧渲染会因缺图标字体而 panic（见 logic 内注释）
-if !self.icon_fonts_loaded {
+        // 字体表在帧边界才落地，首帧渲染会因缺图标字体而 panic（见 logic 内注释）
+        if !self.icon_fonts_loaded {
             return;
         }
         // Panel 体系下渲染函数只拿到 Ui，但 preset 启动通知与间距可视化仍需
