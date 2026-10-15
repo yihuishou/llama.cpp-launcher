@@ -434,18 +434,6 @@ impl LlamaLauncherApp {
     }
 
     fn render_top_bar(&mut self, ui: &mut egui::Ui) {
-        let title = match self.nav {
-            NavSection::Server => i18n::t(i18n::Key::NavServer, &self.lang),
-            NavSection::Rpc => i18n::t(i18n::Key::NavRpc, &self.lang),
-            NavSection::Model => i18n::t(i18n::Key::TabModel, &self.lang),
-            NavSection::Params => i18n::t(i18n::Key::TabParams, &self.lang),
-            NavSection::Mcp => i18n::t(i18n::Key::TabMcp, &self.lang),
-            NavSection::Log => i18n::t(i18n::Key::TabLog, &self.lang),
-            NavSection::RpcLog => i18n::t(i18n::Key::TabRpcLog, &self.lang),
-            NavSection::Commands => i18n::t(i18n::Key::TabCommands, &self.lang),
-            NavSection::Presets => i18n::t(i18n::Key::TabPresets, &self.lang),
-            NavSection::Settings => i18n::t(i18n::Key::NavSettings, &self.lang),
-        };
         let accent = crate::theme::accent_color(&self.settings.accent_color);
 
         egui::Panel::top("top_panel")
@@ -468,15 +456,6 @@ impl LlamaLauncherApp {
             })
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    // 标题放大（HTML .topbar .ttl{font-size:17px;font-weight:600}）
-                    // ★ 不用 .strong()（浅色模式下 strong_text_color=白色→隐形），改用显式主文本色
-                    ui.label(
-                        egui::RichText::new(title)
-                            .size(18.0)
-                            .color(ui.visuals().text_color())
-                            .strong(),
-                    ); // strong 只影响字重（egui 0.33.3 实际不影响字重，但保留语义）
-
                     // 右侧分组：状态点 → 控制按钮 → 主题切换（RTL 布局实现右对齐）
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if widgets::theme_toggle_button(ui, self.settings.dark_mode, accent) {
