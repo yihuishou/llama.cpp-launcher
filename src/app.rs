@@ -324,7 +324,10 @@ impl LlamaLauncherApp {
             .frame(
                 egui::Frame::default()
                     .fill(sidebar_fill)
-                    .stroke(egui::Stroke::NONE),
+                    .stroke(egui::Stroke::NONE)
+                    // 半径随 theme.rs 的 CornerRadius::same(6)；顶部两角与顶栏之间的
+                    // 6px 缺口是 Win11 浮动面板观感，别当成破缝给去掉圆角
+                    .corner_radius(6.0),
             )
             .show(ui, |ui| {
                 let accent = crate::theme::accent_color(&self.settings.accent_color);
