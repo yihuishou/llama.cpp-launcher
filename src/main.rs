@@ -159,18 +159,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "llama.cpp launcher",
         options,
-        Box::new(move |cc| {
-            fluent_egui::winui::install(
-                &cc.egui_ctx,
-                fluent_egui::winui::ThemeConfig::new(fluent_egui::winui::FluentTheme::Light),
-            );
-            // install() 内部用 ctx.set_fonts 整体替换字体表，iconflow 图标字体须在其后叠加
-            let mut fonts = cc.egui_ctx.fonts(|f| f.definitions().clone());
-            load_icon_fonts(&mut fonts);
-            cc.egui_ctx.set_fonts(fonts);
-
-            Ok(Box::new(LlamaLauncherApp::new(cc, start_minimized)))
-        }),
+        Box::new(move |cc| Ok(Box::new(LlamaLauncherApp::new(cc, start_minimized)))),
     )
 }
 
@@ -186,7 +175,7 @@ fn load_window_icon() -> Option<egui::IconData> {
 }
 
 /// 加载 iconflow Fluent UI 图标字体
-fn load_icon_fonts(fonts: &mut FontDefinitions) {
+pub fn load_icon_fonts(fonts: &mut FontDefinitions) {
     let fallback_fonts: Vec<String> = fonts.font_data.keys().cloned().collect();
 
     for font in iconflow::fonts() {

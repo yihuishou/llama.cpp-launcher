@@ -53,6 +53,9 @@ pub struct LlamaLauncherApp {
     spacing_debugger: SpacingDebugger,      // UI 间距可视化工具
     title_bar_color_set: bool,              // 是否已设置过窗口标题栏颜色（仅一次）
     last_system_dark: Option<bool>,
+    /// 推迟到首帧安装：egui 0.35 在首次 Context::run() 前不初始化字体表，
+    /// 此时访问 ctx.fonts() 会 panic
+    winui_installed: bool,
 }
 
 impl LlamaLauncherApp {
@@ -161,6 +164,7 @@ impl LlamaLauncherApp {
             spacing_debugger: SpacingDebugger::new(),
             title_bar_color_set: false,
             last_system_dark,
+            winui_installed: false,
         }
     }
 
@@ -520,6 +524,17 @@ impl LlamaLauncherApp {
 
 impl eframe::App for LlamaLauncherApp {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        if !self.winui_installed {
+            fluent_egui::winui::install(
+                ctx,
+                fluent_egui::winui::ThemeConfig::new(fluent_egui::winui::FluentTheme::Light),
+            );
+            // install() 内部用 set_fonts 整体替换字体表，iconflow 图标字体须在其后叠加
+            let mut fonts = ctx.fonts(|f| f.definitions().clone());
+            crate::load_icon_fonts(&mut fonts);
+            ctx.set_fonts(fonts);
+            self.winui_installed = true;
+        }
         ctx.request_repaint_after(std::time::Duration::from_millis(500));
 
         // 预设启动监听：状态机到终态后转为结果通知（Running=成功 / Error=失败 / Idle=取消）
