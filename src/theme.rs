@@ -51,5 +51,16 @@ pub fn apply_theme(ctx: &egui::Context, dark: bool, accent: [u8; 3]) {
         spread: 0,
         color: egui::Color32::from_black_alpha(64),
     };
+
+    // 6px 是本项目约定，刻意覆盖 fluent-egui 的 WinUI 3 官方值（窗口/菜单 8px、控件 4px）
+    let r = egui::CornerRadius::same(6);
+    visuals.window_corner_radius = r;
+    visuals.menu_corner_radius = r;
+    visuals.widgets.noninteractive.corner_radius = r;
+    visuals.widgets.inactive.corner_radius = r;
+    visuals.widgets.hovered.corner_radius = r;
+    visuals.widgets.active.corner_radius = r;
+    visuals.widgets.open.corner_radius = r;
+
     ctx.set_visuals(visuals);
 }
