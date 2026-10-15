@@ -2093,7 +2093,7 @@ pub struct AppSettings {
     #[serde(default = "default_theme_mode")]
     pub theme_mode: String,
 
-    // 界面主题色（十六进制，如 #0A84FF），全局强调色
+    // 界面主题色（十六进制，如 #005FB8），全局强调色
     #[serde(default = "default_accent_color")]
     pub accent_color: String,
 
@@ -2403,18 +2403,18 @@ impl Default for AppSettings {
             kv_cache_result: None,
             kv_cache_promise: KvCachePromiseWrapper::default(),
             max_context_promise: MaxContextPromiseWrapper::default(),
-        system_service_selected_preset: String::new(),
-        show_system_service_details: false,
-        // ── llama.cpp 编译配置 ──
-        build_git_repo: default_build_git_repo(),
-        build_branch: default_build_branch(),
-        build_tag: String::new(),
-        build_output_dir: String::new(),
-        build_opt_level: default_build_opt_level(),
-        build_cuda_enabled: false,
-        build_rocm_enabled: false,
-        build_vulkan_enabled: false,
-    }
+            system_service_selected_preset: String::new(),
+            show_system_service_details: false,
+            // ── llama.cpp 编译配置 ──
+            build_git_repo: default_build_git_repo(),
+            build_branch: default_build_branch(),
+            build_tag: String::new(),
+            build_output_dir: String::new(),
+            build_opt_level: default_build_opt_level(),
+            build_cuda_enabled: false,
+            build_rocm_enabled: false,
+            build_vulkan_enabled: false,
+        }
     }
 }
 

@@ -1087,11 +1087,12 @@ fn pick_cudart_asset<'a>(assets: &'a [Asset], variant: &DownloadVariant) -> Opti
         _ => return None,
     };
     // 正则匹配任何小版本号
-    let pattern = format!("cudart-llama-bin-win-cuda-{}\\.[0-9]+-{}.zip", cuda_major, arch);
+    let pattern = format!(
+        "cudart-llama-bin-win-cuda-{}\\.[0-9]+-{}.zip",
+        cuda_major, arch
+    );
     let re = regex::Regex::new(&pattern).ok()?;
-    assets
-        .iter()
-        .find(|a| re.is_match(&a.name))
+    assets.iter().find(|a| re.is_match(&a.name))
 }
 
 /// 定位解压后的 llama-server 二进制：

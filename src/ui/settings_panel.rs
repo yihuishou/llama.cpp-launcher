@@ -178,11 +178,11 @@ pub fn ui(
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {
                     // ★ 不用 .strong()（浅色模式下 strong_text_color=白色→隐形），改用显式主文本色
-                ui.label(
-                    RichText::new(i18n::t(i18n::Key::SystemServiceStatus, lang))
-                        .color(ui.visuals().text_color())
-                        .strong(),
-                );
+                    ui.label(
+                        RichText::new(i18n::t(i18n::Key::SystemServiceStatus, lang))
+                            .color(ui.visuals().text_color())
+                            .strong(),
+                    );
                     let status = check_service_status();
                     let (status_text, status_color) = match status.as_str() {
                         "running" => (
@@ -414,117 +414,129 @@ pub fn ui(
     // ── 服务详情弹窗 ──
     if settings.show_system_service_details {
         let mut open = settings.show_system_service_details;
-        egui::Window::new(i18n::t(i18n::Key::SystemServiceDetailsServiceWindowTitle, lang))
-            .collapsible(false)
-            .resizable(true)
-            .default_width(520.0)
-            .default_height(400.0)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .open(&mut open)
-            .show(ui.ctx(), |ui| {
-                // 根据选中预设生成服务文件
-                let template = i18n::t(i18n::Key::LinuxServiceFileContent, lang);
-                let cmd = if let Some(preset) = settings
-                    .presets
-                    .iter()
-                    .find(|p| p.name == settings.system_service_selected_preset)
-                {
-                    let mut temp_settings = settings.clone();
-                    preset.clone().apply_to(&mut temp_settings);
-                    server_manager.build_launch_command(&temp_settings)
-                } else {
-                    server_manager.build_launch_command(settings)
-                };
-                let content = build_systemd_service_file(&template, &cmd);
-                let mut content = content;
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.add(
-                        egui::TextEdit::multiline(&mut content)
-                            .font(egui::TextStyle::Monospace)
-                            .desired_width(f32::INFINITY),
-                    );
-                });
-                ui.separator();
-                if ui.button(i18n::t(i18n::Key::BtnCopyServiceFile, lang)).clicked() {
-                    ui.ctx().copy_text(content.to_string());
-                }
+        egui::Window::new(i18n::t(
+            i18n::Key::SystemServiceDetailsServiceWindowTitle,
+            lang,
+        ))
+        .collapsible(false)
+        .resizable(true)
+        .default_width(520.0)
+        .default_height(400.0)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .open(&mut open)
+        .show(ui.ctx(), |ui| {
+            // 根据选中预设生成服务文件
+            let template = i18n::t(i18n::Key::LinuxServiceFileContent, lang);
+            let cmd = if let Some(preset) = settings
+                .presets
+                .iter()
+                .find(|p| p.name == settings.system_service_selected_preset)
+            {
+                let mut temp_settings = settings.clone();
+                preset.clone().apply_to(&mut temp_settings);
+                server_manager.build_launch_command(&temp_settings)
+            } else {
+                server_manager.build_launch_command(settings)
+            };
+            let content = build_systemd_service_file(&template, &cmd);
+            let mut content = content;
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.add(
+                    egui::TextEdit::multiline(&mut content)
+                        .font(egui::TextStyle::Monospace)
+                        .desired_width(f32::INFINITY),
+                );
             });
+            ui.separator();
+            if ui
+                .button(i18n::t(i18n::Key::BtnCopyServiceFile, lang))
+                .clicked()
+            {
+                ui.ctx().copy_text(content.to_string());
+            }
+        });
         settings.show_system_service_details = open;
     }
 
     // ── llama.cpp 编译 ──
-    widgets::card(
-        ui,
-        i18n::t(i18n::Key::SettingsBuild, lang),
-        accent,
-        |ui| {
-            ui.add_space(8.0);
+    widgets::card(ui, i18n::t(i18n::Key::SettingsBuild, lang), accent, |ui| {
+        ui.add_space(8.0);
 
-                // Git 仓库
-                ui.label(i18n::t(i18n::Key::BuildGitRepo, lang));
-                ui.text_edit_singleline(&mut settings.build_git_repo);
+        // Git 仓库
+        ui.label(i18n::t(i18n::Key::BuildGitRepo, lang));
+        ui.text_edit_singleline(&mut settings.build_git_repo);
 
-                // 分支
-                ui.label(i18n::t(i18n::Key::BuildBranch, lang));
-                ui.text_edit_singleline(&mut settings.build_branch);
+        // 分支
+        ui.label(i18n::t(i18n::Key::BuildBranch, lang));
+        ui.text_edit_singleline(&mut settings.build_branch);
 
-                // Tag
-                ui.label(i18n::t(i18n::Key::BuildTag, lang));
-                ui.text_edit_singleline(&mut settings.build_tag);
+        // Tag
+        ui.label(i18n::t(i18n::Key::BuildTag, lang));
+        ui.text_edit_singleline(&mut settings.build_tag);
 
-                ui.add_space(8.0);
-                ui.separator();
-                ui.add_space(4.0);
+        ui.add_space(8.0);
+        ui.separator();
+        ui.add_space(4.0);
 
-                // 编译优化级别
-                ui.label(i18n::t(i18n::Key::BuildOptLevel, lang));
-                let opt_opts = ["Release", "RelWithDebInfo", "Debug"];
-                let mut opt_idx = match settings.build_opt_level.as_str() {
-                    "RelWithDebInfo" => 1,
-                    "Debug" => 2,
-                    _ => 0,
-                };
-                widgets::segmented(ui, &opt_opts, &mut opt_idx, accent);
-                settings.build_opt_level = opt_opts[opt_idx].to_string();
+        // 编译优化级别
+        ui.label(i18n::t(i18n::Key::BuildOptLevel, lang));
+        let opt_opts = ["Release", "RelWithDebInfo", "Debug"];
+        let mut opt_idx = match settings.build_opt_level.as_str() {
+            "RelWithDebInfo" => 1,
+            "Debug" => 2,
+            _ => 0,
+        };
+        widgets::segmented(ui, &opt_opts, &mut opt_idx, accent);
+        settings.build_opt_level = opt_opts[opt_idx].to_string();
 
-                ui.add_space(8.0);
-                ui.separator();
-                ui.add_space(4.0);
+        ui.add_space(8.0);
+        ui.separator();
+        ui.add_space(4.0);
 
-                // 后端选择
-                ui.label(i18n::t(i18n::Key::BuildBackend, lang));
-                let mut cuda = settings.build_cuda_enabled;
-                if widgets::toggle(ui, &mut cuda, i18n::t(i18n::Key::BuildCuda, lang), accent) {
-                    settings.build_cuda_enabled = cuda;
-                }
-                let mut rocm = settings.build_rocm_enabled;
-                if widgets::toggle(ui, &mut rocm, i18n::t(i18n::Key::BuildRocm, lang), accent) {
-                    settings.build_rocm_enabled = rocm;
-                }
-                let mut vulkan = settings.build_vulkan_enabled;
-                if widgets::toggle(ui, &mut vulkan, i18n::t(i18n::Key::BuildVulkan, lang), accent) {
-                    settings.build_vulkan_enabled = vulkan;
-                }
+        // 后端选择
+        ui.label(i18n::t(i18n::Key::BuildBackend, lang));
+        let mut cuda = settings.build_cuda_enabled;
+        if widgets::toggle(ui, &mut cuda, i18n::t(i18n::Key::BuildCuda, lang), accent) {
+            settings.build_cuda_enabled = cuda;
+        }
+        let mut rocm = settings.build_rocm_enabled;
+        if widgets::toggle(ui, &mut rocm, i18n::t(i18n::Key::BuildRocm, lang), accent) {
+            settings.build_rocm_enabled = rocm;
+        }
+        let mut vulkan = settings.build_vulkan_enabled;
+        if widgets::toggle(
+            ui,
+            &mut vulkan,
+            i18n::t(i18n::Key::BuildVulkan, lang),
+            accent,
+        ) {
+            settings.build_vulkan_enabled = vulkan;
+        }
 
-                ui.add_space(8.0);
+        ui.add_space(8.0);
 
-                // 操作按钮
-                ui.horizontal_wrapped(|ui| {
-                    if ui.add(widgets::rounded_button(
-                        i18n::t(i18n::Key::BuildBtnClone, lang),
-                        None,
-                    )).clicked() {
-                        // TODO: 克隆仓库逻辑
-                    }
-                    if ui.add(widgets::rounded_button(
-                        i18n::t(i18n::Key::BuildBtnBuild, lang),
-                        None,
-                    )).clicked() {
-                        // TODO: 编译逻辑
-                    }
-                });
-        },
-    );
+        // 操作按钮
+        ui.horizontal_wrapped(|ui| {
+            if ui
+                .add(widgets::rounded_button(
+                    i18n::t(i18n::Key::BuildBtnClone, lang),
+                    None,
+                ))
+                .clicked()
+            {
+                // TODO: 克隆仓库逻辑
+            }
+            if ui
+                .add(widgets::rounded_button(
+                    i18n::t(i18n::Key::BuildBtnBuild, lang),
+                    None,
+                ))
+                .clicked()
+            {
+                // TODO: 编译逻辑
+            }
+        });
+    });
 
     // ── 调试 ──
     widgets::card(

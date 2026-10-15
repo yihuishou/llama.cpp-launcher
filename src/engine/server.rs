@@ -440,7 +440,11 @@ impl ServerManager {
             args.push("--spec-type".to_string());
             args.push(settings.spec_type.clone());
         }
-        if settings.spec_type.split(',').any(|s| s.starts_with("draft-")) {
+        if settings
+            .spec_type
+            .split(',')
+            .any(|s| s.starts_with("draft-"))
+        {
             if settings.enable_spec_draft_n_max {
                 args.push("--spec-draft-n-max".to_string());
                 args.push(settings.spec_draft_n_max.to_string());
@@ -1085,7 +1089,11 @@ impl ServerManager {
         }
 
         // 3) --spec-draft-*: 仅在 spec_type 为 draft-* 时写入
-        if settings.spec_type.split(',').any(|s| s.starts_with("draft-")) {
+        if settings
+            .spec_type
+            .split(',')
+            .any(|s| s.starts_with("draft-"))
+        {
             if settings.enable_spec_draft_n_max {
                 cmd.arg("--spec-draft-n-max")
                     .arg(settings.spec_draft_n_max.to_string());

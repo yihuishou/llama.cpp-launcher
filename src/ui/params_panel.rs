@@ -998,7 +998,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 }
             });
             // draft-* 算法参数（draft-simple / draft-eagle3 / draft-mtp / draft-dflash / draft-dspark）
-            let is_draft = settings.spec_type.split(',').any(|s| s.starts_with("draft-"));
+            let is_draft = settings
+                .spec_type
+                .split(',')
+                .any(|s| s.starts_with("draft-"));
             if is_draft {
                 // 最大推测数量 --spec-draft-n-max（DragValue + 启用开关）
                 ui.horizontal(|ui| {
@@ -1088,9 +1091,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 });
             }
             // ngram-simple / ngram-map-k / ngram-map-k4v 共用参数（size-n / size-m / min-hits）
-            let is_ngram_shared = settings.spec_type.split(',').any(|s| {
-                matches!(s, "ngram-simple" | "ngram-map-k" | "ngram-map-k4v")
-            });
+            let is_ngram_shared = settings
+                .spec_type
+                .split(',')
+                .any(|s| matches!(s, "ngram-simple" | "ngram-map-k" | "ngram-map-k4v"));
             if is_ngram_shared {
                 ui.horizontal(|ui| {
                     ui.label(i18n::t(i18n::Key::SpecNgramSizeNLabel, lang));
