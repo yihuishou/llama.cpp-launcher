@@ -501,7 +501,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.label(i18n::t(i18n::Key::CheckboxCpuMoe, lang));
                 ui.small(i18n::t(i18n::Key::HintCpuMoe, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCpuMoe, lang));
-                // ★ Toggle 新签名（行首已有标签，开关后不再重复文字）
+                // 开关不重复标签：行首已有说明文字
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     widgets::toggle(ui, &mut settings.cpu_moe, "", accent);
                 });

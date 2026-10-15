@@ -1,11 +1,11 @@
 //! 通用 UI 组件 —— 移植自 HTML 原型的设计语义
 //!
-//! 设计参数对齐 HTML mockup：
-//!   - radius-card: 12px  /  radius-ctl: 6px（更方正，用户要求）
-//!   - accent: #60CDFF (dark) / #005FB8 (light)
-//!   - 选中导航项：accent-tint 背景 + accent 色文字（对齐 HTML .nav-item.active{color:var(--accent)}）
-//!   - Toggle：开关在左、标签在右（对齐 HTML <div class="toggle"><.sw/><span>label</span></div>）
-//!   - 分段控件/按钮/输入框统一 6px 圆角矩形（非 pill 椭圆）
+//! 卡片、开关、分段控件已改用 fluent-egui 的 WinUI 3 实现，配色与圆角由库接管，
+//! 圆角统一在 `crate::theme::apply_theme` 里覆写。以下组件库中无等价物，故保留自绘：
+//!   - `nav_row` / `nav_icon_paint`：选中态 accent-tint 背景 + accent 色文字，
+//!     对齐 HTML `.nav-item.active{color:var(--accent)}`；10 个图标为手写矢量
+//!   - `color_swatch` / `rounded_button`：`egui::Button` 配自定义 `.fill()`，
+//!     库的 FluentButton 只走主题色、AccentButton 亦不支持自定义填充
 
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
 use fluent_egui::winui::{self, FluentTheme};
@@ -19,13 +19,12 @@ pub(crate) fn current_theme(ui: &Ui) -> FluentTheme {
     }
 }
 
-// ──── 设计常量（对齐 HTML :root 变量，按用户反馈调方） ────
+// ──── 自绘组件的尺寸常量 ────
 
-/// 控件圆角 = 6px（比 HTML --radius-ctl:8px 更方正，用户明确要求）
+/// rounded_button 的圆角 = 6px（比 HTML --radius-ctl:8px 更方正，用户明确要求）。
+/// 其余控件的圆角由 fluent-egui 提供，并在 `crate::theme::apply_theme` 里覆写。
 pub const R_CTL: f32 = 6.0;
-/// 卡片圆角 = 12px（HTML --radius-card）
-pub const R_CARD: f32 = 12.0;
-/// 导航项圆角 = 6px
+/// nav_row 的圆角 = 6px
 pub const R_NAV: f32 = 6.0;
 
 // ──── 侧边栏图标 ────
@@ -46,13 +45,8 @@ pub enum NavIcon {
 
 // ──── 卡片容器 ────
 
-/// 卡片：标题（带 accent 竖条） + 分隔线 + 内容，12px 圆角
-///
-/// 对齐 HTML `.card h3`：
-/// ```html
-/// <h3><span class="bar"></span>Server 配置</h3>
-/// /* .bar{width:3px;height:14px;border-radius:2px;background:var(--accent);} */
-/// ```
+/// 卡片：标题行（标题居左、可选附加组件右对齐）+ 分隔线 + 内容。
+/// 边框、圆角与内边距由 `winui::card_frame` 提供（WinUI 3 标准的 4px 圆角）。
 pub fn card<R>(
     ui: &mut Ui,
     title: &str,

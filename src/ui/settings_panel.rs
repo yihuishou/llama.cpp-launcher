@@ -49,7 +49,7 @@ pub fn ui(
                 }
             });
             ui.add_space(8.0);
-            // ★ Toggle 新签名：开关在左，标签在右
+            // 开关在左，标签在右
             let theme_opts = [
                 i18n::t(i18n::Key::ThemeLight, lang),
                 i18n::t(i18n::Key::ThemeDark, lang),
@@ -93,7 +93,7 @@ pub fn ui(
         accent,
         |ui| {
             let mut auto = settings.auto_start;
-            // ★ Toggle 新签名：返回值直接用于判断是否变更
+            // toggle 的返回值即是否变更
             if widgets::toggle(
                 ui,
                 &mut auto,
@@ -546,7 +546,6 @@ pub fn ui(
         accent,
         |ui| {
             let mut log_to_file = settings.log_to_file;
-            // ★ Toggle 新签名
             if widgets::toggle(
                 ui,
                 &mut log_to_file,
