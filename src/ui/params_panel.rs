@@ -6,6 +6,7 @@ use crate::i18n;
 use crate::kv_cache;
 use crate::ui::helper;
 use crate::ui::widgets;
+use fluent_egui::winui;
 use poll_promise::Promise;
 
 pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) {
@@ -357,7 +358,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // 对话模板 (--chat-template)
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelChatTemplate, lang));
-                ui.text_edit_singleline(&mut settings.chat_template);
+                ui.add(winui::FluentTextEdit::new(&mut settings.chat_template));
                 ui.small(i18n::t(i18n::Key::HintChatTemplate, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpChatTemplate, lang));
             });
@@ -366,11 +367,11 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelChatTemplateFile, lang));
                 let mut file_str = settings.chat_template_file.to_string_lossy().to_string();
-                let response = ui.text_edit_singleline(&mut file_str);
+                let response = ui.add(winui::FluentTextEdit::new(&mut file_str));
                 if response.changed() {
                     settings.chat_template_file = std::path::PathBuf::from(&file_str);
                 }
-                if ui.button(i18n::t(i18n::Key::BtnBrowse, lang)).clicked() {
+                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowse, lang))).clicked() {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title(i18n::t(i18n::Key::DialogSelectChatTemplate, lang))
                         .add_filter(
@@ -469,7 +470,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // 张量拆分比例
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelTensorSplit, lang));
-                ui.text_edit_singleline(&mut settings.tensor_split);
+                ui.add(winui::FluentTextEdit::new(&mut settings.tensor_split));
                 ui.small(i18n::t(i18n::Key::HintTensorSplit, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTensorSplit, lang));
             });
@@ -512,7 +513,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // 指定特定张量到缓冲区
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelOverrideTensor, lang));
-                ui.text_edit_singleline(&mut settings.override_tensor);
+                ui.add(winui::FluentTextEdit::new(&mut settings.override_tensor));
                 ui.small(i18n::t(i18n::Key::HintOverrideTensor, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpOverrideTensor, lang));
             });
@@ -579,7 +580,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // 设备（多卡时指定）
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelServerDevice, lang));
-                ui.text_edit_singleline(&mut settings.device);
+                ui.add(winui::FluentTextEdit::new(&mut settings.device));
                 ui.small(i18n::t(i18n::Key::HintServerDevice, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpServerDevice, lang));
             });
@@ -1229,7 +1230,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelVideoFfmpegDir, lang));
             ui.add(egui::TextEdit::singleline(&mut settings.video_ffmpeg_dir).desired_width(200.0));
-            if ui.button(i18n::t(i18n::Key::BtnBrowse, lang)).clicked() {
+            if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowse, lang))).clicked() {
                 if let Some(path) = rfd::FileDialog::new()
                     .set_title("Select ffmpeg directory")
                     .pick_folder()
@@ -1359,7 +1360,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::AdvDrySequenceBreaker, lang));
-                        ui.text_edit_singleline(&mut settings.dry_sequence_breaker);
+                        ui.add(winui::FluentTextEdit::new(&mut settings.dry_sequence_breaker));
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::AdvDrySequenceBreakerHint, lang),
@@ -1370,7 +1371,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // logit 偏置（--logit-bias）
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvLogitBias, lang));
-                ui.text_edit_singleline(&mut settings.logit_bias);
+                ui.add(winui::FluentTextEdit::new(&mut settings.logit_bias));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvLogitBiasHint, lang));
             });
             ui.horizontal(|ui| {
@@ -1614,7 +1615,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // 采样器序列
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelSamplerSeq, lang));
-                ui.text_edit_singleline(&mut settings.sampler_seq);
+                ui.add(winui::FluentTextEdit::new(&mut settings.sampler_seq));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSamplerSeq, lang));
             });
         },
@@ -1629,24 +1630,24 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // JSON Schema
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelJsonSchema, lang));
-                ui.text_edit_singleline(&mut settings.json_schema);
+                ui.add(winui::FluentTextEdit::new(&mut settings.json_schema));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpJsonSchema, lang));
             });
             // Grammar
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelGrammar, lang));
-                ui.text_edit_singleline(&mut settings.grammar);
+                ui.add(winui::FluentTextEdit::new(&mut settings.grammar));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpGrammar, lang));
             });
             // 语法 / Schema 的文件形式（与内联字段二选一）
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvGrammarFile, lang));
-                ui.text_edit_singleline(&mut settings.grammar_file);
+                ui.add(winui::FluentTextEdit::new(&mut settings.grammar_file));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvGrammarFileHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvJsonSchemaFile, lang));
-                ui.text_edit_singleline(&mut settings.json_schema_file);
+                ui.add(winui::FluentTextEdit::new(&mut settings.json_schema_file));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvJsonSchemaFileHint, lang));
             });
         },
@@ -1759,18 +1760,18 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         |ui| {
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvLoraPath, lang));
-                ui.text_edit_singleline(&mut settings.lora_path);
+                ui.add(winui::FluentTextEdit::new(&mut settings.lora_path));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvLoraPathHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvLoraScaled, lang));
-                ui.text_edit_singleline(&mut settings.lora_scaled);
+                ui.add(winui::FluentTextEdit::new(&mut settings.lora_scaled));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvLoraScaledHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvControlVector, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvControlVectorHint, lang));
-                ui.text_edit_singleline(&mut settings.control_vector);
+                ui.add(winui::FluentTextEdit::new(&mut settings.control_vector));
             });
         },
     );
@@ -1783,7 +1784,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         |ui| {
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvSlotSavePath, lang));
-                ui.text_edit_singleline(&mut settings.slot_save_path);
+                ui.add(winui::FluentTextEdit::new(&mut settings.slot_save_path));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvSlotSavePathHint, lang));
             });
             ui.horizontal(|ui| {
@@ -1848,7 +1849,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvOverrideKv, lang));
-                ui.text_edit_singleline(&mut settings.override_kv);
+                ui.add(winui::FluentTextEdit::new(&mut settings.override_kv));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvOverrideKvHint, lang));
             });
             ui.horizontal(|ui| {
