@@ -2,7 +2,7 @@
 //!
 //! 设计参数对齐 HTML mockup：
 //!   - radius-card: 12px  /  radius-ctl: 6px（更方正，用户要求）
-//!   - accent: #0A84FF (dark) / #007AFF (light)
+//!   - accent: #60CDFF (dark) / #005FB8 (light)
 //!   - 选中导航项：accent-tint 背景 + accent 色文字（对齐 HTML .nav-item.active{color:var(--accent)}）
 //!   - Toggle：开关在左、标签在右（对齐 HTML <div class="toggle"><.sw/><span>label</span></div>）
 //!   - 分段控件/按钮/输入框统一 6px 圆角矩形（非 pill 椭圆）
@@ -75,7 +75,7 @@ pub fn card_with_header_notice<R>(
     add_contents: impl FnOnce(&mut Ui) -> R,
 ) -> R {
     let fill = ui.visuals().widgets.noninteractive.bg_fill;
-    // ★ 关键修复：深色模式下显式调亮 stroke，让卡片边界在 #2C2C2E 上可见
+    // ★ 关键修复：深色模式下显式调亮 stroke，让卡片边界在 #2B2B2B 上可见
     let stroke_color = if ui.visuals().dark_mode {
         Color32::from_rgb(90, 90, 95) // #5A5A5F — 在深色卡片上清晰可见
     } else {
@@ -222,9 +222,9 @@ pub fn segmented(ui: &mut Ui, options: &[&str], selected: &mut usize, _accent: C
     let mut changed = false;
     // 背景槽：用非交互控件填充色
     let slot_fill = if ui.visuals().dark_mode {
-        Color32::from_rgb(58, 58, 60) // HTML dark segmented bg #3A3A3C
+        Color32::from_rgb(50, 50, 50) // #323232 WinUI3 ControlFillPressed
     } else {
-        Color32::from_rgb(232, 232, 237) // HTML light segmented bg #E8E8ED
+        Color32::from_rgb(245, 245, 245) // #F5F5F5 WinUI3 ControlFillPressed
     };
     let frame = egui::Frame::default()
         .fill(slot_fill)
@@ -235,11 +235,12 @@ pub fn segmented(ui: &mut Ui, options: &[&str], selected: &mut usize, _accent: C
             ui.spacing_mut().item_spacing.x = 2.0;
             for (i, opt) in options.iter().enumerate() {
                 let is_sel = *selected == i;
-                // 选中态填充
+                // 选中态填充：WinUI 3 分段控件选中项用强调色（深色），
+                // 浅色模式用白色卡片浮起在浅灰轨道上。
                 let sel_fill = if ui.visuals().dark_mode {
-                    Color32::from_rgb(99, 99, 102) // HTML dark .sel bg #636366
+                    _accent
                 } else {
-                    Color32::WHITE
+                    Color32::WHITE // #FFFFFF CardBackground
                 };
                 // 按钮内边距通过 Frame inner_margin 控制（egui 0.33.3 Button 无 .padding()）
                 let resp = if is_sel {
@@ -315,9 +316,11 @@ pub fn nav_row(
         Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), 56)
     } else if resp.hovered() {
         if ui.visuals().dark_mode {
-            Color32::from_rgb(58, 58, 60) // HTML --bg-hover dark
+            // WinUI3 SubtleHover rgba(255,255,255,15) 合成到面板底 #2B2B2B
+            Color32::from_rgb(56, 56, 56) // #383838
         } else {
-            Color32::from_rgb(240, 240, 242) // HTML --bg-hover light
+            // WinUI3 SubtleHover rgba(0,0,0,9) 合成到面板底 #FFFFFF
+            Color32::from_rgb(246, 246, 246) // #F6F6F6
         }
     } else {
         Color32::TRANSPARENT
@@ -462,16 +465,16 @@ pub fn color_swatch(
 /// 依据填充色亮度返回对比文字色。
 ///
 /// egui 的 `Button` 文字色取自 `widgets.inactive.fg_stroke.color`，**不会**根据
-/// `.fill()` 自动反色。浅色主题下该 fg 色是深灰（#1D1D1F），于是「深色填充按钮」
+/// `.fill()` 自动反色。浅色主题下该 fg 色是深灰（#1B1B1B），于是「深色填充按钮」
 /// 会变成深色文字压在深色底上、不可见（深色主题下 fg 是浅灰，反而正常）。
 ///
-/// 这里用感知亮度（Rec. 709）做阈值：暗底 → 白字，亮底 → 深色字(#1D1D1F)。
+/// 这里用感知亮度（Rec. 709）做阈值：暗底 → 白字，亮底 → 深色字(#1B1B1B)。
 pub fn contrast_text(fill: Color32) -> Color32 {
     let y = 0.2126 * fill.r() as f32 + 0.7152 * fill.g() as f32 + 0.0722 * fill.b() as f32;
     if y < 128.0 {
         Color32::WHITE
     } else {
-        Color32::from_rgb(29, 29, 31) // 与浅色主题主文本一致
+        Color32::from_rgb(27, 27, 27) // #1B1B1B WinUI3 TextPrimary，与浅色主题主文本一致
     }
 }
 

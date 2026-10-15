@@ -451,9 +451,9 @@ impl LlamaLauncherApp {
                 };
                 // ★ 顶栏颜色统一为背景色（用户要求无色差）
                 if self.settings.dark_mode {
-                    f.fill = Color32::from_rgb(28, 28, 30); // #1C1C1E — 与主内容区同
+                    f.fill = Color32::from_rgb(32, 32, 32); // #202020 — WinUI3 app_bg，与主内容区同
                 } else {
-                    f.fill = Color32::from_rgb(245, 245, 247); // #F5F5F7 — 与主内容区同
+                    f.fill = Color32::from_rgb(243, 243, 243); // #F3F3F3 — WinUI3 app_bg，与主内容区同
                 }
                 f
             })
@@ -691,12 +691,12 @@ impl eframe::App for LlamaLauncherApp {
 
         // ★ CentralPanel 显式设置 fill 为 window_fill（而非默认的 panel_fill）
         // 这样主内容区背景比侧边栏/卡片更深，形成 HTML 的三层层次：
-        //   深色: content=#1C1C1E < sidebar+card=#2C2C2E
-        //   浅色: content=#F5F5F7 < sidebar+card=#FFFFFF
+        //   深色: content=#202020 < sidebar+card=#2B2B2B
+        //   浅色: content=#F3F3F3 < sidebar+card=#FFFFFF
         let content_fill = if self.settings.dark_mode {
-            Color32::from_rgb(28, 28, 30) // #1C1C1E
+            Color32::from_rgb(32, 32, 32) // #202020 WinUI3 app_bg
         } else {
-            Color32::from_rgb(245, 245, 247) // #F5F5F7
+            Color32::from_rgb(243, 243, 243) // #F3F3F3 WinUI3 app_bg
         };
         egui::CentralPanel::default()
             // 让内容区中的所有子框与内容边缘保留统一的呼吸空间。
@@ -835,9 +835,9 @@ fn set_title_bar_color(dark: bool, frame: &eframe::Frame) {
 
     // COLORREF 格式为 0x00BBGGRR（注意不是 RGB 顺序）
     let (r, g, b): (u8, u8, u8) = if dark {
-        (0x2C, 0x2C, 0x2E) // #2C2C2E，与侧边栏一致
+        (0x2B, 0x2B, 0x2B) // #2B2B2B WinUI3 CardBackground，与侧边栏一致
     } else {
-        (0xFF, 0xFF, 0xFF) // #FFFFFF，与侧边栏一致
+        (0xFF, 0xFF, 0xFF) // #FFFFFF WinUI3 CardBackground，与侧边栏一致
     };
     let colorref: u32 = ((b as u32) << 16) | ((g as u32) << 8) | (r as u32);
 
