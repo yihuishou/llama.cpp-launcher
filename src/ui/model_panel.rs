@@ -1,6 +1,7 @@
 use crate::config::settings::AppSettings;
 use crate::i18n;
 use crate::ui::widgets;
+use fluent_egui::winui;
 use poll_promise::Promise;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -798,7 +799,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelModelDir, lang));
                 let mut dir_str = settings.model_dir.to_string_lossy().to_string();
-                let response = ui.text_edit_singleline(&mut dir_str);
+                let response = ui.add(winui::FluentTextEdit::new(&mut dir_str));
                 if response.changed() {
                     settings.model_dir = std::path::PathBuf::from(&dir_str);
                 }
@@ -806,7 +807,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
             ui.horizontal(|ui| {
                 if ui
-                    .button(i18n::t(i18n::Key::BtnSelectFolder, lang))
+                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnSelectFolder, lang)))
                     .clicked()
                 {
                     if let Some(path) = rfd::FileDialog::new()
@@ -816,7 +817,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         settings.model_dir = path;
                     }
                 }
-                if ui.button(i18n::t(i18n::Key::BtnAutoDetect, lang)).clicked() {
+                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnAutoDetect, lang))).clicked() {
                     if let Some(path) = auto_detect_model_dir() {
                         settings.model_dir = path;
                     } else {
@@ -824,7 +825,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     }
                 }
                 let model_dir_exists = auto_detect_model_dir().is_some();
-                let btn = egui::Button::new(i18n::t(i18n::Key::BtnCreateModelDir, lang));
+                let btn = winui::FluentButton::new(i18n::t(i18n::Key::BtnCreateModelDir, lang));
                 if ui.add_enabled(!model_dir_exists, btn).clicked() {
                     if let Ok(exe_dir) = std::env::current_exe() {
                         if let Some(parent) = exe_dir.parent() {
