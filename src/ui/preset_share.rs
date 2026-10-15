@@ -17,6 +17,7 @@
 use crate::config::settings::{AppSettings, GpuLayersMode, Preset};
 use crate::i18n;
 use crate::ui::widgets;
+use fluent_egui::winui;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -764,7 +765,7 @@ impl PresetShareUi {
 
 // ─────────────── 弹窗 UI ───────────────
 
-/// 分享/引入弹窗（尺寸限制在屏幕 90% 内；深浅色跟随主题，规范同 MCP 编辑弹窗）
+/// 分享/引入弹窗（WinUI3 模态对话框：固定 520 宽 / 最大 420 高，组件内自动夹到屏幕内）
 pub fn share_window(
     ctx: &egui::Context,
     settings: &mut AppSettings,
@@ -774,20 +775,13 @@ pub fn share_window(
     if !share.open {
         return;
     }
-    let mut open = true;
-    let screen = ctx.content_rect().size();
-    let style = ctx.style_of(ctx.theme());
-    egui::Window::new(i18n::t(i18n::Key::ShareWindowTitle, lang))
-        .open(&mut open)
-        .resizable(true)
-        .default_width(520.0)
-        .default_height(420.0)
-        .min_width(380.0)
-        .min_height(260.0)
-        .max_width(screen.x * 0.9)
-        .max_height(screen.y * 0.9)
-        .frame(egui::Frame::window(&style))
-        .show(ctx, |ui| {
+    let should_close = widgets::dialog(
+        ctx,
+        "preset_share_dialog",
+        i18n::t(i18n::Key::ShareWindowTitle, lang),
+        520.0,
+        420.0,
+        |ui, _avail_h| {
             let accent = crate::theme::accent_color(&settings.accent_color);
             // 顶部标签页：两个按钮各占可用宽度一半（现代化分段样式，选中态主题色填充）
             ui.horizontal(|ui| {
@@ -833,8 +827,21 @@ pub fn share_window(
             } else {
                 render_import_tab(ui, settings, share, lang);
             }
-        });
-    share.open = open;
+        },
+        |ui| {
+            let mut close = false;
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnClose, lang)))
+                    .clicked()
+                {
+                    close = true;
+                }
+            });
+            close
+        },
+    );
+    share.open = !should_close;
 }
 
 /// 分享页：勾选本地预设 → 生成分享码 → 复制
@@ -1160,25 +1167,27 @@ pub fn config_window(
         .and_then(|json| serde_json::from_str::<ShareDecl>(json).ok())
         .unwrap_or_default();
 
-    let mut open = true;
     let mut cancel_clicked = false;
+    let mut save_clicked = false;
+    // 分类快照：内容闭包取拷贝，避免与侧栏闭包的 &mut cfg.category 写冲突
+    // （Rust 2021 不相交捕获按字段划分，两闭包同帧内先后调用也无法共享可变借用）
+    let category = cfg.category;
     let accent = crate::theme::accent_color(&settings.accent_color);
     let screen = ctx.content_rect().size();
-    let style = ctx.style_of(ctx.theme());
-    // 默认尺寸随应用窗口缩放（封顶 1000x640），保证弹窗完整落在应用界面内
-    let default_w = (screen.x * 0.85).min(1000.0);
-    let default_h = (screen.y * 0.85).min(640.0);
-    egui::Window::new(i18n::t(i18n::Key::ConfigWindowTitle, lang))
-        .open(&mut open)
-        .resizable(true)
-        .default_width(default_w)
-        .default_height(default_h)
-        .min_width(680.0)
-        .min_height(380.0)
-        .max_width(screen.x * 0.92)
-        .max_height(screen.y * 0.92)
-        .frame(egui::Frame::window(&style))
-        .show(ctx, |ui| {
+    // 默认尺寸随应用窗口缩放（封顶 1000x640，下限 680x380），保证弹窗完整落在应用界面内；
+    // 组件还会再夹到屏幕内（与原窗口 max 92% 屏幕的意图一致）
+    let width = (screen.x * 0.85).clamp(680.0, 1000.0);
+    let max_height = (screen.y * 0.85).clamp(380.0, 640.0);
+    let should_close = widgets::dialog_with_side_panel(
+        ctx,
+        "preset_config_dialog",
+        i18n::t(i18n::Key::ConfigWindowTitle, lang),
+        width,
+        150.0,
+        max_height,
+        // 中央内容区：顶行（预设名 + 声明入口）固定，分类内容占满剩余高度并内部滚动
+        |ui, avail_h| {
+            let start_y = ui.cursor().top();
             // 顶行：正在配置的预设名 + "分享依赖声明"按钮入口
             ui.horizontal(|ui| {
                 // 主文本色随深浅色主题切换（不可用 .strong()：其颜色恒为按下态前景色=白色）
@@ -1206,131 +1215,120 @@ pub fn config_window(
                 }
             });
             ui.separator();
-
-            // 底部操作条：确定 / 取消 + 未配置确认消息
-            // （顶部分隔线由 TopBottomPanel 自带，勿再手画 ui.separator()，否则双线重叠）
-            egui::Panel::bottom("preset_cfg_bottom")
-                .frame(egui::Frame::NONE.inner_margin(egui::Margin::symmetric(0, 6)))
-                .show(ui, |ui| {
-                    if cfg.confirm_pending {
-                        ui.small(
-                            egui::RichText::new(i18n::t(i18n::Key::ConfigConfirmPending, lang))
-                                .color(ui.visuals().warn_fg_color),
-                        );
-                    }
-                    if let Some((ok, msg)) = &cfg.msg {
-                        ui.small(egui::RichText::new(msg).color(if *ok {
-                            ui.visuals().text_color()
-                        } else {
-                            ui.visuals().error_fg_color
-                        }));
-                    }
-                    // 操作按钮右对齐（顺手好点），加大尺寸；确定为主操作（低饱和主题色填充）
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let primary_fill = egui::Color32::from_rgba_unmultiplied(
-                            accent.r(),
-                            accent.g(),
-                            accent.b(),
-                            175,
-                        );
-                        if ui
-                            .add_sized(
-                                [104.0, 32.0],
-                                widgets::rounded_button(
-                                    i18n::t(i18n::Key::ConfigSaveBtn, lang),
-                                    Some(primary_fill),
-                                ),
-                            )
-                            .clicked()
-                        {
-                            if cfg.confirm_pending {
-                                // 第二次点击：用户确认保存未配置完成的内容
-                                cfg.msg = Some((
-                                    true,
-                                    i18n::t(i18n::Key::ConfigSavedPartial, lang).to_string(),
-                                ));
-                                cfg.confirm_saved = true;
-                            } else {
-                                // 校验：模型路径 / 声明的 MCP 命令是否已配置
-                                let missing = collect_missing(&decl_effective, draft);
-                                if missing {
-                                    cfg.confirm_pending = true;
-                                } else {
-                                    cfg.confirm_saved = true;
-                                }
-                            }
-                        }
-                        if ui
-                            .add_sized(
-                                [104.0, 32.0],
-                                widgets::rounded_button(
-                                    i18n::t(i18n::Key::ShareCancelBtn, lang),
-                                    None,
-                                ),
-                            )
-                            .clicked()
-                        {
-                            cancel_clicked = true;
-                            cfg.confirm_pending = false;
-                        }
-                    });
-                });
-
-            // 侧边栏分类导航：全宽按钮、选中态主题色填充（现代化样式）
-            egui::Panel::left("preset_cfg_side")
-                .exact_size(150.0)
-                .frame(egui::Frame::NONE.inner_margin(egui::Margin {
-                    left: 0,
-                    right: 12,
-                    top: 4,
-                    bottom: 4,
-                }))
-                .show(ui, |ui| {
-                    for (cat_id, key) in CONFIG_CATS {
-                        let selected = cfg.category == *cat_id;
-                        let text = egui::RichText::new(i18n::t(*key, lang));
-                        let btn = if selected {
-                            egui::Button::new(text.color(widgets::contrast_text(accent)))
-                                .fill(accent)
-                                .corner_radius(4.0)
-                        } else {
-                            egui::Button::new(text)
-                                .fill(ui.visuals().widgets.inactive.bg_fill)
-                                .corner_radius(4.0)
-                        };
-                        if ui.add_sized([ui.available_width(), 30.0], btn).clicked() {
-                            cfg.category = *cat_id;
-                        }
-                        ui.add_space(3.0);
-                    }
-                });
-
+            // 扣除顶行已占用的高度后，让分类内容滚动区撑满剩余空间（同 mcp_panel 的推算方式）
+            let used_h = ui.cursor().top() - start_y;
             // 中央配置区：按分类渲染（复用现有面板函数，绑定草稿）
-            // 左边距 12px：与侧边栏的边界分隔线保持间距，避免卡片贴线
-            egui::CentralPanel::default()
-                .frame(egui::Frame::NONE.inner_margin(egui::Margin {
-                    left: 12,
-                    right: 0,
-                    top: 4,
-                    bottom: 4,
-                }))
-                .show(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .id_salt("preset_cfg_content")
-                        .auto_shrink(false)
-                        .show(ui, |ui| match cfg.category {
-                            0 => crate::ui::model_panel::ui(ui, draft, lang),
-                            1 => crate::ui::params_panel::ui(ui, draft, lang),
-                            2 => crate::ui::mcp_panel::ui(ui, draft, lang),
-                            3 => render_server_network_card(ui, draft, lang),
-                            4 => render_rpc_card(ui, draft, lang),
-                            _ => {}
-                        });
+            egui::ScrollArea::vertical()
+                .id_salt("preset_cfg_content")
+                .auto_shrink(false)
+                .max_height((avail_h - used_h).max(80.0))
+                .show(ui, |ui| match category {
+                    0 => crate::ui::model_panel::ui(ui, draft, lang),
+                    1 => crate::ui::params_panel::ui(ui, draft, lang),
+                    2 => crate::ui::mcp_panel::ui(ui, draft, lang),
+                    3 => render_server_network_card(ui, draft, lang),
+                    4 => render_rpc_card(ui, draft, lang),
+                    _ => {}
                 });
-        });
+        },
+        // 左侧分类导航：全宽按钮、选中态主题色填充（现代化样式）
+        |ui| {
+            for (cat_id, key) in CONFIG_CATS {
+                let selected = cfg.category == *cat_id;
+                let text = egui::RichText::new(i18n::t(*key, lang));
+                let btn = if selected {
+                    egui::Button::new(text.color(widgets::contrast_text(accent)))
+                        .fill(accent)
+                        .corner_radius(4.0)
+                } else {
+                    egui::Button::new(text)
+                        .fill(ui.visuals().widgets.inactive.bg_fill)
+                        .corner_radius(4.0)
+                };
+                if ui.add_sized([ui.available_width(), 30.0], btn).clicked() {
+                    cfg.category = *cat_id;
+                }
+                ui.add_space(3.0);
+            }
+        },
+        // 底部操作条：确定 / 取消 + 未配置确认消息
+        |ui| {
+            if cfg.confirm_pending {
+                ui.small(
+                    egui::RichText::new(i18n::t(i18n::Key::ConfigConfirmPending, lang))
+                        .color(ui.visuals().warn_fg_color),
+                );
+            }
+            if let Some((ok, msg)) = &cfg.msg {
+                ui.small(egui::RichText::new(msg).color(if *ok {
+                    ui.visuals().text_color()
+                } else {
+                    ui.visuals().error_fg_color
+                }));
+            }
+            // 操作按钮右对齐（顺手好点），加大尺寸；确定为主操作（低饱和主题色填充）
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let primary_fill = egui::Color32::from_rgba_unmultiplied(
+                    accent.r(),
+                    accent.g(),
+                    accent.b(),
+                    175,
+                );
+                if ui
+                    .add_sized(
+                        [104.0, 32.0],
+                        widgets::rounded_button(
+                            i18n::t(i18n::Key::ConfigSaveBtn, lang),
+                            Some(primary_fill),
+                        ),
+                    )
+                    .clicked()
+                {
+                    save_clicked = true;
+                }
+                if ui
+                    .add_sized(
+                        [104.0, 32.0],
+                        widgets::rounded_button(
+                            i18n::t(i18n::Key::ShareCancelBtn, lang),
+                            None,
+                        ),
+                    )
+                    .clicked()
+                {
+                    cancel_clicked = true;
+                }
+            });
+            false
+        },
+    );
+
+    // footer 闭包只记录点击：内容闭包持有 draft 的可变借用，校验与写回在
+    // dialog 返回后进行（同 mcp_panel editor_window 的枚举中转思路）
+    if save_clicked {
+        if cfg.confirm_pending {
+            // 第二次点击：用户确认保存未配置完成的内容
+            cfg.msg = Some((
+                true,
+                i18n::t(i18n::Key::ConfigSavedPartial, lang).to_string(),
+            ));
+            cfg.confirm_saved = true;
+        } else {
+            // 校验：模型路径 / 声明的 MCP 命令是否已配置
+            let missing = collect_missing(&decl_effective, draft);
+            if missing {
+                cfg.confirm_pending = true;
+            } else {
+                cfg.confirm_saved = true;
+            }
+        }
+    }
+    if cancel_clicked {
+        cfg.confirm_pending = false;
+    }
 
     // 写回：用户点确定（confirm_saved）且草稿存在
-    if open && !cancel_clicked && cfg.confirm_saved {
+    if !should_close && !cancel_clicked && cfg.confirm_saved {
         if let Some(draft) = cfg.draft.clone() {
             // 1) 全局写回（MCP 定义/网络/RPC 等全部草稿内容）。
             //    预设列表保留实时状态：若整体覆盖，会把步骤 2 写入的预设更新
@@ -1355,7 +1353,7 @@ pub fn config_window(
         }
         cfg.confirm_saved = false;
         cfg.open = false;
-    } else if !open || cancel_clicked {
+    } else if should_close || cancel_clicked {
         cfg.open = false;
     }
 }
@@ -1467,37 +1465,26 @@ pub fn decl_window(ctx: &egui::Context, share: &mut PresetShareUi, lang: &i18n::
     if !share.decl_window_open {
         return;
     }
-    let screen = ctx.content_rect().size();
-    let style = ctx.style_of(ctx.theme());
-    egui::Window::new(i18n::t(i18n::Key::ShareDeclWindowTitle, lang))
-        .open(&mut share.decl_window_open)
-        .resizable(true)
-        .default_width(520.0)
-        .default_height(380.0)
-        .min_width(380.0)
-        .min_height(240.0)
-        .max_width(screen.x * 0.9)
-        .max_height(screen.y * 0.9)
-        .frame(egui::Frame::window(&style))
-        .show(ctx, |ui| {
+    let should_close = widgets::dialog(
+        ctx,
+        "preset_share_decl_dialog",
+        i18n::t(i18n::Key::ShareDeclWindowTitle, lang),
+        520.0,
+        380.0,
+        |ui, _avail_h| {
             ui.small(i18n::t(i18n::Key::ShareDeclWindowHint, lang));
             ui.separator();
-            egui::ScrollArea::vertical()
-                .id_salt("decl_view")
-                .auto_shrink(false)
-                .show(ui, |ui| {
-                    // 逐段展示声明文本（render_decl_text 已按段生成，含分隔空行）
-                    ui.add(
-                        egui::Label::new(egui::RichText::new(&share.decl_window_text).monospace())
-                            .selectable(true)
-                            .wrap(),
-                    );
-                });
-            ui.add_space(6.0);
+            ui.add(
+                egui::Label::new(egui::RichText::new(&share.decl_window_text).monospace())
+                    .selectable(true)
+                    .wrap(),
+            );
+        },
+        |ui| {
+            let mut copy = false;
             ui.horizontal(|ui| {
                 if ui.button(i18n::t(i18n::Key::ShareCopyBtn, lang)).clicked() {
-                    ui.ctx().copy_text(share.decl_window_text.clone());
-                    share.copied = true;
+                    copy = true;
                 }
                 if share.copied {
                     ui.small(
@@ -1506,7 +1493,14 @@ pub fn decl_window(ctx: &egui::Context, share: &mut PresetShareUi, lang: &i18n::
                     );
                 }
             });
-        });
+            if copy {
+                ui.ctx().copy_text(share.decl_window_text.clone());
+                share.copied = true;
+            }
+            false
+        },
+    );
+    share.decl_window_open = !should_close;
 }
 
 /// 生成声明阅读文本（声明窗口与感叹号窗口共用）

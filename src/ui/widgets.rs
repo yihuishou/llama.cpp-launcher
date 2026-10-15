@@ -113,29 +113,33 @@ pub fn card_with_header_notice<R>(
 
 // ──── WinUI 3 模态对话框 ────
 
-/// 渲染一个 WinUI3 风格模态对话框（居中 + 遮罩阻断底层输入）。
-/// - `title`：已 i18n 化的标题文本（调用方负责 t(Key, lang)）
-/// - `width`：固定宽度（会被夹到屏幕内）
-/// - `max_height`：整个对话框的最大高度（会被夹到屏幕内）
-/// - `content`：中央内容区，超出高度时内部纵向滚动；第二参数为内容区可用高度（已扣除内边距），调用方可据此将控件撑满
-/// - `footer`：底部按钮区；返回 true 表示该对话框应关闭
+/// `dialog` / `dialog_with_side_panel` 的共享骨架（抽取自原 `dialog`，两个公开函数共用，避免各自漂移）：
+/// Modal（暗色遮罩）+ 卡片框（card_bg 填充、1px card_border 描边、6px 圆角、弹窗阴影）
+/// + 56px 标题栏（右对齐 32×32 关闭按钮）+ 标题下方 1px 分隔线
+/// + 主体区（高度 = 总高 - 标题栏 - 60 底部按钮区预留）
+/// + footer 上方 1px 分隔线 + 通栏 footer（Margin::symmetric(24, 14)）。
 ///
-/// 返回 true 表示应关闭（点了 × / 按 Esc / 点了遮罩 / footer 返回 true）
+/// - `body` 接收标题分隔线之后的 ui、主体区高度与对话框 Id（供内部 ScrollArea 做 id_salt）；
+///   内容布局由 body 自行完成：无侧栏版是 24px 内边距的滚动区，带侧栏版是左侧定宽栏
+///   + 1px 竖直分隔线 + 右侧滚动区。
+/// - `footer` 是底部按钮区；返回 true 表示该对话框应关闭。
+///
+/// 返回 true 表示应关闭（点了 × / 按 Esc / 点了遮罩 / footer 返回 true）。
 ///
 /// 基于 `egui::Modal` 构建：居中、不可拖动、不可调整大小（WinUI3 ContentDialog
 /// 语义），几何与配色对齐 fluent-egui 的 `ContentDialog`，仅圆角统一为 6px
 /// （`crate::theme::apply_theme` 对全局圆角的覆写）。
-pub fn dialog<C, F>(
+fn dialog_skeleton<B, F>(
     ctx: &egui::Context,
     id_salt: impl std::hash::Hash + std::fmt::Debug,
     title: &str,
     width: f32,
     max_height: f32,
-    content: C,
+    body: B,
     footer: F,
 ) -> bool
 where
-    C: FnOnce(&mut egui::Ui, f32),
+    B: FnOnce(&mut egui::Ui, f32, egui::Id),
     F: FnOnce(&mut egui::Ui) -> bool,
 {
     let id = egui::Id::new(id_salt);
@@ -218,24 +222,9 @@ where
                 ],
                 egui::Stroke::new(1.0, p.card_border),
             );
-            // 内容区：WinUI3 官方左右内边距 24 + 上下内边距 12；超出 content_view_h 时内部纵向滚动
-            // 视口高度 = 总高 - 标题栏(动态) - 60(底部按钮区预留) - 24(内容区垂直内边距)
-            let content_view_h = (max_h - header_h - 60.0 - 24.0).max(80.0);
-            egui::Frame::new()
-                .inner_margin(egui::Margin::symmetric(24, 12))
-                .show(ui, |ui| {
-                    // 浮动滚动条不占布局宽度（默认滚动条会吃掉右侧 10px），保证左右内边距严格对称
-                    ui.style_mut().spacing.scroll = egui::style::ScrollStyle::floating();
-                    egui::ScrollArea::vertical()
-                        .id_salt(id)
-                        .auto_shrink([false, false])
-                        .max_height(content_view_h)
-                        .show(ui, |ui| {
-                            // 短内容也占满整个视口
-                            ui.set_min_height(content_view_h);
-                            content(ui, content_view_h);
-                        });
-                });
+            // 主体区：高度 = 总高 - 标题栏(动态) - 60(底部按钮区预留)
+            let body_h = (max_h - header_h - 60.0).max(60.0);
+            body(ui, body_h, id);
             // 底部按钮区：分隔线 + Margin::symmetric(24, 14) 内边距（WinUI3 官方左右内边距 24）
             ui.painter().line_segment(
                 [
@@ -256,6 +245,144 @@ where
 
     // should_close() 已覆盖遮罩点击与 Esc（仅顶层且无弹层时消费一次 Esc）
     close_clicked || modal.inner || modal.should_close()
+}
+
+/// 渲染一个 WinUI3 风格模态对话框（居中 + 遮罩阻断底层输入）。
+/// - `title`：已 i18n 化的标题文本（调用方负责 t(Key, lang)）
+/// - `width`：固定宽度（会被夹到屏幕内）
+/// - `max_height`：整个对话框的最大高度（会被夹到屏幕内）
+/// - `content`：中央内容区，超出高度时内部纵向滚动；第二参数为内容区可用高度（已扣除内边距），调用方可据此将控件撑满
+/// - `footer`：底部按钮区；返回 true 表示该对话框应关闭
+///
+/// 返回 true 表示应关闭（点了 × / 按 Esc / 点了遮罩 / footer 返回 true）
+///
+/// 基于 `egui::Modal` 构建：居中、不可拖动、不可调整大小（WinUI3 ContentDialog
+/// 语义），几何与配色对齐 fluent-egui 的 `ContentDialog`，仅圆角统一为 6px
+/// （`crate::theme::apply_theme` 对全局圆角的覆写）。
+pub fn dialog<C, F>(
+    ctx: &egui::Context,
+    id_salt: impl std::hash::Hash + std::fmt::Debug,
+    title: &str,
+    width: f32,
+    max_height: f32,
+    content: C,
+    footer: F,
+) -> bool
+where
+    C: FnOnce(&mut egui::Ui, f32),
+    F: FnOnce(&mut egui::Ui) -> bool,
+{
+    dialog_skeleton(ctx, id_salt, title, width, max_height, |ui, body_h, id| {
+        // 内容区：WinUI3 官方左右内边距 24 + 上下内边距 12；超出 content_view_h 时内部纵向滚动
+        // 视口高度 = 总高 - 标题栏(动态) - 60(底部按钮区预留) - 24(内容区垂直内边距)
+        let content_view_h = (body_h - 24.0).max(80.0);
+        egui::Frame::new()
+            .inner_margin(egui::Margin::symmetric(24, 12))
+            .show(ui, |ui| {
+                // 浮动滚动条不占布局宽度（默认滚动条会吃掉右侧 10px），保证左右内边距严格对称
+                ui.style_mut().spacing.scroll = egui::style::ScrollStyle::floating();
+                egui::ScrollArea::vertical()
+                    .id_salt(id)
+                    .auto_shrink([false, false])
+                    .max_height(content_view_h)
+                    .show(ui, |ui| {
+                        // 短内容也占满整个视口
+                        ui.set_min_height(content_view_h);
+                        content(ui, content_view_h);
+                    });
+            });
+    }, footer)
+}
+
+/// `dialog` 的带可选左侧面板变体。
+///
+/// 布局：56px 标题栏 + 分隔线，然后左侧定宽（`side_width`）侧栏（占满主体区高度，
+/// 需要时内部纵向滚动）+ 1px 竖直分隔线（card_border）+ 右侧内容区（24px 水平内边距，
+/// 内部纵向滚动），最底部是通栏按钮区（同时位于侧栏与内容区之下）。
+/// - `side_width`：侧栏固定宽度
+/// - `side`：侧栏内容；接收侧栏 ui（已含内边距，占满主体区高度，超出时内部纵向滚动）
+/// - 其余参数与行为同 `dialog`。
+#[allow(clippy::too_many_arguments)]
+pub fn dialog_with_side_panel<C, S, F>(
+    ctx: &egui::Context,
+    id_salt: impl std::hash::Hash + std::fmt::Debug,
+    title: &str,
+    width: f32,
+    side_width: f32,
+    max_height: f32,
+    content: C,
+    side: S,
+    footer: F,
+) -> bool
+where
+    C: FnOnce(&mut egui::Ui, f32),
+    S: FnOnce(&mut egui::Ui),
+    F: FnOnce(&mut egui::Ui) -> bool,
+{
+    dialog_skeleton(ctx, id_salt, title, width, max_height, |ui, body_h, id| {
+        // 内容区视口高度（与无侧栏版同式：主体高 - 上下各 12 内边距）
+        let content_view_h = (body_h - 24.0).max(80.0);
+        // 侧栏内部高度（主体高 - 上下各 8 内边距）
+        let side_inner_h = (body_h - 16.0).max(40.0);
+        // 库控件收 FluentTheme 枚举而非 egui::Theme，故从 dark_mode 推导（取分隔线颜色）
+        let theme = if ctx.theme() == egui::Theme::Dark {
+            FluentTheme::Dark
+        } else {
+            FluentTheme::Light
+        };
+        let p = winui::palette(theme);
+        let body_origin = ui.min_rect().min;
+        ui.horizontal(|ui| {
+            // 侧栏与内容区之间不留间距：分隔线恰好落在两者边界上
+            ui.spacing_mut().item_spacing.x = 0.0;
+            // 左侧栏：固定宽 side_width、占满主体区高度，内部纵向滚动（与内容区同等处理）
+            ui.allocate_ui_with_layout(
+                Vec2::new(side_width, body_h),
+                egui::Layout::top_down(egui::Align::LEFT),
+                |side_ui| {
+                    egui::Frame::new()
+                        .inner_margin(egui::Margin::symmetric(12, 8))
+                        .show(side_ui, |side_ui| {
+                            side_ui
+                                .style_mut()
+                                .spacing
+                                .scroll = egui::style::ScrollStyle::floating();
+                            egui::ScrollArea::vertical()
+                                .id_salt(id.with("side"))
+                                .auto_shrink([false, false])
+                                .max_height(side_inner_h)
+                                .show(side_ui, |side_ui| {
+                                    side_ui.set_min_height(side_inner_h);
+                                    side(side_ui);
+                                });
+                        });
+                },
+            );
+            // 侧栏与内容区之间的 1px 竖直分隔线（贯穿主体区全高）
+            let divider_x = body_origin.x + side_width;
+            ui.painter().line_segment(
+                [
+                    Pos2::new(divider_x, body_origin.y),
+                    Pos2::new(divider_x, body_origin.y + body_h),
+                ],
+                egui::Stroke::new(1.0, p.card_border),
+            );
+            // 右侧内容区：24px 水平内边距 + 内部纵向滚动（与无侧栏版一致）
+            egui::Frame::new()
+                .inner_margin(egui::Margin::symmetric(24, 12))
+                .show(ui, |ui| {
+                    ui.style_mut().spacing.scroll = egui::style::ScrollStyle::floating();
+                    egui::ScrollArea::vertical()
+                        .id_salt(id)
+                        .auto_shrink([false, false])
+                        .max_height(content_view_h)
+                        .show(ui, |ui| {
+                            ui.set_min_height(content_view_h);
+                            content(ui, content_view_h);
+                        });
+                });
+        });
+    }, footer)
 }
 
 // ──── WinUI 3 开关 ────

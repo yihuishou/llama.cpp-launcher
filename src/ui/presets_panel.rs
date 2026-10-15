@@ -351,46 +351,86 @@ pub fn ui(
 
                         if let Some(idx) = settings.rename_preset_index {
                             if idx < settings.presets.len() {
-                                egui::Window::new(i18n::t(i18n::Key::BtnRenamePreset, lang))
-                                    .collapsible(false)
-                                    .resizable(false)
-                                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-                                    .fixed_size([150.0, 0.0])
-                                    .show(ui.ctx(), |ui| {
+                                // 重命名预设弹窗（WinUI3 模态对话框，规范同 MCP 编辑弹窗）：
+                                // footer 与 content 是同一调用里的两个闭包，用局部枚举中转动作，
+                                // 让两闭包各自捕获不同字段，避免同时借用 settings。
+                                #[derive(PartialEq)]
+                                enum RenameAction {
+                                    None,
+                                    Confirm,
+                                    Cancel,
+                                }
+                                let mut action = RenameAction::None;
+                                let mut save_failed = false;
+                                let should_close = widgets::dialog(
+                                    ui.ctx(),
+                                    "presets_rename_dialog",
+                                    i18n::t(i18n::Key::BtnRenamePreset, lang),
+                                    520.0,
+                                    ui.ctx().content_rect().height() * 0.8,
+                                    |ui, _avail_h| {
                                         ui.label(i18n::t(i18n::Key::LabelPresetName, lang));
                                         ui.add(winui::FluentTextEdit::new(
                                             &mut settings.rename_preset_new_name,
                                         ));
-                                        ui.horizontal(|ui| {
-                                            if ui
-                                                .add(winui::AccentButton::new(i18n::t(
-                                                    i18n::Key::BtnConfirm,
-                                                    lang,
-                                                )))
-                                                .clicked()
-                                            {
-                                                let trimmed = settings
-                                                    .rename_preset_new_name
-                                                    .trim()
-                                                    .to_string();
-                                                if !trimmed.is_empty() {
-                                                    settings.presets[idx].name = trimmed;
+                                    },
+                                    |ui| {
+                                        ui.with_layout(
+                                            egui::Layout::right_to_left(egui::Align::Center),
+                                            |ui| {
+                                                if ui
+                                                    .add(winui::AccentButton::new(i18n::t(
+                                                        i18n::Key::BtnConfirm,
+                                                        lang,
+                                                    )))
+                                                    .clicked()
+                                                {
+                                                    action = RenameAction::Confirm;
                                                 }
-                                                settings.rename_preset_index = None;
+                                                if ui
+                                                    .add(winui::FluentButton::new(i18n::t(
+                                                        i18n::Key::BtnCancel,
+                                                        lang,
+                                                    )))
+                                                    .clicked()
+                                                {
+                                                    action = RenameAction::Cancel;
+                                                }
+                                            },
+                                        );
+                                        action != RenameAction::None
+                                    },
+                                );
+
+                                // dialog 返回后 content 闭包已结束，此处可安全读写 settings
+                                if should_close {
+                                    match action {
+                                        RenameAction::Confirm => {
+                                            let trimmed = settings
+                                                .rename_preset_new_name
+                                                .trim()
+                                                .to_string();
+                                            if trimmed.is_empty() {
+                                                // 空名校验失败：保持打开，保留输入供用户修改
+                                                save_failed = true;
+                                            } else {
+                                                settings.presets[idx].name = trimmed;
                                                 settings.rename_preset_new_name.clear();
                                             }
-                                            if ui
-                                                .add(winui::FluentButton::new(i18n::t(
-                                                    i18n::Key::BtnCancel,
-                                                    lang,
-                                                )))
-                                                .clicked()
-                                            {
-                                                settings.rename_preset_index = None;
-                                                settings.rename_preset_new_name.clear();
-                                            }
-                                        });
-                                    });
+                                        }
+                                        RenameAction::Cancel => {
+                                            settings.rename_preset_new_name.clear();
+                                        }
+                                        RenameAction::None => {}
+                                    }
+                                }
+                                // 校验失败时对话框保持打开，其余情形一律收起
+                                settings.rename_preset_index =
+                                    if !should_close || save_failed {
+                                        Some(idx)
+                                    } else {
+                                        None
+                                    };
                             }
                         }
                     });
@@ -415,94 +455,90 @@ pub fn ui(
     // 依赖声明阅读窗口（配置窗口/分享窗口内按钮打开；egui 窗口均为顶层区域，可叠加）
     crate::ui::preset_share::decl_window(ui.ctx(), share, lang);
 
-    // ── Linux 服务文件窗口 ──
+    // ── Linux 服务文件弹窗（WinUI3 模态对话框，规范同 MCP 编辑弹窗） ──
     if settings.show_linux_service_file {
-        let mut open = settings.show_linux_service_file;
-        egui::Window::new(i18n::t(i18n::Key::LinuxServiceFileWindowTitle, lang))
-            .collapsible(false)
-            .resizable(true)
-            .default_width(520.0)
-            .default_height(400.0)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .open(&mut open)
-            .show(ui.ctx(), |ui| {
-                ui.label(i18n::t(i18n::Key::LinuxServiceFileHint, lang));
+        // 获取服务器启动命令，替换模板中的 ExecStart 行，并自动填充用户信息
+        let template = i18n::t(i18n::Key::LinuxServiceFileContent, lang);
+        let mut content = {
+            // 获取当前用户名
+            let username = std::env::var("USER")
+                .or_else(|_| std::env::var("USERNAME"))
+                .unwrap_or_else(|_| "your-username".to_string());
+
+            // 获取用户 home 目录
+            let home_dir = dirs::home_dir()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| format!("/home/{}", username));
+
+            // 先替换用户信息占位符
+            let template = template
+                .replace("your-username", &username)
+                .replace("/home/your-username", &home_dir);
+
+            // 根据当前设置构建启动命令
+            let cmd = server_manager.build_launch_command(settings);
+            // 将启动命令按行分割，替换 ExecStart 行
+            let mut lines: Vec<String> = template.lines().map(String::from).collect();
+            let mut in_exec_start = false;
+            for line in &mut lines {
+                if line.starts_with("ExecStart=") {
+                    *line = format!("ExecStart={}", cmd);
+                    in_exec_start = true;
+                } else if in_exec_start && line.starts_with("    ") {
+                    // 跳过原模板中 ExecStart 的续行
+                    line.clear();
+                } else {
+                    in_exec_start = false;
+                }
+            }
+            // 移除连续的空行
+            let mut result = Vec::new();
+            let mut prev_empty = false;
+            for line in lines {
+                let is_empty = line.trim().is_empty();
+                if !is_empty || !prev_empty {
+                    result.push(line);
+                }
+                prev_empty = is_empty;
+            }
+            result.join("\n")
+        };
+
+        // footer 与 content 是同一调用里的两个闭包：用局部枚举中转动作，
+        // 让两闭包各自捕获不同字段（content 闭包持有 content 的可变借用，
+        // footer 若直接复制会与之冲突），避免同时借用。
+        #[derive(PartialEq)]
+        enum LinuxServiceAction {
+            None,
+            Copy,
+            SaveFile,
+        }
+        let mut action = LinuxServiceAction::None;
+        let should_close = widgets::dialog(
+            ui.ctx(),
+            "linux_service_file_dialog",
+            i18n::t(i18n::Key::LinuxServiceFileWindowTitle, lang),
+            520.0,
+            ui.ctx().content_rect().height() * 0.8,
+            |ui, avail_h| {
+                // 记录绘制提示/分隔行之前的光标 y，用于推算编辑器行数
+                let start_y = ui.cursor().top();
+                ui.small(i18n::t(i18n::Key::LinuxServiceFileHint, lang));
                 ui.separator();
-
-                // 获取服务器启动命令，替换模板中的 ExecStart 行，并自动填充用户信息
-                let template = i18n::t(i18n::Key::LinuxServiceFileContent, lang);
-                let content = {
-                    // 获取当前用户名
-                    let username = std::env::var("USER")
-                        .or_else(|_| std::env::var("USERNAME"))
-                        .unwrap_or_else(|_| "your-username".to_string());
-
-                    // 获取用户 home 目录
-                    let home_dir = dirs::home_dir()
-                        .map(|p| p.to_string_lossy().to_string())
-                        .unwrap_or_else(|| format!("/home/{}", username));
-
-                    // 先替换用户信息占位符
-                    let template = template
-                        .replace("your-username", &username)
-                        .replace("/home/your-username", &home_dir);
-
-                    // 根据当前设置构建启动命令
-                    let cmd = server_manager.build_launch_command(settings);
-                    // 将启动命令按行分割，替换 ExecStart 行
-                    let mut lines: Vec<String> = template.lines().map(String::from).collect();
-                    let mut in_exec_start = false;
-                    for line in &mut lines {
-                        if line.starts_with("ExecStart=") {
-                            *line = format!("ExecStart={}", cmd);
-                            in_exec_start = true;
-                        } else if in_exec_start && line.starts_with("    ") {
-                            // 跳过原模板中 ExecStart 的续行
-                            line.clear();
-                        } else {
-                            in_exec_start = false;
-                        }
-                    }
-                    // 移除连续的空行
-                    let mut result = Vec::new();
-                    let mut prev_empty = false;
-                    for line in lines {
-                        let is_empty = line.trim().is_empty();
-                        if !is_empty || !prev_empty {
-                            result.push(line);
-                        }
-                        prev_empty = is_empty;
-                    }
-                    result.join("\n")
-                };
-
-                let mut content = content;
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.add(
-                        egui::TextEdit::multiline(&mut content)
-                            .font(egui::TextStyle::Monospace)
-                            .desired_width(f32::INFINITY),
-                    );
-                });
-
-                ui.separator();
-                ui.horizontal(|ui| {
-                    // 复制到剪贴板
-                    let copy_label = if settings.linux_service_file_copied {
-                        "✓"
-                    } else {
-                        &i18n::t(i18n::Key::BtnCopyServiceFile, lang)
-                    };
-                    if ui.add(winui::FluentButton::new(copy_label)).clicked() {
-                        ui.ctx().copy_text(content.to_string());
-                        settings.linux_service_file_copied = true;
-                    }
-                    // 重置复制状态（下次点击前）
-                    if settings.linux_service_file_copied {
-                        ui.ctx().request_repaint();
-                    }
-
-                    // 保存为文件
+                // 可用高度扣除已占用的提示/分隔行高度后推算行数，让编辑器撑满内容区
+                let used_h = ui.cursor().top() - start_y;
+                let row_h = ui.text_style_height(&egui::TextStyle::Monospace);
+                let rows = (((avail_h - used_h) / row_h).floor() as usize).max(6);
+                ui.add(
+                    egui::TextEdit::multiline(&mut content)
+                        .font(egui::TextStyle::Monospace)
+                        .desired_width(f32::INFINITY)
+                        .desired_rows(rows),
+                );
+            },
+            |ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    // 保存为文件（先绘制，位于最右，与旧布局一致）
                     if ui
                         .add(winui::FluentButton::new(i18n::t(
                             i18n::Key::BtnSaveServiceFile,
@@ -510,21 +546,53 @@ pub fn ui(
                         )))
                         .clicked()
                     {
-                        if let Some(path) = rfd::FileDialog::new()
-                            .set_title(i18n::t(i18n::Key::LinuxServiceFileWindowTitle, lang))
-                            .add_filter("Service File", &["service"])
-                            .save_file()
-                        {
-                            let _ = std::fs::write(&path, &content);
-                        }
+                        action = LinuxServiceAction::SaveFile;
+                    }
+                    // 复制到剪贴板（靠左，与旧布局一致）
+                    let copy_label = if settings.linux_service_file_copied {
+                        "✓"
+                    } else {
+                        &i18n::t(i18n::Key::BtnCopyServiceFile, lang)
+                    };
+                    if ui.add(winui::FluentButton::new(copy_label)).clicked() {
+                        action = LinuxServiceAction::Copy;
                     }
                 });
-            });
-        settings.show_linux_service_file = open;
-        // 仅在窗口关闭时重置复制状态
-        if !open {
+                // 复制成功态下保持重绘（保留原行为）
+                if settings.linux_service_file_copied {
+                    ui.ctx().request_repaint();
+                }
+                // 两个按钮均不关闭对话框，关闭仅由 × / Esc / 遮罩触发
+                false
+            },
+        );
+
+        // dialog 返回后 content 闭包已结束，此处可安全读写 content 与 settings
+        if should_close {
+            // 仅在窗口关闭时重置复制状态
             settings.linux_service_file_copied = false;
+        } else {
+            match action {
+                LinuxServiceAction::Copy => {
+                    ui.ctx().copy_text(content.to_string());
+                    settings.linux_service_file_copied = true;
+                }
+                LinuxServiceAction::SaveFile => {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_title(i18n::t(
+                            i18n::Key::LinuxServiceFileWindowTitle,
+                            lang,
+                        ))
+                        .add_filter("Service File", &["service"])
+                        .save_file()
+                    {
+                        let _ = std::fs::write(&path, &content);
+                    }
+                }
+                LinuxServiceAction::None => {}
+            }
         }
+        settings.show_linux_service_file = !should_close;
     }
 
     if start_server {

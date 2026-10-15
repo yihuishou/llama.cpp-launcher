@@ -979,15 +979,16 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
     let mut popup = ui.data(|map| map.get_temp::<DetailsPopupState>(popup_id));
     if let Some(ref mut state) = popup {
         if state.open {
-            // 用局部变量承载开关状态，避免窗口构建器与内容闭包的借用冲突
-            let mut open = state.open;
             let ctx = ui.ctx();
-            egui::Window::new(i18n::t(i18n::Key::DetailsWindowTitle, lang))
-                .open(&mut open)
-                .collapsible(true)
-                .resizable(false)
-                .min_size(egui::vec2(340.0, 0.0))
-                .show(ctx, |ui| {
+            // 只读详情弹窗：无操作按钮，footer 闭包直接返回 false；
+            // 关闭按钮 / Esc / 点击背景均由 dialog 内部处理并返回 true
+            let should_close = widgets::dialog(
+                ctx,
+                "model_details_dialog",
+                i18n::t(i18n::Key::DetailsWindowTitle, lang),
+                340.0,
+                ctx.content_rect().height() * 0.8,
+                |ui, _avail_h| {
                     // 显示详情或加载状态
                     if let Some(ref details) = state.details {
                         let unknown = i18n::t(i18n::Key::DetailsUnknown, lang).to_string();
@@ -1066,9 +1067,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             ui.label(i18n::t(i18n::Key::Loading, lang));
                         });
                     }
-                });
-            // 写回开关状态（用户可能已点击关闭按钮）
-            state.open = open;
+                },
+                |_ui| false,
+            );
+            state.open = !should_close;
         }
     }
     // 写回弹窗状态：打开则保留，关闭则清理

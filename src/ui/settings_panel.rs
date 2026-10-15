@@ -414,49 +414,68 @@ pub fn ui(
 
     // ── 服务详情弹窗 ──
     if settings.show_system_service_details {
-        let mut open = settings.show_system_service_details;
-        egui::Window::new(i18n::t(
-            i18n::Key::SystemServiceDetailsServiceWindowTitle,
-            lang,
-        ))
-        .collapsible(false)
-        .resizable(true)
-        .default_width(520.0)
-        .default_height(400.0)
-        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-        .open(&mut open)
-        .show(ui.ctx(), |ui| {
-            // 根据选中预设生成服务文件
-            let template = i18n::t(i18n::Key::LinuxServiceFileContent, lang);
-            let cmd = if let Some(preset) = settings
-                .presets
-                .iter()
-                .find(|p| p.name == settings.system_service_selected_preset)
-            {
-                let mut temp_settings = settings.clone();
-                preset.clone().apply_to(&mut temp_settings);
-                server_manager.build_launch_command(&temp_settings)
-            } else {
-                server_manager.build_launch_command(settings)
-            };
-            let content = build_systemd_service_file(&template, &cmd);
-            let mut content = content;
-            egui::ScrollArea::vertical().show(ui, |ui| {
+        // 根据选中预设生成服务文件
+        let template = i18n::t(i18n::Key::LinuxServiceFileContent, lang);
+        let cmd = if let Some(preset) = settings
+            .presets
+            .iter()
+            .find(|p| p.name == settings.system_service_selected_preset)
+        {
+            let mut temp_settings = settings.clone();
+            preset.clone().apply_to(&mut temp_settings);
+            server_manager.build_launch_command(&temp_settings)
+        } else {
+            server_manager.build_launch_command(settings)
+        };
+        let mut content = build_systemd_service_file(&template, &cmd);
+
+        // footer 与 content 是同一调用里的两个闭包：用局部枚举中转动作，
+        // content 闭包持有 content 的可变借用，footer 若直接复制会与之冲突。
+        #[derive(PartialEq)]
+        enum ServiceDetailsAction {
+            None,
+            Copy,
+        }
+        let mut action = ServiceDetailsAction::None;
+        let should_close = widgets::dialog(
+            ui.ctx(),
+            "system_service_details_dialog",
+            i18n::t(i18n::Key::SystemServiceDetailsServiceWindowTitle, lang),
+            520.0,
+            ui.ctx().content_rect().height() * 0.8,
+            |ui, avail_h| {
+                // 由可用高度推算行数，让编辑器撑满内容区
+                let row_h = ui.text_style_height(&egui::TextStyle::Monospace);
+                let rows = ((avail_h / row_h).floor() as usize).max(6);
                 ui.add(
                     egui::TextEdit::multiline(&mut content)
                         .font(egui::TextStyle::Monospace)
-                        .desired_width(f32::INFINITY),
+                        .desired_width(f32::INFINITY)
+                        .desired_rows(rows),
                 );
-            });
-            ui.separator();
-            if ui
-                .button(i18n::t(i18n::Key::BtnCopyServiceFile, lang))
-                .clicked()
-            {
-                ui.ctx().copy_text(content.to_string());
-            }
-        });
-        settings.show_system_service_details = open;
+            },
+            |ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .add(winui::FluentButton::new(i18n::t(
+                            i18n::Key::BtnCopyServiceFile,
+                            lang,
+                        )))
+                        .clicked()
+                    {
+                        action = ServiceDetailsAction::Copy;
+                    }
+                });
+                // 复制不关闭对话框，关闭仅由 × / Esc / 遮罩触发
+                false
+            },
+        );
+
+        // dialog 返回后 content 闭包已结束，此处可安全读取 content
+        if action == ServiceDetailsAction::Copy {
+            ui.ctx().copy_text(content.to_string());
+        }
+        settings.show_system_service_details = !should_close;
     }
 
     // ── llama.cpp 编译 ──
