@@ -3,6 +3,7 @@ use crate::engine::rpc::RpcManager;
 use crate::engine::server::{LogEntry, LogLevel, ServerManager};
 use crate::i18n;
 use crate::ui::widgets;
+use fluent_egui::winui;
 
 /// 日志源抽象：保证「服务器日志」与「远程调用日志」两个面板功能完全一致、永不漂移
 trait LogSource {
@@ -43,7 +44,7 @@ fn render(
 
         ui.horizontal(|ui| {
             if ui
-                .small_button(i18n::t(i18n::Key::BtnClearLogs, lang))
+                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnClearLogs, lang)))
                 .clicked()
             {
                 source.clear_logs();
@@ -59,7 +60,13 @@ fn render(
         });
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelMaxLogLines, lang));
-            ui.add(egui::DragValue::new(&mut settings.max_log_lines).range(-1..=10000));
+            let mut max_lines = settings.max_log_lines as f64;
+            ui.add(
+                winui::NumberBox::new(&mut max_lines)
+                    .range(-1.0..=10000.0)
+                    .width(132.0),
+            );
+            settings.max_log_lines = max_lines as i32;
             ui.small(i18n::t(i18n::Key::HintLogSession, lang));
         });
 
@@ -69,12 +76,12 @@ fn render(
 
         if progress > 0.0 {
             let pct = (progress * 100.0).round() as u32;
-            let label = format!(
+            ui.small(format!(
                 "{}: {}/100%",
                 i18n::t(i18n::Key::LabelPreFillProgress, lang),
                 pct
-            );
-            ui.add(egui::ProgressBar::new(progress).text(&label));
+            ));
+            ui.add(winui::FluentProgressBar::new(progress));
             ui.add_space(4.0);
         }
 
@@ -105,7 +112,7 @@ fn render(
                         ui.add_space(8.0);
                         ui.horizontal_centered(|ui| {
                             ui.colored_label(
-                                egui::Color32::GRAY,
+                                ui.visuals().weak_text_color(),
                                 i18n::t(i18n::Key::HintNoLogs, lang),
                             );
                         });
@@ -115,18 +122,12 @@ fn render(
                         // 合并后按级别着色保持不变，且拖选可跨任意行延伸。
                         let mut job = egui::text::LayoutJob::default();
                         let text_color = ui.visuals().text_color();
-                        // Warn 颜色随主题变化：浅色主题下黄色不可读，改用 WinUI3 强调色（#005FB8），
-                        // 深色主题用 WarningText（#FCE100）
-                        let warn_color = if settings.dark_mode {
-                            egui::Color32::from_rgb(252, 225, 0)
-                        } else {
-                            egui::Color32::from_rgb(0, 95, 184)
-                        };
+                        let palette = winui::palette(widgets::current_theme(ui));
                         for entry in &logs {
                             let (prefix, color) = match entry.level {
                                 LogLevel::Info => ("", text_color),
-                                LogLevel::Warn => ("⚠ ", warn_color),
-                                LogLevel::Error => ("✖ ", egui::Color32::RED),
+                                LogLevel::Warn => ("⚠ ", palette.warning),
+                                LogLevel::Error => ("✖ ", palette.danger),
                             };
                             let line = format!("{}{}\n", prefix, entry.text);
                             job.append(

@@ -11,7 +11,7 @@ use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Response, Sense, Stroke
 use fluent_egui::winui::{self, FluentTheme};
 
 /// 库控件收 FluentTheme 枚举而非 egui::Theme，故从 dark_mode 推导。
-fn current_theme(ui: &Ui) -> FluentTheme {
+pub(crate) fn current_theme(ui: &Ui) -> FluentTheme {
     if ui.visuals().dark_mode {
         FluentTheme::Dark
     } else {
