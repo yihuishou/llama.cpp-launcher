@@ -56,6 +56,7 @@ pub struct LlamaLauncherApp {
     /// 推迟到首帧安装：egui 0.35 在首次 Context::run() 前不初始化字体表，
     /// 此时访问 ctx.fonts() 会 panic
     winui_installed: bool,
+    icon_fonts_loaded: bool,
 }
 
 impl LlamaLauncherApp {
@@ -165,6 +166,7 @@ impl LlamaLauncherApp {
             title_bar_color_set: false,
             last_system_dark,
             winui_installed: false,
+        icon_fonts_loaded: false,
         }
     }
 
@@ -525,15 +527,19 @@ impl LlamaLauncherApp {
 impl eframe::App for LlamaLauncherApp {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         if !self.winui_installed {
+// set_fonts 本帧内不生效，同帧读回的 definitions 仍是旧值，
+// 叠加 iconflow 会抹掉 install() 注册的 Segoe Fluent Icons，
+// 令图标类控件在 epaint 内 panic —— 故拆到下一帧再叠加。
             fluent_egui::winui::install(
                 ctx,
                 fluent_egui::winui::ThemeConfig::new(fluent_egui::winui::FluentTheme::Light),
             );
-            // install() 内部用 set_fonts 整体替换字体表，iconflow 图标字体须在其后叠加
+            self.winui_installed = true;
+        } else if !self.icon_fonts_loaded {
             let mut fonts = ctx.fonts(|f| f.definitions().clone());
             crate::load_icon_fonts(&mut fonts);
             ctx.set_fonts(fonts);
-            self.winui_installed = true;
+            self.icon_fonts_loaded = true;
         }
         ctx.request_repaint_after(std::time::Duration::from_millis(500));
 
@@ -704,6 +710,10 @@ impl eframe::App for LlamaLauncherApp {
         }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+// 字体表在帧边界才落地，首帧渲染会因缺图标字体而 panic（见 logic 内注释）
+if !self.icon_fonts_loaded {
+            return;
+        }
         // Panel 体系下渲染函数只拿到 Ui，但 preset 启动通知与间距可视化仍需
         // Context（取输入时间 / 发视口命令）。Context 内部是 Arc，克隆代价可忽略。
         let ctx = ui.ctx().clone();
