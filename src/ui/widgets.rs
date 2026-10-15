@@ -8,6 +8,16 @@
 //!   - 分段控件/按钮/输入框统一 6px 圆角矩形（非 pill 椭圆）
 
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
+use fluent_egui::winui::{self, FluentTheme};
+
+/// 库控件收 FluentTheme 枚举而非 egui::Theme，故从 dark_mode 推导。
+fn current_theme(ui: &Ui) -> FluentTheme {
+    if ui.visuals().dark_mode {
+        FluentTheme::Dark
+    } else {
+        FluentTheme::Light
+    }
+}
 
 // ──── 设计常量（对齐 HTML :root 变量，按用户反馈调方） ────
 
@@ -74,34 +84,16 @@ pub fn card_with_header_notice<R>(
     header: impl FnOnce(&mut Ui),
     add_contents: impl FnOnce(&mut Ui) -> R,
 ) -> R {
-    let fill = ui.visuals().widgets.noninteractive.bg_fill;
-    // ★ 关键修复：深色模式下显式调亮 stroke，让卡片边界在 #2B2B2B 上可见
-    let stroke_color = if ui.visuals().dark_mode {
-        Color32::from_rgb(90, 90, 95) // #5A5A5F — 在深色卡片上清晰可见
-    } else {
-        Color32::from_rgb(190, 190, 200) // 在浅色卡片上可见
-    };
-    let frame = egui::Frame::default()
-        .fill(fill)
-        .stroke(egui::Stroke {
-            width: 1.0_f32,
-            color: stroke_color,
-        })
-        .corner_radius(R_CARD)
-        .inner_margin(egui::Margin::same(24_i8)) // HTML .card{padding:24px}
-        .outer_margin(egui::Margin::symmetric(0, 12)); // 子框之间间距
-    frame
+    winui::card_frame(current_theme(ui))
+        .outer_margin(egui::Margin::symmetric(0, 12))
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 12.0;
             ui.horizontal(|ui| {
                 ui.label(title);
                 // 标题右侧紧跟的状态通知（显式颜色，随成败切换）
                 if let Some((ok, msg)) = notice {
-                    let color = if ok {
-                        Color32::from_rgb(52, 168, 83) // #34A853 成功绿
-                    } else {
-                        ui.visuals().error_fg_color
-                    };
+                    let p = winui::palette(current_theme(ui));
+                    let color = if ok { p.success } else { p.danger };
                     ui.label(
                         egui::RichText::new(format!("{} {}", if ok { "✓" } else { "✕" }, msg))
                             .color(color),
@@ -119,154 +111,29 @@ pub fn card_with_header_notice<R>(
         .inner
 }
 
-// ──── iOS Toggle（带标签，开关在左） ────
+// ──── WinUI 3 开关 ────
 
-/// iOS 风格开关 + 标签行。on 状态使用固定的强调色（不随深色模式变暗）。
-/// `toggle`：[开关] [标签]；`toggle_trailing`：[标签] …… [开关]（开关在选项末尾）
-
-/// 开关在选项末尾：标签在左，开关靠右（供 KV 缓存配置等整行选项使用）
-pub fn toggle_trailing(ui: &mut Ui, on: &mut bool, label: &str, accent: Color32) -> bool {
-    draw_toggle(ui, on, label, accent, true)
+/// 标签在左、开关靠右（供 KV 缓存配置等整行选项使用）。
+pub fn toggle_trailing(ui: &mut Ui, on: &mut bool, label: &str, _accent: Color32) -> bool {
+    ui.add(winui::ToggleSwitch::new(on).label(label)).changed()
 }
 
-/// `trailing=false`：开关在左、标签在右；`trailing=true`：标签在左、开关靠右（选项末尾）
-fn draw_toggle(ui: &mut Ui, on: &mut bool, label: &str, accent: Color32, trailing: bool) -> bool {
-    let height = 22.0_f32;
-    let toggle_width = 40.0_f32;
-    let spacing = 10.0;
-
-    // 用 galley 实际测量标签宽度（替代旧"字符数×13px"估算，避免间距过大/重叠）
-    let label_width = ui.ctx().fonts_mut(|f| {
-        f.layout_no_wrap(
-            label.to_string(),
-            FontId::default(),
-            ui.visuals().text_color(),
-        )
-        .rect
-        .size()
-        .x
+/// 开关在左、标签在右。
+pub fn toggle(ui: &mut Ui, on: &mut bool, label: &str, _accent: Color32) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        changed = ui.add(winui::ToggleSwitch::new(on)).changed();
+        ui.label(label);
     });
-    let total_width = toggle_width + spacing + label_width;
-    let (resp, painter) = ui.allocate_painter(Vec2::new(total_width, height), Sense::click());
-    let rect = resp.rect;
-    let radius = height / 2.0;
-
-    if trailing {
-        // ── 标签文字（左侧）──
-        let label_pos = Pos2::new(rect.left(), rect.center().y);
-        painter.text(
-            label_pos,
-            Align2::LEFT_CENTER,
-            label,
-            FontId::default(),
-            ui.visuals().text_color(),
-        );
-    }
-
-    // ── 开关 track（trailing 时靠右，即选项末尾）──
-    let track_rect = if trailing {
-        Rect::from_min_max(
-            Pos2::new(rect.right() - toggle_width, rect.top()),
-            Pos2::new(rect.right(), rect.bottom()),
-        )
-    } else {
-        Rect::from_min_size(rect.left_top(), Vec2::new(toggle_width, height))
-    };
-    let off_color = if ui.visuals().dark_mode {
-        Color32::from_gray(90)
-    } else {
-        Color32::from_rgb(200, 200, 200)
-    };
-    let track_fill = if *on { accent } else { off_color };
-    painter.rect_filled(track_rect, radius, track_fill);
-
-    // ── knob ──
-    let knob_r = radius - 3.0;
-    let cx = if *on {
-        track_rect.right() - radius
-    } else {
-        track_rect.left() + radius
-    };
-    painter.circle_filled(Pos2::new(cx, rect.center().y), knob_r, Color32::WHITE);
-
-    if !trailing {
-        // ── 标签文字（右侧）──
-        let label_x = rect.left() + toggle_width + spacing;
-        let label_pos = Pos2::new(label_x, rect.center().y);
-        painter.text(
-            label_pos,
-            Align2::LEFT_CENTER,
-            label,
-            FontId::default(),
-            ui.visuals().text_color(),
-        );
-    }
-
-    if resp.clicked() {
-        *on = !*on;
-        true
-    } else {
-        false
-    }
-}
-
-/// 开关在左，标签在右（保持原有调用方式）
-pub fn toggle(ui: &mut Ui, on: &mut bool, label: &str, accent: Color32) -> bool {
-    draw_toggle(ui, on, label, accent, false)
+    changed
 }
 
 // ──── 分段控件 ────
 
-/// 分段控件：6px 圆角矩形，内边距舒适，选中项高亮
 pub fn segmented(ui: &mut Ui, options: &[&str], selected: &mut usize, _accent: Color32) -> bool {
-    let mut changed = false;
-    // 背景槽：用非交互控件填充色
-    let slot_fill = if ui.visuals().dark_mode {
-        Color32::from_rgb(50, 50, 50) // #323232 WinUI3 ControlFillPressed
-    } else {
-        Color32::from_rgb(245, 245, 245) // #F5F5F5 WinUI3 ControlFillPressed
-    };
-    let frame = egui::Frame::default()
-        .fill(slot_fill)
-        .corner_radius(R_CTL)
-        .inner_margin(egui::Margin::same(2));
-    frame.show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 2.0;
-            for (i, opt) in options.iter().enumerate() {
-                let is_sel = *selected == i;
-                // 选中态填充：WinUI 3 分段控件选中项用强调色（深色），
-                // 浅色模式用白色卡片浮起在浅灰轨道上。
-                let sel_fill = if ui.visuals().dark_mode {
-                    _accent
-                } else {
-                    Color32::WHITE // #FFFFFF CardBackground
-                };
-                // 按钮内边距通过 Frame inner_margin 控制（egui 0.33.3 Button 无 .padding()）
-                let resp = if is_sel {
-                    ui.add(
-                        egui::Button::new(*opt)
-                            .fill(sel_fill)
-                            .corner_radius(R_CTL - 1.0),
-                    )
-                } else {
-                    ui.add(
-                        egui::Button::new(
-                            egui::RichText::new(*opt).color(ui.visuals().weak_text_color()),
-                        )
-                        .fill(Color32::TRANSPARENT)
-                        .corner_radius(R_CTL - 1.0)
-                        .stroke(egui::Stroke::NONE),
-                    )
-                };
-                if resp.clicked() {
-                    *selected = i;
-                    changed = true;
-                }
-            }
-        });
-    });
-    changed
+    let before = *selected;
+    ui.add(winui::SegmentedControl::new(selected, options.iter().copied()));
+    *selected != before
 }
 
 // ──── 状态点 ────
