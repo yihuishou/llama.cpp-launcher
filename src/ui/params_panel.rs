@@ -855,6 +855,15 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
         });
 
+        // K 缓存类型启用开关
+        ui.horizontal(|ui| {
+            ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeK, lang));
+            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeK, lang));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                widgets::toggle(ui, &mut settings.enable_cache_type_k, "", accent);
+            });
+        });
+
         // K 缓存类型：标签 + ❓提示框同一行
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelCacheTypeK, lang));
@@ -874,6 +883,15 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     settings.cache_type_k = k_type.to_string();
                 }
             }
+        });
+
+        // V 缓存类型启用开关
+        ui.horizontal(|ui| {
+            ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeV, lang));
+            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeV, lang));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                widgets::toggle(ui, &mut settings.enable_cache_type_v, "", accent);
+            });
         });
 
         // V 缓存类型：标签 + ❓提示框同一行

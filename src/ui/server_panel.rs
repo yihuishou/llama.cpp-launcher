@@ -613,6 +613,15 @@ pub fn ui(
                 accent,
             );
 
+            // 日志级别启用开关
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::CheckboxEnableLogVerbosity, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableLogVerbosity, lang));
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    widgets::toggle(ui, &mut settings.enable_log_verbosity, "", accent);
+                });
+            });
+
             // 日志级别（--log-verbosity）分段控件
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelLogVerbosity, lang));
