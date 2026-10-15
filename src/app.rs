@@ -313,8 +313,14 @@ impl LlamaLauncherApp {
     }
 
     fn render_sidebar(&mut self, ui: &mut egui::Ui) {
-        // 侧边栏填充色 = panel_fill（与卡片同色），去掉默认分隔线
-        let sidebar_fill = ui.visuals().panel_fill;
+        // 侧边栏填充色取 app 层实色（与卡片同色），去掉默认分隔线。
+        // 不能读 panel_fill：库把它设成透明好让 Mica 透出来，但 Mica 跟随的是 Windows
+        // 系统主题而非本应用的 dark_mode，系统浅色时深色主题下这里会透出白色。
+        let sidebar_fill = if self.settings.dark_mode {
+            Color32::from_rgb(43, 43, 43) // #2B2B2B = WinUI3 card_bg
+        } else {
+            Color32::from_rgb(255, 255, 255) // #FFFFFF = WinUI3 card_bg
+        };
         egui::Panel::left("sidebar")
             .resizable(false)
             .show_separator_line(false)
