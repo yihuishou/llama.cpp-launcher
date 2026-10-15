@@ -160,6 +160,8 @@ fn main() -> eframe::Result {
         Box::new(move |cc| {
             match cc.winit_window() {
                 Some(window) => {
+                    // 主题写死 Light：这里只求尽早把材质应用上，材质本身与主题无关；
+                    // 原生边框的深浅由 App 首帧的 sync_native_window_theme 按实际主题改写。
                     let status = fluent_egui::winui::sync_window_backdrop(
                         window,
                         fluent_egui::winui::FluentTheme::Light,

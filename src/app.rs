@@ -51,7 +51,7 @@ pub struct LlamaLauncherApp {
     start_minimized: bool,                  // 开机自启时最小化到任务栏
     debug_mode: bool,                       // egui Inspector / 调试模式开关
     spacing_debugger: SpacingDebugger,      // UI 间距可视化工具
-    title_bar_color_set: bool,              // 是否已设置过窗口标题栏颜色（仅一次）
+    native_theme_synced: bool,              // 原生窗口属性是否已同步过（首帧兜底，仅一次）
     last_system_dark: Option<bool>,
     /// 推迟到首帧安装：egui 0.35 在首次 Context::run() 前不初始化字体表，
     /// 此时访问 ctx.fonts() 会 panic
@@ -166,7 +166,7 @@ impl LlamaLauncherApp {
             start_minimized,
             debug_mode: false,
             spacing_debugger: SpacingDebugger::new(),
-            title_bar_color_set: false,
+            native_theme_synced: false,
             last_system_dark,
             winui_installed: false,
             icon_fonts_loaded: false,
@@ -321,21 +321,30 @@ impl LlamaLauncherApp {
         } else {
             Color32::from_rgb(255, 255, 255) // #FFFFFF = WinUI3 card_bg
         };
+        // 圆角挖掉的弧形区没有任何 egui 图元，会漏到窗口底层由 DWM 决定颜色（随系统主题/
+        // 焦点/最大化漂移，深色下呈黑方角）。故先铺顶栏色方角底，再叠圆角本体。
+        let backing_fill = if self.settings.dark_mode {
+            Color32::from_rgb(32, 32, 32) // #202020 = render_top_bar 的 fill
+        } else {
+            Color32::from_rgb(243, 243, 243) // #F3F3F3 = render_top_bar 的 fill
+        };
         egui::Panel::left("sidebar")
             .resizable(false)
             .show_separator_line(false)
             .default_size(198.0)
             .min_size(198.0)
             .max_size(198.0)
+            // 方角底色：不设 corner_radius，否则弧形区又漏回 DWM
             .frame(
                 egui::Frame::default()
-                    .fill(sidebar_fill)
-                    .stroke(egui::Stroke::NONE)
-                    // 半径随 theme.rs 的 CornerRadius::same(6)；顶部两角与顶栏之间的
-                    // 6px 缺口是 Win11 浮动面板观感，别当成破缝给去掉圆角
-                    .corner_radius(6.0),
+                    .fill(backing_fill)
+                    .stroke(egui::Stroke::NONE),
             )
             .show(ui, |ui| {
+                // inner_margin 为 0，闭包开头 max_rect() 即整个面板矩形，与方角底色同尺寸
+                let rect = ui.max_rect();
+                ui.painter()
+                    .rect_filled(rect, egui::CornerRadius::same(6), sidebar_fill);
                 let accent = crate::theme::accent_color(&self.settings.accent_color);
 
                 ui.add_space(10.0);
@@ -635,8 +644,8 @@ impl eframe::App for LlamaLauncherApp {
             let accent = crate::theme::parse_hex(&self.settings.accent_color);
             crate::theme::apply_theme(ctx, self.settings.dark_mode, accent);
             self.theme_applied = sig;
-            // 主题变化时同步更新原生标题栏颜色（与侧边栏/主内容区一致）
-            set_title_bar_color(self.settings.dark_mode, frame);
+            // 主题变化时同步原生窗口属性（标题栏透明 + Mica 取色跟随）
+            sync_native_window_theme(self.settings.dark_mode, frame);
         }
 
         // 应用启动时自动启动 Server
@@ -645,11 +654,10 @@ impl eframe::App for LlamaLauncherApp {
             self.server_manager.start(&self.settings);
         }
 
-        // ★ 首次帧：确保 Windows 标题栏颜色已设置（与侧边栏同色）
-        // 注：主题块通常也会在首帧触发，这里作为保底，保证任意配置下都能着色
-        if !self.title_bar_color_set {
-            self.title_bar_color_set = true;
-            set_title_bar_color(self.settings.dark_mode, frame);
+        // ★ 首次帧保底：主题块通常也会在首帧触发，这里保证任意配置下原生属性都已同步
+        if !self.native_theme_synced {
+            self.native_theme_synced = true;
+            sync_native_window_theme(self.settings.dark_mode, frame);
         }
 
         // 开机自启时最小化到任务栏（仅第一帧执行）
@@ -854,18 +862,18 @@ impl Drop for LlamaLauncherApp {
     }
 }
 
-// 设置 Windows 原生标题栏（可拖动区域）为透明，让 Mica 材质延伸进去。
-// 材质窗口下把标题栏刷成实色会与半透明客户区割裂，故此处传 DWMWA_COLOR_NONE
-// 而非具体色值。旧版系统不支持该属性时调用失败并静默忽略，标题栏回退系统默认。
+// 同步只有 DWM 知道、egui 侧无法表达的窗口主题信息：
+// 1. 原生标题栏设为透明（DWMWA_COLOR_NONE），让 Mica 延伸进去；刷实色会与半透明客户区割裂。
+// 2. DWMWA_USE_IMMERSIVE_DARK_MODE 让原生边框跟随应用主题。它只作用于非客户区（标题栏/
+//    边框），管不到 Mica 着色——Mica 只跟随 Windows 系统主题，应用侧改不动。
+// 属性不受支持时静默忽略，回退系统默认。
 #[cfg(target_os = "windows")]
-fn set_title_bar_color(_dark: bool, frame: &eframe::Frame) {
+fn sync_native_window_theme(dark: bool, frame: &eframe::Frame) {
     use raw_window_handle::{HasWindowHandle, RawWindowHandle};
     use windows_sys::Win32::Foundation::HWND;
     use windows_sys::Win32::Graphics::Dwm::{
-        DwmSetWindowAttribute, DWMWA_CAPTION_COLOR, DWMWA_COLOR_NONE,
+        DwmSetWindowAttribute, DWMWA_CAPTION_COLOR, DWMWA_COLOR_NONE, DWMWA_USE_IMMERSIVE_DARK_MODE,
     };
-
-    let colorref: u32 = DWMWA_COLOR_NONE;
 
     let hwnd: HWND = match frame.window_handle() {
         Ok(h) => match h.as_raw() {
@@ -875,19 +883,32 @@ fn set_title_bar_color(_dark: bool, frame: &eframe::Frame) {
         Err(_) => return,
     };
 
+    // DWM 只读这 32 位的 0/1，BOOL 在 Win32 上就是 i32
+    let colorref: u32 = DWMWA_COLOR_NONE;
+    let darkref: i32 = i32::from(dark);
+
     unsafe {
-        // 忽略返回值：失败时（旧系统/无 DWM）标题栏保持系统默认即可
+        // 忽略返回值：失败时（旧系统/无 DWM）保持系统默认即可
         let _ = DwmSetWindowAttribute(
             hwnd,
             DWMWA_CAPTION_COLOR as u32,
             &colorref as *const u32 as *const std::ffi::c_void,
             std::mem::size_of::<u32>() as u32,
         );
+        let hr = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_USE_IMMERSIVE_DARK_MODE as u32,
+            &darkref as *const i32 as *const std::ffi::c_void,
+            std::mem::size_of::<i32>() as u32,
+        );
+        // 只记这一项：写失败时界面不会有任何变化，靠日志区分「属性没写进去」与「写进去了但
+        // 视觉没差别」
+        log::info!("[backdrop] immersive_dark_mode={} hr={:#x}", darkref, hr);
     }
 }
 
 #[cfg(not(target_os = "windows"))]
-fn set_title_bar_color(_dark: bool, _frame: &eframe::Frame) {}
+fn sync_native_window_theme(_dark: bool, _frame: &eframe::Frame) {}
 
 /// 从 exe 同级及向上若干级目录查找 llama-cpp-launcher.png 并解码为纹理
 fn load_logo_texture(ctx: &egui::Context) -> Option<egui::TextureHandle> {
