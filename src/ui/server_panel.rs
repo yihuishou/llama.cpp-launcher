@@ -44,7 +44,13 @@ pub fn ui(
             });
 
             ui.horizontal(|ui| {
-                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowse, lang))).clicked() {
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnBrowse,
+                        lang,
+                    )))
+                    .clicked()
+                {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title(i18n::t(i18n::Key::DialogSelectServer, lang))
                         .add_filter(i18n::t(i18n::Key::FilterExecutable, lang), &["exe"])
@@ -53,7 +59,13 @@ pub fn ui(
                         settings.server_path = path;
                     }
                 }
-                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnAutoDetect, lang))).clicked() {
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnAutoDetect,
+                        lang,
+                    )))
+                    .clicked()
+                {
                     if let Some(path) = settings_manager.auto_detect_server_path() {
                         settings.server_path = path;
                     } else {
@@ -79,7 +91,10 @@ pub fn ui(
                 }
 
                 if ui
-                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnCheckVersion, lang)))
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnCheckVersion,
+                        lang,
+                    )))
                     .clicked()
                 {
                     settings.llama_version = get_local_llama_version(&settings.server_path);
@@ -380,23 +395,26 @@ pub fn ui(
             ui.add(winui::FluentTextEdit::new(&mut settings.host));
             ui.label(i18n::t(i18n::Key::LabelPort, lang));
             let mut port = settings.port as f64;
-            ui.add(winui::NumberBox::new(&mut port).range(1.0..=65535.0).width(90.0));
+            ui.add(
+                winui::NumberBox::new(&mut port)
+                    .range(1.0..=65535.0)
+                    .width(90.0),
+            );
             settings.port = port as _;
         });
 
         ui.horizontal(|ui| {
             if ui
                 .add(
-                    winui::FluentButton::new(i18n::t(i18n::Key::BtnHostLocal, lang)).min_width(40.0),
+                    winui::FluentButton::new(i18n::t(i18n::Key::BtnHostLocal, lang))
+                        .min_width(40.0),
                 )
                 .clicked()
             {
                 settings.host = "127.0.0.1".to_string();
             }
             if ui
-                .add(
-                    winui::FluentButton::new(i18n::t(i18n::Key::BtnHostAny, lang)).min_width(50.0),
-                )
+                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnHostAny, lang)).min_width(50.0))
                 .clicked()
             {
                 settings.host = "0.0.0.0".to_string();
@@ -407,7 +425,11 @@ pub fn ui(
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelParallelSlots, lang));
             let mut slots = settings.parallel_slots as f64;
-            ui.add(winui::NumberBox::new(&mut slots).range(-1.0..=1024.0).width(90.0));
+            ui.add(
+                winui::NumberBox::new(&mut slots)
+                    .range(-1.0..=1024.0)
+                    .width(90.0),
+            );
             settings.parallel_slots = slots as _;
             if settings.parallel_slots == 0 {
                 settings.parallel_slots = 1;
@@ -519,9 +541,13 @@ pub fn ui(
                     ui.separator();
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelAddEndpoint, lang));
-                        let response = ui.add(winui::FluentTextEdit::new(&mut settings.rpc_endpoint_input));
+                        let response =
+                            ui.add(winui::FluentTextEdit::new(&mut settings.rpc_endpoint_input));
                         if ui
-                            .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnAddEndpoint, lang)))
+                            .add(winui::FluentButton::new(i18n::t(
+                                i18n::Key::BtnAddEndpoint,
+                                lang,
+                            )))
                             .clicked()
                             || (response.lost_focus()
                                 && ui.input(|i| i.key_pressed(egui::Key::Enter)))
@@ -562,7 +588,10 @@ pub fn ui(
                     if ui
                         .add_enabled(
                             !already_added,
-                            winui::FluentButton::new(i18n::t(i18n::Key::BtnAddLocalRpcClient, lang)),
+                            winui::FluentButton::new(i18n::t(
+                                i18n::Key::BtnAddLocalRpcClient,
+                                lang,
+                            )),
                         )
                         .clicked()
                     {
@@ -642,7 +671,13 @@ pub fn ui(
                 if resp.changed() {
                     settings.ssl_cert_file = PathBuf::from(&cert_str);
                 }
-                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowseCert, lang))).clicked() {
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnBrowseCert,
+                        lang,
+                    )))
+                    .clicked()
+                {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title(i18n::t(i18n::Key::LabelSslCertFile, lang))
                         .add_filter("PEM", &["pem", "crt", "cer"])
@@ -660,7 +695,13 @@ pub fn ui(
                 if resp.changed() {
                     settings.ssl_key_file = PathBuf::from(&key_str);
                 }
-                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowseCert, lang))).clicked() {
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnBrowseCert,
+                        lang,
+                    )))
+                    .clicked()
+                {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title(i18n::t(i18n::Key::LabelSslKeyFile, lang))
                         .add_filter("PEM", &["pem", "key"])

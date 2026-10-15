@@ -371,7 +371,13 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if response.changed() {
                     settings.chat_template_file = std::path::PathBuf::from(&file_str);
                 }
-                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowse, lang))).clicked() {
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnBrowse,
+                        lang,
+                    )))
+                    .clicked()
+                {
                     if let Some(path) = rfd::FileDialog::new()
                         .set_title(i18n::t(i18n::Key::DialogSelectChatTemplate, lang))
                         .add_filter(
@@ -1230,7 +1236,13 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelVideoFfmpegDir, lang));
             ui.add(egui::TextEdit::singleline(&mut settings.video_ffmpeg_dir).desired_width(200.0));
-            if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowse, lang))).clicked() {
+            if ui
+                .add(winui::FluentButton::new(i18n::t(
+                    i18n::Key::BtnBrowse,
+                    lang,
+                )))
+                .clicked()
+            {
                 if let Some(path) = rfd::FileDialog::new()
                     .set_title("Select ffmpeg directory")
                     .pick_folder()
@@ -1360,7 +1372,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::AdvDrySequenceBreaker, lang));
-                        ui.add(winui::FluentTextEdit::new(&mut settings.dry_sequence_breaker));
+                        ui.add(winui::FluentTextEdit::new(
+                            &mut settings.dry_sequence_breaker,
+                        ));
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::AdvDrySequenceBreakerHint, lang),

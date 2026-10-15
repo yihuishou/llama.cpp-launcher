@@ -22,7 +22,10 @@ pub fn ui(
                     ui.monospace(cmd);
                 });
                 if ui
-                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnCopyToClipboard, lang)))
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnCopyToClipboard,
+                        lang,
+                    )))
                     .clicked()
                 {
                     ui.ctx().copy_text(cmd.to_string());
@@ -41,7 +44,10 @@ pub fn ui(
                     ui.monospace(cmd);
                 });
                 if ui
-                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnCopyToClipboard, lang)))
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnCopyToClipboard,
+                        lang,
+                    )))
                     .clicked()
                 {
                     ui.ctx().copy_text(cmd.to_string());

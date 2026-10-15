@@ -29,7 +29,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             ui.horizontal(|ui| {
                 if ui
-                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnEditMcpConfig, lang)))
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnEditMcpConfig,
+                        lang,
+                    )))
                     .clicked()
                 {
                     settings.mcp_editor_text = settings.mcp_config_json.clone();
@@ -190,7 +193,10 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
                     ui.add_space(6.0);
                     ui.horizontal(|ui| {
                         if ui
-                            .add(winui::AccentButton::new(i18n::t(i18n::Key::BtnMcpSave, lang)))
+                            .add(winui::AccentButton::new(i18n::t(
+                                i18n::Key::BtnMcpSave,
+                                lang,
+                            )))
                             .clicked()
                         {
                             match parse_mcp_servers(&settings.mcp_editor_text) {
@@ -216,7 +222,10 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
                             }
                         }
                         if ui
-                            .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnMcpCancel, lang)))
+                            .add(winui::FluentButton::new(i18n::t(
+                                i18n::Key::BtnMcpCancel,
+                                lang,
+                            )))
                             .clicked()
                         {
                             close_after_save = true;

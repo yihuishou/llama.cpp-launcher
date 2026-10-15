@@ -7,8 +7,8 @@ use crate::app::{disable_auto_start, enable_auto_start, open_repo_url};
 use crate::config::settings::{AppSettings, SettingsManager};
 use crate::i18n;
 use crate::ui::widgets;
-use fluent_egui::winui;
 use egui::{Color32, RichText};
+use fluent_egui::winui;
 
 pub fn ui(
     ui: &mut egui::Ui,

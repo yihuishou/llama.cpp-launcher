@@ -807,7 +807,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
             ui.horizontal(|ui| {
                 if ui
-                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnSelectFolder, lang)))
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnSelectFolder,
+                        lang,
+                    )))
                     .clicked()
                 {
                     if let Some(path) = rfd::FileDialog::new()
@@ -817,7 +820,13 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         settings.model_dir = path;
                     }
                 }
-                if ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnAutoDetect, lang))).clicked() {
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnAutoDetect,
+                        lang,
+                    )))
+                    .clicked()
+                {
                     if let Some(path) = auto_detect_model_dir() {
                         settings.model_dir = path;
                     } else {

@@ -37,10 +37,15 @@ pub fn lighten_accent(accent: egui::Color32, t: f32) -> egui::Color32 {
 /// - dark: 深色模式开关
 /// - accent: 全局强调色 (RGB)
 pub fn apply_theme(ctx: &egui::Context, dark: bool, accent: [u8; 3]) {
-    let theme = if dark { FluentTheme::Dark } else { FluentTheme::Light };
+    let theme = if dark {
+        FluentTheme::Dark
+    } else {
+        FluentTheme::Light
+    };
     winui::apply_theme(
         ctx,
-        ThemeConfig::new(theme).with_accent(egui::Color32::from_rgb(accent[0], accent[1], accent[2])),
+        ThemeConfig::new(theme)
+            .with_accent(egui::Color32::from_rgb(accent[0], accent[1], accent[2])),
     );
 
     // 提示框使用更克制的阴影，避免问号帮助框出现大面积黑色晕影

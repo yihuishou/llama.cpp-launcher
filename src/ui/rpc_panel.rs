@@ -142,7 +142,10 @@ pub fn ui(
 
         ui.horizontal(|ui| {
             if ui
-                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowse, lang)))
+                .add(winui::FluentButton::new(i18n::t(
+                    i18n::Key::BtnBrowse,
+                    lang,
+                )))
                 .clicked()
             {
                 if let Some(path) = rfd::FileDialog::new()
@@ -154,7 +157,10 @@ pub fn ui(
                 }
             }
             if ui
-                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnAutoDetect, lang)))
+                .add(winui::FluentButton::new(i18n::t(
+                    i18n::Key::BtnAutoDetect,
+                    lang,
+                )))
                 .clicked()
             {
                 if let Some(path) = settings_manager.auto_detect_rpc_path() {
@@ -188,7 +194,11 @@ pub fn ui(
             ui.label(i18n::t(i18n::Key::LabelPort, lang));
             let mut port = settings.rpc_port as f64;
             if ui
-                .add(winui::NumberBox::new(&mut port).range(1.0..=65535.0).width(90.0))
+                .add(
+                    winui::NumberBox::new(&mut port)
+                        .range(1.0..=65535.0)
+                        .width(90.0),
+                )
                 .changed()
             {
                 settings.rpc_port = port as _;
@@ -197,7 +207,10 @@ pub fn ui(
 
         ui.horizontal(|ui| {
             if ui
-                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnHostLocal, lang)).min_width(40.0))
+                .add(
+                    winui::FluentButton::new(i18n::t(i18n::Key::BtnHostLocal, lang))
+                        .min_width(40.0),
+                )
                 .clicked()
             {
                 settings.rpc_host = "127.0.0.1".to_string();
@@ -214,7 +227,11 @@ pub fn ui(
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelRpcThreads, lang));
             let mut threads = settings.rpc_threads as f64;
-            ui.add(winui::NumberBox::new(&mut threads).range(1.0..=1024.0).width(90.0));
+            ui.add(
+                winui::NumberBox::new(&mut threads)
+                    .range(1.0..=1024.0)
+                    .width(90.0),
+            );
             settings.rpc_threads = threads as _;
             ui.small(i18n::t(i18n::Key::HintRpcThreads, lang));
         });
@@ -386,7 +403,10 @@ pub fn ui(
 
         // 清除缓存按钮
         if ui
-            .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnClearRpcCache, lang)))
+            .add(winui::FluentButton::new(i18n::t(
+                i18n::Key::BtnClearRpcCache,
+                lang,
+            )))
             .clicked()
         {
             if cache_dir.exists() {

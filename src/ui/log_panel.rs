@@ -44,7 +44,10 @@ fn render(
 
         ui.horizontal(|ui| {
             if ui
-                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnClearLogs, lang)))
+                .add(winui::FluentButton::new(i18n::t(
+                    i18n::Key::BtnClearLogs,
+                    lang,
+                )))
                 .clicked()
             {
                 source.clear_logs();

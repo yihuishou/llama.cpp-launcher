@@ -132,7 +132,10 @@ pub fn toggle(ui: &mut Ui, on: &mut bool, label: &str, _accent: Color32) -> bool
 
 pub fn segmented(ui: &mut Ui, options: &[&str], selected: &mut usize, _accent: Color32) -> bool {
     let before = *selected;
-    ui.add(winui::SegmentedControl::new(selected, options.iter().copied()));
+    ui.add(winui::SegmentedControl::new(
+        selected,
+        options.iter().copied(),
+    ));
     *selected != before
 }
 
