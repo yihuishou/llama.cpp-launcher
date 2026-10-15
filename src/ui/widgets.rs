@@ -1,9 +1,10 @@
 //! 通用 UI 组件 —— 移植自 HTML 原型的设计语义
 //!
 //! 卡片、开关已改用 fluent-egui 的 WinUI 3 实现，配色与圆角由库接管，
-//! 圆角统一在 `crate::theme::apply_theme` 里覆写。以下组件库中无等价物，故保留自绘：
-//!   - `nav_row` / `nav_icon_paint`：选中态 accent-tint 背景 + accent 色文字，
-//!     对齐 HTML `.nav-item.active{color:var(--accent)}`；10 个图标为手写矢量
+//! 圆角统一在 `crate::theme::apply_theme` 里覆写。图标取自 iconflow 的 Fluent UI
+//! 字体字形（见 `nav_icon_paint`），不再手写矢量路径。以下组件库中无等价物，故自绘：
+//!   - `nav_row`：选中态 accent-tint 背景 + accent 色文字，
+//!     对齐 HTML `.nav-item.active{color:var(--accent)}`
 //!   - `color_swatch` / `rounded_button`：`egui::Button` 配自定义 `.fill()`，
 //!     库的 FluentButton 只走主题色、AccentButton 亦不支持自定义填充
 //!   - `segmented` / `segmented_width`：库把选中态固定为 `card_bg`（浅主题下近白，
@@ -504,269 +505,99 @@ pub fn rounded_button(text: &str, fill: Option<Color32>) -> egui::Button<'_> {
     }
 }
 
-// ──── 自绘矢量图标（SF Symbols 风格） ────
+// ──── 导航栏图标（iconflow 的 Fluent UI 字体） ────
 
-/// 在给定矩形内自绘导航图标（扁平矢量风格，stroke-based）
-pub fn nav_icon_paint(painter: &Painter, rect: Rect, kind: NavIcon, color: Color32) {
-    let w = rect.width();
-    let h = rect.height();
-    let cx = rect.center().x;
-    let _cy = rect.center().y; // Settings gear 以 cx 为基准对称绘制，cy 保留备用
-                               // 对齐 HTML .nav-item .ico svg{stroke-width:1.8}，图标 18×18 在 24×24 viewBox 内
-    let s = Stroke::new(1.8_f32, color);
+/// 解析导航图标字形，返回 (字符, 字体 family)。
+///
+/// 用 `try_icon` 而非 `icon()`：后者在 (Style, Size) 不受支持时 panic，而本函数
+/// 每帧被调用，不能炸进程。`Size` 指字体变体档位（10/12/16/20/24/28/32/48/
+/// Regular），不是渲染字号——实际字号由 `FontId` 决定，两者独立。
+///
+/// Regular 档在前：它是非实心的可变字体，描边风格与导航项 13px 文字协调，
+/// 且在 18px 下比静态字面锐利；Filled 档仅作兜底。实测两者都覆盖全部 10 个图标。
+fn nav_icon_glyph(kind: NavIcon) -> Option<(char, &'static str)> {
+    use iconflow::{Pack, Size, Style};
 
-    // 辅助函数：将 SVG 24×24 坐标系映射到实际 rect
-    let sx = |x: f32| rect.left() + (x / 24.0) * w;
-    let sy = |y: f32| rect.top() + (y / 24.0) * h;
+    const FALLBACKS: [(Style, Size); 2] = [
+        (Style::Regular, Size::Regular),
+        (Style::Filled, Size::Custom(20)),
+    ];
+    FALLBACKS
+        .iter()
+        .find_map(|&(style, size)| {
+            iconflow::try_icon(Pack::Fluentui, nav_icon_name(kind), style, size).ok()
+        })
+        .and_then(|icon| Some((char::from_u32(icon.codepoint)?, icon.family)))
+}
 
+fn nav_icon_name(kind: NavIcon) -> &'static str {
     match kind {
-        NavIcon::Server => {
-            // ★ HTML: <rect x="2" y="3" width="20" height="14" rx="2"/>
-            //         <path d="M8 21h8M12 17v4"/>
-            //         <line x1="7" y1="8" x2="7" y2="12"/><line x1="17" y1="8" x2="17" y2="12"/>
-            // 显示器屏幕
-            painter.rect_stroke(
-                Rect::from_min_max(Pos2::new(sx(2.0), sy(3.0)), Pos2::new(sx(22.0), sy(17.0))),
-                2.0,
-                s,
-                egui::StrokeKind::Middle,
-            );
-            // 支架
-            painter.line_segment(
-                [Pos2::new(sx(8.0), sy(21.0)), Pos2::new(sx(16.0), sy(21.0))],
-                s,
-            );
-            painter.line_segment(
-                [Pos2::new(sx(12.0), sy(17.0)), Pos2::new(sx(12.0), sy(21.0))],
-                s,
-            );
-            // 屏幕内容线
-            painter.line_segment(
-                [Pos2::new(sx(7.0), sy(8.0)), Pos2::new(sx(7.0), sy(12.0))],
-                s,
-            );
-            painter.line_segment(
-                [Pos2::new(sx(17.0), sy(8.0)), Pos2::new(sx(17.0), sy(12.0))],
-                s,
-            );
-        }
-        NavIcon::Rpc => {
-            // ★ 保留不变：三点层级连接图（用户明确要求）
-            let r = w * 0.17;
-            let top = Pos2::new(cx, rect.top() + r + 1.0);
-            let bl = Pos2::new(rect.left() + r + 1.0, rect.bottom() - r - 1.0);
-            let br = Pos2::new(rect.right() - r - 1.0, rect.bottom() - r - 1.0);
-            painter.line_segment([top, bl], s);
-            painter.line_segment([top, br], s);
-            painter.circle_stroke(top, r, s);
-            painter.circle_stroke(bl, r, s);
-            painter.circle_stroke(br, r, s);
-        }
-        NavIcon::Mcp => {
-            // ★ MCP 工具集线：左侧小方块（主程序）连接右侧三个工具节点
-            let hub = Rect::from_min_max(Pos2::new(sx(3.0), sy(9.0)), Pos2::new(sx(8.0), sy(15.0)));
-            painter.rect_stroke(hub, 1.5, s, egui::StrokeKind::Middle);
-            let r = w * 0.11;
-            let nodes = [
-                Pos2::new(sx(19.0), sy(4.5)),
-                Pos2::new(sx(21.0), sy(12.0)),
-                Pos2::new(sx(19.0), sy(19.5)),
-            ];
-            for &node in &nodes {
-                painter.line_segment([Pos2::new(sx(8.0), sy(12.0)), node], s);
-                painter.circle_stroke(node, r, s);
-            }
-        }
-        NavIcon::Model => {
-            // ★ HTML: 圆角六边形（3D 盒子 / AI 模型经典图标）
-            // 原始尖角六边形顶点，每对相邻点之间插入圆角过渡点（内缩 ~5%）
-            let hex_raw = [
-                Pos2::new(sx(12.0), sy(2.37)),  // 顶
-                Pos2::new(sx(20.0), sy(6.27)),  // 右上
-                Pos2::new(sx(20.0), sy(15.73)), // 右下
-                Pos2::new(sx(12.0), sy(19.63)), // 底
-                Pos2::new(sx(4.0), sy(15.73)),  // 左下
-                Pos2::new(sx(4.0), sy(6.27)),   // 左上
-            ];
-            let n = hex_raw.len();
-            let mut rounded_hex = Vec::with_capacity(n * 3); // 每个角拆成 3 点（入+弧出）
-            for i in 0..n {
-                let curr = hex_raw[i];
-                let prev = hex_raw[(i + n - 1) % n];
-                let next = hex_raw[(i + 1) % n];
-                // 沿两条边各内缩 8% 作为圆角起止点
-                let round_t = 0.12;
-                let p_in = Pos2::new(
-                    curr.x + (prev.x - curr.x) * round_t,
-                    curr.y + (prev.y - curr.y) * round_t,
-                );
-                let p_out = Pos2::new(
-                    curr.x + (next.x - curr.x) * round_t,
-                    curr.y + (next.y - curr.y) * round_t,
-                );
-                rounded_hex.push(p_in);
-                rounded_hex.push(curr); // 保留原顶点作为弧中点近似
-                rounded_hex.push(p_out);
-            }
-            painter.add(egui::epaint::PathShape::closed_line(rounded_hex, s));
-        }
-        NavIcon::Params => {
-            // ★ HTML: 三条竖直滑杆 + 圆形旋钮
-            // <path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3"/>
-            // <circle cx="4" cy="10" r="2"/><circle cx="12" cy="8" r="2"/><circle cx="20" cy="14" r="2"/>
-            let sliders = [
-                (4.0_f32, 10.0, 21.0), // (track_x, knob_y, track_bottom)
-                (12.0, 8.0, 19.0),
-                (20.0, 14.0, 17.0),
-            ];
-            for &(kx, ky, bot) in &sliders {
-                painter.line_segment([Pos2::new(sx(kx), sy(3.0)), Pos2::new(sx(kx), sy(bot))], s);
-                painter.circle_stroke(Pos2::new(sx(kx), sy(ky)), sx(2.0) - sx(0.0), s);
-            }
-        }
-        NavIcon::Log => {
-            // ★ HTML: 文档图标
-            // <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-            // <polyline points="14,2 14,8 20,8"/>
-            // <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/>
-            // 文档外框
-            painter.add(egui::epaint::PathShape::closed_line(
-                vec![
-                    Pos2::new(sx(6.0), sy(2.0)),
-                    Pos2::new(sx(14.0), sy(2.0)),
-                    Pos2::new(sx(14.0), sy(8.0)),
-                    Pos2::new(sx(20.0), sy(8.0)),
-                    Pos2::new(sx(20.0), sy(20.0)),
-                    Pos2::new(sx(6.0), sy(20.0)),
-                ],
-                s,
-            ));
-            // 折角线
-            painter.line_segment(
-                [Pos2::new(sx(14.0), sy(2.0)), Pos2::new(sx(14.0), sy(8.0))],
-                s,
-            );
-            painter.line_segment(
-                [Pos2::new(sx(14.0), sy(8.0)), Pos2::new(sx(20.0), sy(8.0))],
-                s,
-            );
-            // 文字行
-            painter.line_segment(
-                [Pos2::new(sx(8.0), sy(13.0)), Pos2::new(sx(16.0), sy(13.0))],
-                s,
-            );
-            painter.line_segment(
-                [Pos2::new(sx(8.0), sy(17.0)), Pos2::new(sx(14.0), sy(17.0))],
-                s,
-            );
-        }
-        NavIcon::RpcLog => {
-            // 远程调用日志图标：与服务器日志同款文档样式，靠文字标签区分
-            // ★ HTML: 文档图标
-            // <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-            // <polyline points="14,2 14,8 20,8"/>
-            // <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/>
-            // 文档外框
-            painter.add(egui::epaint::PathShape::closed_line(
-                vec![
-                    Pos2::new(sx(6.0), sy(2.0)),
-                    Pos2::new(sx(14.0), sy(2.0)),
-                    Pos2::new(sx(14.0), sy(8.0)),
-                    Pos2::new(sx(20.0), sy(8.0)),
-                    Pos2::new(sx(20.0), sy(20.0)),
-                    Pos2::new(sx(6.0), sy(20.0)),
-                ],
-                s,
-            ));
-            // 折角线
-            painter.line_segment(
-                [Pos2::new(sx(14.0), sy(2.0)), Pos2::new(sx(14.0), sy(8.0))],
-                s,
-            );
-            painter.line_segment(
-                [Pos2::new(sx(14.0), sy(8.0)), Pos2::new(sx(20.0), sy(8.0))],
-                s,
-            );
-            // 文字行
-            painter.line_segment(
-                [Pos2::new(sx(8.0), sy(13.0)), Pos2::new(sx(16.0), sy(13.0))],
-                s,
-            );
-            painter.line_segment(
-                [Pos2::new(sx(8.0), sy(17.0)), Pos2::new(sx(14.0), sy(17.0))],
-                s,
-            );
-        }
-        NavIcon::Commands => {
-            // ★ HTML: 播放三角形 <polygon points="5,3 19,12 5,21"/>
-            painter.add(egui::epaint::PathShape::closed_line(
-                vec![
-                    Pos2::new(sx(5.0), sy(3.0)),
-                    Pos2::new(sx(19.0), sy(12.0)),
-                    Pos2::new(sx(5.0), sy(21.0)),
-                ],
-                s,
-            ));
-        }
-        NavIcon::Presets => {
-            // ★ HTML: 星形 <polygon points="12,2 15.09,8.26 22,9.27 ..."/>
-            painter.add(egui::epaint::PathShape::closed_line(
-                vec![
-                    Pos2::new(sx(12.0), sy(2.0)),
-                    Pos2::new(sx(15.09), sy(8.26)),
-                    Pos2::new(sx(22.0), sy(9.27)),
-                    Pos2::new(sx(17.0), sy(14.14)),
-                    Pos2::new(sx(18.18), sy(21.02)),
-                    Pos2::new(sx(12.0), sy(18.0)),
-                    Pos2::new(sx(5.82), sy(21.02)),
-                    Pos2::new(sx(7.0), sy(14.14)),
-                    Pos2::new(sx(2.0), sy(9.27)),
-                    Pos2::new(sx(8.91), sy(8.26)),
-                ],
-                s,
-            ));
-        }
-        NavIcon::Settings => {
-            // ★ HTML: 圆角齿轮（cog）—— 外圈带圆角齿牙 + 内圆孔
-            // 对齐 HTML SF Symbols "gear" / Fluent "Settings" 图标风格
-            let gear_cx = sx(12.0); // 齿轮中心（viewBox 12,12）
-            let gear_cy = sy(12.0);
-            let outer_r = w * 0.42; // 外圈半径（含齿）
-            let inner_r = w * 0.22; // 内孔半径
-            let hub_r = w * 0.30; // 齿根圆半径（齿与齿之间的凹处）
-            let teeth = 8;
+        NavIcon::Server => "server",
+        NavIcon::Rpc => "remote",
+        NavIcon::Model => "cube",
+        NavIcon::Params => "options",
+        NavIcon::Mcp => "toolbox",
+        NavIcon::Log => "list",
+        NavIcon::RpcLog => "document",
+        NavIcon::Commands => "play",
+        NavIcon::Presets => "star",
+        NavIcon::Settings => "settings",
+    }
+}
 
-            // 用 path 绘制齿轮外轮廓（带齿的闭合路径）
-            let mut gear_points = Vec::with_capacity(teeth * 4);
-            for i in 0..teeth {
-                let base_ang = (i as f32) * std::f32::consts::TAU / teeth as f32;
-                // 每个齿：从齿根 → 齿顶右 → 齿顶左 → 回到下一个齿根
-                // 齿根起点（凹处）
-                let a0 = base_ang - 0.20; // 齿宽约 0.4 rad
-                let a1 = base_ang - 0.10; // 齿顶开始
-                let a2 = base_ang + 0.10; // 齿顶结束
-                let a3 = base_ang + 0.20; // 齿根结束
+/// 在给定矩形内绘制导航图标（iconflow Fluent UI 字形）。
+pub fn nav_icon_paint(painter: &Painter, rect: Rect, kind: NavIcon, color: Color32) {
+    static WARNED: std::sync::Once = std::sync::Once::new();
+    let Some((ch, family)) = nav_icon_glyph(kind) else {
+        // 本函数每帧调用，解析失败是确定性的，不加限制会每秒刷 60 行日志
+        WARNED.call_once(|| log::warn!("导航图标解析失败，跳过绘制: {kind:?}"));
+        return;
+    };
+    painter.text(
+        rect.center(),
+        Align2::CENTER_CENTER,
+        ch.to_string(),
+        FontId::new(
+            rect.height().max(1.0),
+            egui::FontFamily::Name(family.into()),
+        ),
+        color,
+    );
+}
 
-                gear_points.push(Pos2::new(
-                    gear_cx + a0.cos() * hub_r,
-                    gear_cy + a0.sin() * hub_r,
-                ));
-                gear_points.push(Pos2::new(
-                    gear_cx + a1.cos() * outer_r,
-                    gear_cy + a1.sin() * outer_r,
-                ));
-                gear_points.push(Pos2::new(
-                    gear_cx + a2.cos() * outer_r,
-                    gear_cy + a2.sin() * outer_r,
-                ));
-                gear_points.push(Pos2::new(
-                    gear_cx + a3.cos() * hub_r,
-                    gear_cy + a3.sin() * hub_r,
-                ));
-            }
-            painter.add(egui::epaint::PathShape::closed_line(gear_points, s));
-            // 内圆孔
-            painter.circle_stroke(Pos2::new(gear_cx, gear_cy), inner_r, s);
+#[cfg(test)]
+mod nav_icon_tests {
+    use super::{nav_icon_glyph, NavIcon};
+
+    const ALL: [NavIcon; 10] = [
+        NavIcon::Server,
+        NavIcon::Rpc,
+        NavIcon::Model,
+        NavIcon::Params,
+        NavIcon::Mcp,
+        NavIcon::Log,
+        NavIcon::RpcLog,
+        NavIcon::Commands,
+        NavIcon::Presets,
+        NavIcon::Settings,
+    ];
+
+    /// iconflow 升级若删掉某个图标名或改掉变体，这里会失败，
+    /// 而不是运行时静默不绘制或悄悄换一套外观。
+    #[test]
+    fn all_nav_icons_resolve() {
+        for kind in ALL {
+            let (ch, family) =
+                super::nav_icon_glyph(kind).unwrap_or_else(|| panic!("{kind:?} 解析失败"));
+            assert!(
+                !ch.is_control(),
+                "{kind:?} 拿到控制字符 U+{:04X}",
+                ch as u32
+            );
+            assert_eq!(
+                family, "Fluent UI Regular Resizable",
+                "{kind:?} 回退到了非预期字体档"
+            );
         }
     }
 }
