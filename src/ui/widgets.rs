@@ -79,7 +79,7 @@ pub fn card_with_header_notice<R>(
     add_contents: impl FnOnce(&mut Ui) -> R,
 ) -> R {
     winui::card_frame(current_theme(ui))
-        .outer_margin(egui::Margin::symmetric(0, 12))
+        .outer_margin(egui::Margin::symmetric(0, 0))
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 12.0;
             ui.horizontal(|ui| {
