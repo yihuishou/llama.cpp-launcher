@@ -2,6 +2,7 @@ use crate::config::settings::AppSettings;
 use crate::engine::rpc::RpcManager;
 use crate::i18n;
 use crate::ui::widgets;
+use fluent_egui::winui;
 
 /// 返回平台特定的 RPC 本地文件缓存目录
 fn rpc_cache_dir() -> std::path::PathBuf {
@@ -133,14 +134,17 @@ pub fn ui(
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelRpcPath, lang));
             let mut rpc_path_str = settings.rpc_server_path.to_string_lossy().to_string();
-            let response = ui.text_edit_singleline(&mut rpc_path_str);
+            let response = ui.add(winui::FluentTextEdit::new(&mut rpc_path_str));
             if response.changed() {
                 settings.rpc_server_path = std::path::PathBuf::from(&rpc_path_str);
             }
         });
 
         ui.horizontal(|ui| {
-            if ui.button(i18n::t(i18n::Key::BtnBrowse, lang)).clicked() {
+            if ui
+                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnBrowse, lang)))
+                .clicked()
+            {
                 if let Some(path) = rfd::FileDialog::new()
                     .set_title(i18n::t(i18n::Key::DialogSelectRpc, lang))
                     .add_filter(i18n::t(i18n::Key::FilterExecutable, lang), &["exe"])
@@ -149,7 +153,10 @@ pub fn ui(
                     settings.rpc_server_path = path;
                 }
             }
-            if ui.button(i18n::t(i18n::Key::BtnAutoDetect, lang)).clicked() {
+            if ui
+                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnAutoDetect, lang)))
+                .clicked()
+            {
                 if let Some(path) = settings_manager.auto_detect_rpc_path() {
                     settings.rpc_server_path = path;
                 } else {
@@ -177,26 +184,26 @@ pub fn ui(
 
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelHost, lang));
-            ui.text_edit_singleline(&mut settings.rpc_host);
+            ui.add(winui::FluentTextEdit::new(&mut settings.rpc_host));
             ui.label(i18n::t(i18n::Key::LabelPort, lang));
-            ui.add(egui::DragValue::new(&mut settings.rpc_port).range(1..=65535));
+            let mut port = settings.rpc_port as f64;
+            if ui
+                .add(winui::NumberBox::new(&mut port).range(1.0..=65535.0).width(90.0))
+                .changed()
+            {
+                settings.rpc_port = port as _;
+            }
         });
 
         ui.horizontal(|ui| {
             if ui
-                .add(
-                    egui::Button::new(i18n::t(i18n::Key::BtnHostLocal, lang))
-                        .min_size(egui::vec2(40.0, 20.0)),
-                )
+                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnHostLocal, lang)).min_width(40.0))
                 .clicked()
             {
                 settings.rpc_host = "127.0.0.1".to_string();
             }
             if ui
-                .add(
-                    egui::Button::new(i18n::t(i18n::Key::BtnHostAny, lang))
-                        .min_size(egui::vec2(50.0, 20.0)),
-                )
+                .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnHostAny, lang)).min_width(50.0))
                 .clicked()
             {
                 settings.rpc_host = "0.0.0.0".to_string();
@@ -206,13 +213,15 @@ pub fn ui(
         // 线程数
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelRpcThreads, lang));
-            ui.add(egui::DragValue::new(&mut settings.rpc_threads).range(1..=1024));
+            let mut threads = settings.rpc_threads as f64;
+            ui.add(winui::NumberBox::new(&mut threads).range(1.0..=1024.0).width(90.0));
+            settings.rpc_threads = threads as _;
             ui.small(i18n::t(i18n::Key::HintRpcThreads, lang));
         });
 
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelRpcDevice, lang));
-            ui.text_edit_singleline(&mut settings.rpc_device);
+            ui.add(winui::FluentTextEdit::new(&mut settings.rpc_device));
             ui.small(i18n::t(i18n::Key::HintRpcDevice, lang));
         });
 
@@ -220,7 +229,7 @@ pub fn ui(
         let rpc_available = rpc_manager.check_rpc_server(&settings.rpc_server_path);
         let btn = ui.add_enabled(
             rpc_available,
-            egui::Button::new(i18n::t(i18n::Key::BtnViewDeviceList, lang)),
+            winui::FluentButton::new(i18n::t(i18n::Key::BtnViewDeviceList, lang)),
         );
         if btn.clicked() {
             if settings.show_device_list {
@@ -325,7 +334,7 @@ pub fn ui(
                                             .any(|s| s.trim() == entry);
                                         let btn = ui.add_enabled(
                                             !already_added,
-                                            egui::Button::new(i18n::t(
+                                            winui::FluentButton::new(i18n::t(
                                                 i18n::Key::BtnAddToDevice,
                                                 lang,
                                             )),
@@ -377,7 +386,7 @@ pub fn ui(
 
         // 清除缓存按钮
         if ui
-            .button(i18n::t(i18n::Key::BtnClearRpcCache, lang))
+            .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnClearRpcCache, lang)))
             .clicked()
         {
             if cache_dir.exists() {
