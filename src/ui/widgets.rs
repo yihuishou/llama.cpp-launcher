@@ -111,6 +111,136 @@ pub fn card_with_header_notice<R>(
         .inner
 }
 
+// ──── WinUI 3 模态对话框 ────
+
+/// 渲染一个 WinUI3 风格模态对话框（居中 + 遮罩阻断底层输入）。
+/// - `title`：已 i18n 化的标题文本（调用方负责 t(Key, lang)）
+/// - `width`：固定宽度（会被夹到屏幕内）
+/// - `max_height`：整个对话框的最大高度（会被夹到屏幕内）
+/// - `content`：中央内容区，超出高度时内部纵向滚动
+/// - `footer`：底部按钮区；返回 true 表示该对话框应关闭
+///
+/// 返回 true 表示应关闭（点了 × / 按 Esc / 点了遮罩 / footer 返回 true）
+///
+/// 基于 `egui::Modal` 构建：居中、不可拖动、不可调整大小（WinUI3 ContentDialog
+/// 语义），几何与配色对齐 fluent-egui 的 `ContentDialog`，仅圆角统一为 6px
+/// （`crate::theme::apply_theme` 对全局圆角的覆写）。
+pub fn dialog<C, F>(
+    ctx: &egui::Context,
+    id_salt: impl std::hash::Hash + std::fmt::Debug,
+    title: &str,
+    width: f32,
+    max_height: f32,
+    content: C,
+    footer: F,
+) -> bool
+where
+    C: FnOnce(&mut egui::Ui),
+    F: FnOnce(&mut egui::Ui) -> bool,
+{
+    let id = egui::Id::new(id_salt);
+    // 库控件收 FluentTheme 枚举而非 egui::Theme，故从 dark_mode 推导
+    let theme = if ctx.theme() == egui::Theme::Dark {
+        FluentTheme::Dark
+    } else {
+        FluentTheme::Light
+    };
+    let p = winui::palette(theme);
+
+    // 宽度夹到屏幕内（与库 ContentDialog 相同，下限 160）
+    let max_w = (ctx.content_rect().width() - 32.0).max(160.0);
+    let width = width.clamp(160.0_f32.min(max_w), max_w);
+    // 整体高度同样夹到屏幕内；54 标题栏 + 60 底部按钮区的最小预留 = 114
+    let max_avail_h = (ctx.content_rect().height() - 32.0).max(114.0);
+    let max_h = max_height.clamp(114.0_f32.min(max_avail_h), max_avail_h);
+    // 内容区高度上限 = 总高 - 54(标题栏) - 60(底部按钮区预留)
+    let content_max_h = (max_h - 54.0 - 60.0).max(80.0);
+
+    let frame = egui::Frame::new()
+        .fill(p.card_bg)
+        .stroke(egui::Stroke::new(1.0, p.card_border))
+        .corner_radius(6)
+        .shadow(egui::epaint::Shadow {
+            offset: [0, 8],
+            blur: 32,
+            spread: 0,
+            color: p.shadow,
+        });
+
+    let mut close_clicked = false;
+    let modal = egui::Modal::new(id)
+        .backdrop_color(Color32::from_black_alpha(if theme.is_dark() { 105 } else { 58 }))
+        .frame(frame)
+        .show(ctx, |ui| {
+            ui.set_width(width);
+            // 标题栏：高 54，标题距左 20，关闭按钮 32×32 靠右
+            let (header_rect, _) = ui.allocate_exact_size(Vec2::new(width, 54.0), Sense::hover());
+            ui.painter().text(
+                Pos2::new(header_rect.left() + 20.0, header_rect.center().y),
+                Align2::LEFT_CENTER,
+                title,
+                FontId::proportional(20.0),
+                p.text_primary,
+            );
+            let close_rect = Rect::from_center_size(
+                Pos2::new(header_rect.right() - 22.0, header_rect.center().y),
+                Vec2::splat(32.0),
+            );
+            let close_resp = ui.interact(close_rect, id.with("close"), Sense::click());
+            if close_resp.clicked() {
+                close_clicked = true;
+            }
+            ui.painter().rect_filled(
+                close_rect,
+                4,
+                if close_resp.hovered() {
+                    p.subtle_hover
+                } else {
+                    Color32::TRANSPARENT
+                },
+            );
+            ui.painter().text(
+                close_rect.center(),
+                Align2::CENTER_CENTER,
+                winui::FluentIcon::Close.glyph(),
+                winui::icon_font_id(14.0),
+                p.text_primary,
+            );
+            // 标题栏下方 1px 分隔线
+            ui.painter().line_segment(
+                [
+                    Pos2::new(ui.min_rect().left(), ui.cursor().top()),
+                    Pos2::new(ui.min_rect().right(), ui.cursor().top()),
+                ],
+                egui::Stroke::new(1.0, p.card_border),
+            );
+            // 内容区：超出 content_max_h 时内部纵向滚动
+            egui::ScrollArea::vertical()
+                .id_salt(id)
+                .auto_shrink([false, false])
+                .max_height(content_max_h)
+                .show(ui, content);
+            // 底部按钮区：分隔线 + Margin::symmetric(16, 14) 内边距
+            ui.painter().line_segment(
+                [
+                    Pos2::new(ui.min_rect().left(), ui.cursor().top()),
+                    Pos2::new(ui.min_rect().right(), ui.cursor().top()),
+                ],
+                egui::Stroke::new(1.0, p.card_border),
+            );
+            egui::Frame::new()
+                .inner_margin(egui::Margin::symmetric(16, 14))
+                .show(ui, |ui| {
+                    ui.set_min_width(width - 32.0);
+                    footer(ui)
+                })
+                .inner
+        });
+
+    // should_close() 已覆盖遮罩点击与 Esc（仅顶层且无弹层时消费一次 Esc）
+    close_clicked || modal.inner || modal.should_close()
+}
+
 // ──── WinUI 3 开关 ────
 
 /// 标签在左、开关靠右（供 KV 缓存配置等整行选项使用）。
