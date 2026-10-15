@@ -1679,6 +1679,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(0.0..=1000.0)
                         .speed(0.01),
                 );
+            });
+            ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvRopeFreqBase, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeFreqBaseHint, lang));
                 ui.add(
@@ -1695,6 +1697,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(0.0..=1000.0)
                         .speed(0.01),
                 );
+            });
+            ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvYarnOrigCtx, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnOrigCtxHint, lang));
                 ui.add(
@@ -1711,6 +1715,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1.0..=100.0)
                         .speed(0.01),
                 );
+            });
+            ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvYarnAttnFactor, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnAttnFactorHint, lang));
                 ui.add(
@@ -1727,6 +1733,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1.0..=1000.0)
                         .speed(0.01),
                 );
+            });
+            ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvYarnBetaFast, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnBetaFastHint, lang));
                 ui.add(
