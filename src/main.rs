@@ -160,9 +160,12 @@ fn main() -> eframe::Result {
         "llama.cpp launcher",
         options,
         Box::new(move |cc| {
-            // 配置 CJK 中文字体，解决中文乱码问题
-            let mut fonts = FontDefinitions::default();
-            load_cjk_fonts(&mut fonts);
+            fluent_egui::winui::install(
+                &cc.egui_ctx,
+                fluent_egui::winui::ThemeConfig::new(fluent_egui::winui::FluentTheme::Light),
+            );
+            // install() 内部用 ctx.set_fonts 整体替换字体表，iconflow 图标字体须在其后叠加
+            let mut fonts = cc.egui_ctx.fonts(|f| f.definitions().clone());
             load_icon_fonts(&mut fonts);
             cc.egui_ctx.set_fonts(fonts);
 
@@ -180,32 +183,6 @@ fn load_window_icon() -> Option<egui::IconData> {
         height: image.height(),
         rgba: image.into_raw(),
     })
-}
-
-/// 加载内置字体（编译时嵌入，适配 egui 0.34）
-fn load_cjk_fonts(fonts: &mut FontDefinitions) {
-    // 只嵌入 CJK 中文字体（egui 内置 NotoEmoji-Regular 已支持 emoji）
-    let cjk_bytes = include_bytes!("../assets/NotoSansSC-Regular.ttf");
-
-    // 注册 CJK 字体数据
-    fonts.font_data.insert(
-        "Noto Sans SC".to_owned(),
-        Arc::new(FontData::from_owned(cjk_bytes.to_vec())),
-    );
-
-    // 在现有字体家族的 **最前面** 插入 CJK 字体，保留 egui 内置 emoji 字体
-    // egui 默认: Proportional = [Ubuntu-Light, NotoEmoji-Regular, emoji-icon-font]
-    // egui 默认: Monospace    = [Hack, Ubuntu-Light, NotoEmoji-Regular, emoji-icon-font]
-
-    if let Some(proportional) = fonts.families.get_mut(&FontFamily::Proportional) {
-        proportional.insert(0, "Noto Sans SC".to_owned());
-    }
-
-    if let Some(monospace) = fonts.families.get_mut(&FontFamily::Monospace) {
-        monospace.insert(0, "Noto Sans SC".to_owned());
-    }
-
-    log::info!("CJK 字体加载完成 (Noto Sans SC)");
 }
 
 /// 加载 iconflow Fluent UI 图标字体

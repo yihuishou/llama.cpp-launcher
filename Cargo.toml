@@ -4,8 +4,8 @@ version = "0.1.44"
 edition = "2021"
 
 [dependencies]
-eframe = { version = "0.33.3", default-features = false, features = ["glow", "default_fonts"] }
-egui = "0.33.3"
+eframe = { version = "0.35", default-features = false, features = ["glow", "default_fonts"] }
+egui = "0.35"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rfd = "0.14"
@@ -18,8 +18,8 @@ dirs = "5.0"
 gguf-rs = "0.1.8"
 poll-promise = "0.3"
 
-egui-toast = "0.17"
-egui-thematic = "0.1.1"
+# WinUI 3 Fluent 主题/字体/控件/外壳，替代原 egui-thematic 与手写 CJK 字体注册
+fluent-egui = "0.1.1"
 iconflow = { version = "1.0.0", features = ["pack-fluentui"] }
 image = "0.25"
 arboard = "3"
@@ -39,7 +39,7 @@ windows-sys = { version = "0.61.2", features = ["Win32_Graphics_Dwm", "Win32_Fou
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Linux 需要 x11 后端支持 winit/eframe
-eframe = { version = "0.33", default-features = false, features = ["glow", "default_fonts", "x11"] }
+eframe = { version = "0.35", default-features = false, features = ["glow", "default_fonts", "x11"] }
 
 [dev-dependencies]
 tempfile = "3"

@@ -303,21 +303,21 @@ impl LlamaLauncherApp {
         }
     }
 
-    fn render_sidebar(&mut self, ctx: &egui::Context) {
+    fn render_sidebar(&mut self, ui: &mut egui::Ui) {
         // 侧边栏填充色 = panel_fill（与卡片同色），去掉默认分隔线
-        let sidebar_fill = ctx.style().visuals.panel_fill;
-        egui::SidePanel::left("sidebar")
+        let sidebar_fill = ui.visuals().panel_fill;
+        egui::Panel::left("sidebar")
             .resizable(false)
             .show_separator_line(false)
-            .default_width(198.0)
-            .min_width(198.0)
-            .max_width(198.0)
+            .default_size(198.0)
+            .min_size(198.0)
+            .max_size(198.0)
             .frame(
                 egui::Frame::default()
                     .fill(sidebar_fill)
                     .stroke(egui::Stroke::NONE),
             )
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 let accent = crate::theme::accent_color(&self.settings.accent_color);
 
                 ui.add_space(10.0);
@@ -424,7 +424,7 @@ impl LlamaLauncherApp {
             });
     }
 
-    fn render_top_bar(&mut self, ctx: &egui::Context) {
+    fn render_top_bar(&mut self, ui: &mut egui::Ui) {
         let title = match self.nav {
             NavSection::Server => i18n::t(i18n::Key::NavServer, &self.lang),
             NavSection::Rpc => i18n::t(i18n::Key::NavRpc, &self.lang),
@@ -439,7 +439,7 @@ impl LlamaLauncherApp {
         };
         let accent = crate::theme::accent_color(&self.settings.accent_color);
 
-        egui::TopBottomPanel::top("top_panel")
+        egui::Panel::top("top_panel")
             .show_separator_line(false) // 去掉顶栏底部分隔线
             .frame({
                 let mut f = egui::Frame::default();
@@ -457,7 +457,7 @@ impl LlamaLauncherApp {
                 }
                 f
             })
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     // 标题放大（HTML .topbar .ttl{font-size:17px;font-weight:600}）
                     // ★ 不用 .strong()（浅色模式下 strong_text_color=白色→隐形），改用显式主文本色
@@ -519,7 +519,7 @@ impl LlamaLauncherApp {
 }
 
 impl eframe::App for LlamaLauncherApp {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         ctx.request_repaint_after(std::time::Duration::from_millis(500));
 
         // 预设启动监听：状态机到终态后转为结果通知（Running=成功 / Error=失败 / Idle=取消）
@@ -593,7 +593,7 @@ impl eframe::App for LlamaLauncherApp {
         #[cfg(debug_assertions)]
         {
             ctx.set_debug_on_hover(self.debug_mode);
-            ctx.style_mut(|s| {
+            ctx.style_mut_of(ctx.theme(), |s| {
                 s.debug.hover_shows_next = self.debug_mode;
             });
         }
@@ -686,8 +686,17 @@ impl eframe::App for LlamaLauncherApp {
                 });
         }
 
-        self.render_sidebar(ctx);
-        self.render_top_bar(ctx);
+        }
+
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // Panel 体系下渲染函数只拿到 Ui，但 preset 启动通知与间距可视化仍需
+        // Context（取输入时间 / 发视口命令）。Context 内部是 Arc，克隆代价可忽略。
+        let ctx = ui.ctx().clone();
+
+        // Panel 的嵌套顺序即"由外到内"：先加的占外层。
+        // 因此顶栏最先（顶部通栏），侧边栏次之（顶栏下方左侧），CentralPanel 收尾填剩余。
+        self.render_top_bar(ui);
+        self.render_sidebar(ui);
 
         // ★ CentralPanel 显式设置 fill 为 window_fill（而非默认的 panel_fill）
         // 这样主内容区背景比侧边栏/卡片更深，形成 HTML 的三层层次：
@@ -702,7 +711,7 @@ impl eframe::App for LlamaLauncherApp {
             // 让内容区中的所有子框与内容边缘保留统一的呼吸空间。
             // 32px 与新版设计稿中卡片左右的留白一致。
             .frame(egui::Frame::default().fill(content_fill))
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     egui::Frame::default()
                         .inner_margin(egui::Margin::symmetric(32_i8, 0_i8))
@@ -809,7 +818,7 @@ impl eframe::App for LlamaLauncherApp {
 
         // 调试模式：绘制控件间距可视化
         if self.debug_mode {
-            self.spacing_debugger.visualize(ctx);
+            self.spacing_debugger.visualize(&ctx);
         }
     }
 }

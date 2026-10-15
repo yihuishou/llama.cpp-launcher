@@ -156,7 +156,7 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
     let mut open = true;
     let mut close_after_save = false;
     let screen = ctx.content_rect().size();
-    let style = ctx.style();
+    let style = ctx.style_of(ctx.theme());
     egui::Window::new(i18n::t(i18n::Key::TitleMcpEditor, lang))
         .open(&mut open)
         .resizable(true)
@@ -183,9 +183,9 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
             }
 
             // 底部按钮面板：先于中央区渲染，固定占据底部（保存/取消永远可见）
-            egui::TopBottomPanel::bottom("mcp_editor_buttons")
+            egui::Panel::bottom("mcp_editor_buttons")
                 .frame(egui::Frame::NONE)
-                .show_inside(ui, |ui| {
+                .show(ui, |ui| {
                     ui.add_space(6.0);
                     ui.horizontal(|ui| {
                         if ui.button(i18n::t(i18n::Key::BtnMcpSave, lang)).clicked() {
@@ -221,7 +221,7 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
             // 中央编辑区：占满剩余空间，文本超长时在编辑区内滚动
             egui::CentralPanel::default()
                 .frame(egui::Frame::NONE.inner_margin(egui::Margin::symmetric(0, 4)))
-                .show_inside(ui, |ui| {
+                .show(ui, |ui| {
                     egui::ScrollArea::vertical()
                         .id_salt("mcp_editor_scroll")
                         .auto_shrink(false)

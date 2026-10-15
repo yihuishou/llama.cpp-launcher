@@ -776,7 +776,7 @@ pub fn share_window(
     }
     let mut open = true;
     let screen = ctx.content_rect().size();
-    let style = ctx.style();
+    let style = ctx.style_of(ctx.theme());
     egui::Window::new(i18n::t(i18n::Key::ShareWindowTitle, lang))
         .open(&mut open)
         .resizable(true)
@@ -1164,7 +1164,7 @@ pub fn config_window(
     let mut cancel_clicked = false;
     let accent = crate::theme::accent_color(&settings.accent_color);
     let screen = ctx.content_rect().size();
-    let style = ctx.style();
+    let style = ctx.style_of(ctx.theme());
     // 默认尺寸随应用窗口缩放（封顶 1000x640），保证弹窗完整落在应用界面内
     let default_w = (screen.x * 0.85).min(1000.0);
     let default_h = (screen.y * 0.85).min(640.0);
@@ -1209,9 +1209,9 @@ pub fn config_window(
 
             // 底部操作条：确定 / 取消 + 未配置确认消息
             // （顶部分隔线由 TopBottomPanel 自带，勿再手画 ui.separator()，否则双线重叠）
-            egui::TopBottomPanel::bottom("preset_cfg_bottom")
+            egui::Panel::bottom("preset_cfg_bottom")
                 .frame(egui::Frame::NONE.inner_margin(egui::Margin::symmetric(0, 6)))
-                .show_inside(ui, |ui| {
+                .show(ui, |ui| {
                     if cfg.confirm_pending {
                         ui.small(
                             egui::RichText::new(i18n::t(i18n::Key::ConfigConfirmPending, lang))
@@ -1277,16 +1277,15 @@ pub fn config_window(
                 });
 
             // 侧边栏分类导航：全宽按钮、选中态主题色填充（现代化样式）
-            egui::SidePanel::left("preset_cfg_side")
-                .resizable(false)
-                .exact_width(150.0)
+            egui::Panel::left("preset_cfg_side")
+                .exact_size(150.0)
                 .frame(egui::Frame::NONE.inner_margin(egui::Margin {
                     left: 0,
                     right: 12,
                     top: 4,
                     bottom: 4,
                 }))
-                .show_inside(ui, |ui| {
+                .show(ui, |ui| {
                     for (cat_id, key) in CONFIG_CATS {
                         let selected = cfg.category == *cat_id;
                         let text = egui::RichText::new(i18n::t(*key, lang));
@@ -1315,7 +1314,7 @@ pub fn config_window(
                     top: 4,
                     bottom: 4,
                 }))
-                .show_inside(ui, |ui| {
+                .show(ui, |ui| {
                     egui::ScrollArea::vertical()
                         .id_salt("preset_cfg_content")
                         .auto_shrink(false)
@@ -1469,7 +1468,7 @@ pub fn decl_window(ctx: &egui::Context, share: &mut PresetShareUi, lang: &i18n::
         return;
     }
     let screen = ctx.content_rect().size();
-    let style = ctx.style();
+    let style = ctx.style_of(ctx.theme());
     egui::Window::new(i18n::t(i18n::Key::ShareDeclWindowTitle, lang))
         .open(&mut share.decl_window_open)
         .resizable(true)
