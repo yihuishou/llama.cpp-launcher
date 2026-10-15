@@ -7,6 +7,7 @@ use crate::app::{disable_auto_start, enable_auto_start, open_repo_url};
 use crate::config::settings::{AppSettings, SettingsManager};
 use crate::i18n;
 use crate::ui::widgets;
+use fluent_egui::winui;
 use egui::{Color32, RichText};
 
 pub fn ui(
@@ -464,15 +465,15 @@ pub fn ui(
 
         // Git 仓库
         ui.label(i18n::t(i18n::Key::BuildGitRepo, lang));
-        ui.text_edit_singleline(&mut settings.build_git_repo);
+        ui.add(winui::FluentTextEdit::new(&mut settings.build_git_repo));
 
         // 分支
         ui.label(i18n::t(i18n::Key::BuildBranch, lang));
-        ui.text_edit_singleline(&mut settings.build_branch);
+        ui.add(winui::FluentTextEdit::new(&mut settings.build_branch));
 
         // Tag
         ui.label(i18n::t(i18n::Key::BuildTag, lang));
-        ui.text_edit_singleline(&mut settings.build_tag);
+        ui.add(winui::FluentTextEdit::new(&mut settings.build_tag));
 
         ui.add_space(8.0);
         ui.separator();
@@ -692,7 +693,7 @@ pub fn ui(
             } else {
                 0.0
             };
-            ui.add(egui::ProgressBar::new(frac));
+            ui.add(winui::FluentProgressBar::new(frac));
         }
     });
 }
