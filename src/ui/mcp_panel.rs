@@ -146,34 +146,35 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 }
 
 /// MCP 配置编辑窗口：多行文本编辑 + JSON 校验 + 保存/取消
-/// （open 状态经局部变量中转，避免 Window::open 与闭包同时借用 settings）
 ///
-/// 布局（egui 标准弹窗规范）：
-/// - 窗口尺寸约束在屏幕 90% 以内，内容超长时编辑区内部滚动，
-///   保存/取消按钮固定在底部永远可达；
-/// - 传入显式 Frame 使标题栏颜色与内容区一致（默认标题栏用
-///   widgets.open.weak_bg_fill，深色模式下与 window_fill 有色差）。
+/// 基于 `widgets::dialog`（WinUI3 模态对话框）实现：
+/// - footer 闭包只记录「点了保存还是取消」，真正的 JSON 解析与状态写回在
+///   dialog 返回后进行——content 闭包持有 `settings.mcp_editor_text` 的可变借用，
+///   footer 若直接解析会与之冲突，故用局部枚举中转；
+/// - 保存失败（JSON 非法）时对话框保持打开，错误显示在内容区顶部。
 fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::Language) {
     if !settings.mcp_editor_open {
         return;
     }
-    let mut open = true;
-    let mut close_after_save = false;
-    let screen = ctx.content_rect().size();
-    let style = ctx.style_of(ctx.theme());
-    egui::Window::new(i18n::t(i18n::Key::TitleMcpEditor, lang))
-        .open(&mut open)
-        .resizable(true)
-        .default_width(520.0)
-        .default_height(420.0)
-        .min_width(360.0)
-        .min_height(240.0)
-        .max_width(screen.x * 0.9)
-        .max_height(screen.y * 0.9)
-        .frame(egui::Frame::window(&style))
-        .show(ctx, |ui| {
-            ui.small(i18n::t(i18n::Key::HintMcpEditorTip, lang));
 
+    // footer 与 content 是同一调用里的两个闭包：用局部枚举中转动作，
+    // 让两闭包各自捕获不同字段（Rust 2021 不相交捕获），避免同时借用 settings。
+    #[derive(PartialEq)]
+    enum McpEditorAction {
+        None,
+        Save,
+        Cancel,
+    }
+    let mut action = McpEditorAction::None;
+    let mut save_failed = false;
+    let should_close = widgets::dialog(
+        ctx,
+        "mcp_editor_dialog",
+        i18n::t(i18n::Key::TitleMcpEditor, lang),
+        560.0,
+        ctx.content_rect().height() * 0.8,
+        |ui| {
+            ui.small(i18n::t(i18n::Key::HintMcpEditorTip, lang));
             if !settings.mcp_editor_error.is_empty() {
                 ui.add_space(4.0);
                 ui.small(
@@ -185,71 +186,68 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
                     .color(ui.visuals().error_fg_color),
                 );
             }
+            ui.add(
+                egui::TextEdit::multiline(&mut settings.mcp_editor_text)
+                    .desired_width(f32::INFINITY)
+                    .desired_rows(14)
+                    .font(egui::TextStyle::Monospace),
+            );
+        },
+        |ui| {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui
+                    .add(winui::AccentButton::new(i18n::t(
+                        i18n::Key::BtnMcpSave,
+                        lang,
+                    )))
+                    .clicked()
+                {
+                    action = McpEditorAction::Save;
+                }
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnMcpCancel,
+                        lang,
+                    )))
+                    .clicked()
+                {
+                    action = McpEditorAction::Cancel;
+                }
+            });
+            action != McpEditorAction::None
+        },
+    );
 
-            // 底部按钮面板：先于中央区渲染，固定占据底部（保存/取消永远可见）
-            egui::Panel::bottom("mcp_editor_buttons")
-                .frame(egui::Frame::NONE)
-                .show(ui, |ui| {
-                    ui.add_space(6.0);
-                    ui.horizontal(|ui| {
-                        if ui
-                            .add(winui::AccentButton::new(i18n::t(
-                                i18n::Key::BtnMcpSave,
-                                lang,
-                            )))
-                            .clicked()
-                        {
-                            match parse_mcp_servers(&settings.mcp_editor_text) {
-                                Ok(servers) => {
-                                    // 保存原始配置；为新出现的 server 默认启用，已有状态保持不变
-                                    let mut states = settings.mcp_server_states.clone();
-                                    for s in &servers {
-                                        states
-                                            .entry(s.name.clone())
-                                            .or_insert(s.is_object && !s.command.is_empty());
-                                    }
-                                    // 清理已不存在的 server 状态
-                                    states
-                                        .retain(|name, _| servers.iter().any(|s| &s.name == name));
-                                    settings.mcp_server_states = states;
-                                    settings.mcp_config_json = settings.mcp_editor_text.clone();
-                                    settings.mcp_editor_error.clear();
-                                    close_after_save = true;
-                                }
-                                Err(e) => {
-                                    settings.mcp_editor_error = e;
-                                }
-                            }
-                        }
-                        if ui
-                            .add(winui::FluentButton::new(i18n::t(
-                                i18n::Key::BtnMcpCancel,
-                                lang,
-                            )))
-                            .clicked()
-                        {
-                            close_after_save = true;
-                            settings.mcp_editor_error.clear();
-                        }
-                    });
-                });
-
-            // 中央编辑区：占满剩余空间，文本超长时在编辑区内滚动
-            egui::CentralPanel::default()
-                .frame(egui::Frame::NONE.inner_margin(egui::Margin::symmetric(0, 4)))
-                .show(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .id_salt("mcp_editor_scroll")
-                        .auto_shrink(false)
-                        .show(ui, |ui| {
-                            ui.add(
-                                egui::TextEdit::multiline(&mut settings.mcp_editor_text)
-                                    .desired_width(f32::INFINITY)
-                                    .desired_rows(14)
-                                    .font(egui::TextStyle::Monospace),
-                            );
-                        });
-                });
-        });
-    settings.mcp_editor_open = open && !close_after_save;
+    // dialog 返回后 content 闭包已结束，此处可安全读写 settings 各字段
+    if should_close {
+        match action {
+            McpEditorAction::Save => match parse_mcp_servers(&settings.mcp_editor_text) {
+                Ok(servers) => {
+                    // 保存原始配置；为新出现的 server 默认启用，已有状态保持不变
+                    let mut states = settings.mcp_server_states.clone();
+                    for s in &servers {
+                        states
+                            .entry(s.name.clone())
+                            .or_insert(s.is_object && !s.command.is_empty());
+                    }
+                    // 清理已不存在的 server 状态
+                    states
+                        .retain(|name, _| servers.iter().any(|s| &s.name == name));
+                    settings.mcp_server_states = states;
+                    settings.mcp_config_json = settings.mcp_editor_text.clone();
+                    settings.mcp_editor_error.clear();
+                }
+                Err(e) => {
+                    settings.mcp_editor_error = e;
+                    save_failed = true;
+                }
+            },
+            McpEditorAction::Cancel => {
+                settings.mcp_editor_error.clear();
+            }
+            McpEditorAction::None => {}
+        }
+    }
+    // 保存失败时对话框保持打开（错误留在内容区顶部供用户修正），其余情形一律收起
+    settings.mcp_editor_open = !should_close || save_failed;
 }
