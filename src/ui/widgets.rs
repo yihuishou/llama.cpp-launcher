@@ -1,13 +1,18 @@
 //! 通用 UI 组件 —— 移植自 HTML 原型的设计语义
 //!
-//! 卡片、开关、分段控件已改用 fluent-egui 的 WinUI 3 实现，配色与圆角由库接管，
+//! 卡片、开关已改用 fluent-egui 的 WinUI 3 实现，配色与圆角由库接管，
 //! 圆角统一在 `crate::theme::apply_theme` 里覆写。以下组件库中无等价物，故保留自绘：
 //!   - `nav_row` / `nav_icon_paint`：选中态 accent-tint 背景 + accent 色文字，
 //!     对齐 HTML `.nav-item.active{color:var(--accent)}`；10 个图标为手写矢量
 //!   - `color_swatch` / `rounded_button`：`egui::Button` 配自定义 `.fill()`，
 //!     库的 FluentButton 只走主题色、AccentButton 亦不支持自定义填充
+//!   - `segmented` / `segmented_width`：库把选中态固定为 `card_bg`（浅主题下近白，
+//!     与轨道 `control_bg` 几乎同色而不可见）且不暴露任何覆盖入口，故自绘；
+//!     浅主题选中态改为 accent 浅色提亮，深色主题沿用库原样。
 
-use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
+use egui::{
+    Align2, Color32, FontId, Painter, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2,
+};
 use fluent_egui::winui::{self, FluentTheme};
 
 /// 库控件收 FluentTheme 枚举而非 egui::Theme，故从 dark_mode 推导。
@@ -130,7 +135,8 @@ pub fn segmented(ui: &mut Ui, options: &[&str], selected: &mut usize, _accent: C
     segmented_width(ui, options, selected, _accent, 0.0)
 }
 
-/// 分段控件（可指定整体宽度）。
+/// 分段控件（可指定整体宽度）。自绘实现，几何/交互/动画/焦点行为对齐
+/// fluent-egui 的 `SegmentedControl`，仅浅主题选中态配色不同。
 ///
 /// `width > 0.0` 为固定宽度；`width <= 0.0` 时按选项文本自适应，
 /// 并以 280px（库内默认宽度）为下限——短文案保持统一 280px，
@@ -139,16 +145,118 @@ pub fn segmented_width(
     ui: &mut Ui,
     options: &[&str],
     selected: &mut usize,
-    _accent: Color32,
+    accent: Color32,
     width: f32,
 ) -> bool {
     let before = *selected;
+    let p = winui::palette(current_theme(ui));
+    let count = options.len().max(1);
+    let normalized = if options.is_empty() {
+        0
+    } else {
+        (*selected).min(count - 1)
+    };
+    let normalized_changed = !options.is_empty() && *selected != normalized;
+    *selected = normalized;
+
     let w = if width > 0.0 {
         width
     } else {
         fit_segmented_width(ui, options).max(280.0)
     };
-    ui.add(winui::SegmentedControl::new(selected, options.iter().copied()).width(w));
+    let avail = ui.available_width().max(0.0);
+    let w = if avail > 0.0 { w.min(avail) } else { w };
+    let (rect, mut response) = ui.allocate_exact_size(Vec2::new(w, 32.0), Sense::click());
+    if normalized_changed {
+        response.mark_changed();
+    }
+    if ui.is_enabled() && response.has_focus() {
+        if ui.input(|i| i.key_pressed(egui::Key::ArrowRight)) && *selected + 1 < count {
+            *selected += 1;
+            response.mark_changed();
+        } else if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) && *selected > 0 {
+            *selected -= 1;
+            response.mark_changed();
+        }
+    }
+
+    ui.painter().rect(
+        rect,
+        6,
+        p.control_bg,
+        Stroke::new(1.0, p.control_border),
+        StrokeKind::Inside,
+    );
+    if ui.is_enabled() && response.has_focus() {
+        ui.painter().rect_stroke(
+            rect.expand(1.0),
+            egui::CornerRadius::same(6),
+            Stroke::new(2.0, accent),
+            StrokeKind::Outside,
+        );
+    }
+
+    let segment_width = rect.width() / count as f32;
+
+    // 浅主题：库的选中态 `card_bg`（近白）压 `control_bg`（近白）不可见，且库不暴露
+    // 覆盖入口，故改绘 accent 浅色（t=0.80 填充、t=0.60 描边）；深色主题沿用库原样。
+    let (pill_fill, pill_border) = if ui.visuals().dark_mode {
+        (p.card_bg, p.card_border)
+    } else {
+        (
+            crate::theme::lighten_accent(accent, 0.80),
+            crate::theme::lighten_accent(accent, 0.60),
+        )
+    };
+    if !options.is_empty() {
+        let animated_index = ui.ctx().animate_value_with_time(
+            response.id.with("selection"),
+            *selected as f32,
+            ui.style().animation_time,
+        );
+        let selected_rect = Rect::from_min_size(
+            Pos2::new(
+                rect.left() + animated_index * segment_width + 3.0,
+                rect.top() + 3.0,
+            ),
+            Vec2::new(
+                (segment_width - 6.0).max(0.0),
+                (rect.height() - 6.0).max(0.0),
+            ),
+        );
+        ui.painter().rect(
+            selected_rect,
+            4,
+            pill_fill,
+            Stroke::new(1.0, pill_border),
+            StrokeKind::Inside,
+        );
+    }
+
+    for (index, label) in options.iter().enumerate() {
+        let segment = Rect::from_min_size(
+            Pos2::new(rect.left() + index as f32 * segment_width, rect.top()),
+            Vec2::new(segment_width, rect.height()),
+        );
+        let item_response = ui.interact(segment, response.id.with(index), Sense::click());
+        if item_response.clicked() && *selected != index {
+            *selected = index;
+            response.mark_changed();
+        }
+        response |= item_response;
+        let seg_clip = segment.shrink2(Vec2::new(2.0, 1.0));
+        if seg_clip.is_positive() {
+            ui.painter()
+                .with_clip_rect(seg_clip.intersect(ui.clip_rect()))
+                .text(
+                    segment.center() + Vec2::new(0.0, -0.5),
+                    Align2::CENTER_CENTER,
+                    label,
+                    egui::TextStyle::Button.resolve(ui.style()),
+                    p.text_primary,
+                );
+        }
+    }
     *selected != before
 }
 
