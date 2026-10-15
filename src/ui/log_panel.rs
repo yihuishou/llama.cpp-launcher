@@ -67,7 +67,8 @@ fn render(
             ui.add(
                 winui::NumberBox::new(&mut max_lines)
                     .range(-1.0..=10000.0)
-                    .width(132.0),
+                    .width(132.0)
+                    .spin_button_placement(winui::NumberBoxSpinButtonPlacement::Compact),
             );
             settings.max_log_lines = max_lines as i32;
             ui.small(i18n::t(i18n::Key::HintLogSession, lang));

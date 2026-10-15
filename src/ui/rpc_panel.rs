@@ -197,7 +197,8 @@ pub fn ui(
                 .add(
                     winui::NumberBox::new(&mut port)
                         .range(1.0..=65535.0)
-                        .width(90.0),
+                        .width(90.0)
+                        .spin_button_placement(winui::NumberBoxSpinButtonPlacement::Compact),
                 )
                 .changed()
             {
@@ -230,7 +231,8 @@ pub fn ui(
             ui.add(
                 winui::NumberBox::new(&mut threads)
                     .range(1.0..=1024.0)
-                    .width(90.0),
+                    .width(90.0)
+                    .spin_button_placement(winui::NumberBoxSpinButtonPlacement::Compact),
             );
             settings.rpc_threads = threads as _;
             ui.small(i18n::t(i18n::Key::HintRpcThreads, lang));

@@ -398,7 +398,8 @@ pub fn ui(
             ui.add(
                 winui::NumberBox::new(&mut port)
                     .range(1.0..=65535.0)
-                    .width(90.0),
+                    .width(90.0)
+                    .spin_button_placement(winui::NumberBoxSpinButtonPlacement::Compact),
             );
             settings.port = port as _;
         });
@@ -428,7 +429,8 @@ pub fn ui(
             ui.add(
                 winui::NumberBox::new(&mut slots)
                     .range(-1.0..=1024.0)
-                    .width(90.0),
+                    .width(90.0)
+                    .spin_button_placement(winui::NumberBoxSpinButtonPlacement::Compact),
             );
             settings.parallel_slots = slots as _;
             if settings.parallel_slots == 0 {
