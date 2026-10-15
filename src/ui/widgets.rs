@@ -124,13 +124,52 @@ pub fn toggle(ui: &mut Ui, on: &mut bool, label: &str, _accent: Color32) -> bool
 
 // ──── 分段控件 ────
 
+/// 分段控件，宽度按选项文本自适应（等价于 `segmented_width(.., 0.0)`）。
+/// 修复库内默认 280px 固定宽度裁切长文案的问题。
 pub fn segmented(ui: &mut Ui, options: &[&str], selected: &mut usize, _accent: Color32) -> bool {
+    segmented_width(ui, options, selected, _accent, 0.0)
+}
+
+/// 分段控件（可指定整体宽度）。
+///
+/// `width > 0.0` 为固定宽度；`width <= 0.0` 时按选项文本自适应，
+/// 并以 280px（库内默认宽度）为下限——短文案保持统一 280px，
+/// 仅长文案（如 `deepseek-legacy`）才撑宽，避免被裁切。
+pub fn segmented_width(
+    ui: &mut Ui,
+    options: &[&str],
+    selected: &mut usize,
+    _accent: Color32,
+    width: f32,
+) -> bool {
     let before = *selected;
-    ui.add(winui::SegmentedControl::new(
-        selected,
-        options.iter().copied(),
-    ));
+    let w = if width > 0.0 {
+        width
+    } else {
+        fit_segmented_width(ui, options).max(280.0)
+    };
+    ui.add(winui::SegmentedControl::new(selected, options.iter().copied()).width(w));
     *selected != before
+}
+
+/// 依据各选项文本宽度估算分段控件整体宽度（每段 = 最长文本 + 左右内边距）。
+fn fit_segmented_width(ui: &Ui, options: &[&str]) -> f32 {
+    if options.is_empty() {
+        return 0.0;
+    }
+    let font = egui::TextStyle::Button.resolve(ui.style());
+    let max_text_w = options
+        .iter()
+        .map(|label| {
+            ui.painter()
+                .layout_no_wrap((*label).to_owned(), font.clone(), Color32::WHITE)
+                .size()
+                .x
+        })
+        .fold(0.0_f32, f32::max);
+    // 每段：文本宽 + 左右各 8px 内边距（库内每段再内缩 2px，留足余量）
+    let seg_w = max_text_w + 16.0;
+    seg_w * options.len() as f32
 }
 
 // ──── 状态点 ────
