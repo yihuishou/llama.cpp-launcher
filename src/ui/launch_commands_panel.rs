@@ -2,6 +2,7 @@ use crate::engine::rpc::RpcManager;
 use crate::engine::server::ServerManager;
 use crate::i18n;
 use crate::ui::widgets;
+use fluent_egui::winui;
 
 pub fn ui(
     ui: &mut egui::Ui,
@@ -21,13 +22,16 @@ pub fn ui(
                     ui.monospace(cmd);
                 });
                 if ui
-                    .button(i18n::t(i18n::Key::BtnCopyToClipboard, lang))
+                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnCopyToClipboard, lang)))
                     .clicked()
                 {
                     ui.ctx().copy_text(cmd.to_string());
                 }
             } else {
-                ui.colored_label(egui::Color32::GRAY, i18n::t(i18n::Key::HintNoCommand, lang));
+                ui.colored_label(
+                    ui.visuals().weak_text_color(),
+                    i18n::t(i18n::Key::HintNoCommand, lang),
+                );
             }
             ui.separator();
 
@@ -37,13 +41,16 @@ pub fn ui(
                     ui.monospace(cmd);
                 });
                 if ui
-                    .button(i18n::t(i18n::Key::BtnCopyToClipboard, lang))
+                    .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnCopyToClipboard, lang)))
                     .clicked()
                 {
                     ui.ctx().copy_text(cmd.to_string());
                 }
             } else {
-                ui.colored_label(egui::Color32::GRAY, i18n::t(i18n::Key::HintNoCommand, lang));
+                ui.colored_label(
+                    ui.visuals().weak_text_color(),
+                    i18n::t(i18n::Key::HintNoCommand, lang),
+                );
             }
         },
     );
