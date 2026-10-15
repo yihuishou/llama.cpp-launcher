@@ -679,31 +679,33 @@ impl eframe::App for LlamaLauncherApp {
             }
         }
 
-        if self.show_about {
-            egui::Window::new(i18n::t(i18n::Key::AboutTitle, &self.lang))
-                .collapsible(false)
-                .resizable(false)
-                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-                .fixed_size([150.0, 0.0])
-                .show(ctx, |ui| {
-                    ui.label(i18n::t(i18n::Key::AboutVersion, &self.lang));
-                    ui.label(i18n::t(i18n::Key::AboutDescription, &self.lang));
-                    ui.separator();
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label(
-                            egui::RichText::new(i18n::t(i18n::Key::AboutCopyright, &self.lang))
-                                .size(10.0),
-                        );
-                    });
-                    ui.horizontal_centered(|ui| {
-                        if ui
-                            .button(i18n::t(i18n::Key::BtnClose, &self.lang))
-                            .clicked()
-                        {
-                            self.show_about = false;
-                        }
-                    });
-                });
+        // 版本/描述/版权拼进 message 走 p.text_secondary，三段同字号（版权原为 10.0 小字，
+        // TeachingTip 无独立文本槽，有意降级）。
+        // close_text 必须显式传：库默认值是硬编码英文 "Close"（extended.rs:2393）。
+        let about_theme = if self.settings.dark_mode {
+            fluent_egui::winui::FluentTheme::Dark
+        } else {
+            fluent_egui::winui::FluentTheme::Light
+        };
+        let about_message = [
+            i18n::t(i18n::Key::AboutVersion, &self.lang),
+            i18n::t(i18n::Key::AboutDescription, &self.lang),
+            i18n::t(i18n::Key::AboutCopyright, &self.lang),
+        ]
+        .join("\n");
+        let about_resp = fluent_egui::winui::TeachingTip::new(
+            "about",
+            i18n::t(i18n::Key::AboutTitle, &self.lang),
+            about_message,
+        )
+        .primary_text(i18n::t(i18n::Key::MenuItemRepo, &self.lang))
+        .close_text(i18n::t(i18n::Key::BtnClose, &self.lang))
+        .show(ctx, about_theme, self.show_about);
+        if about_resp.close_clicked {
+            self.show_about = false;
+        }
+        if about_resp.primary_clicked {
+            open_repo_url();
         }
     }
 
