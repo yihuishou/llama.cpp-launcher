@@ -56,7 +56,11 @@ pub struct LlamaLauncherApp {
     /// 推迟到首帧安装：egui 0.35 在首次 Context::run() 前不初始化字体表，
     /// 此时访问 ctx.fonts() 会 panic
     winui_installed: bool,
+    /// 已调用 set_fonts 把 iconflow 字体族写入字体表
     icon_fonts_loaded: bool,
+    /// 字体族已可用于排版。set_fonts 的改动要到下一个帧边界才生效，
+    /// 故比 icon_fonts_loaded 再晚一帧，否则首次排版会因字体族未绑定而 panic
+    icon_fonts_ready: bool,
 }
 
 impl LlamaLauncherApp {
@@ -170,6 +174,7 @@ impl LlamaLauncherApp {
             last_system_dark,
             winui_installed: false,
             icon_fonts_loaded: false,
+            icon_fonts_ready: false,
         }
     }
 
@@ -540,6 +545,11 @@ impl eframe::App for LlamaLauncherApp {
             crate::load_icon_fonts(&mut fonts);
             ctx.set_fonts(fonts);
             self.icon_fonts_loaded = true;
+        } else if !self.icon_fonts_ready {
+            // 导航图标改用 iconflow 字形（而非自绘路径）后，本级成为必需：
+            // 上一级 set_fonts 写入的字体族当帧仍不可用于排版，
+            // 直接放行会让 epaint 以 "FontFamily::Name(..) is not bound" panic。
+            self.icon_fonts_ready = true;
         }
         ctx.request_repaint_after(std::time::Duration::from_millis(500));
 
@@ -711,7 +721,7 @@ impl eframe::App for LlamaLauncherApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // 字体表在帧边界才落地，首帧渲染会因缺图标字体而 panic（见 logic 内注释）
-        if !self.icon_fonts_loaded {
+        if !self.icon_fonts_ready {
             return;
         }
         // Panel 体系下渲染函数只拿到 Ui，但 preset 启动通知与间距可视化仍需
