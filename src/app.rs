@@ -864,22 +864,18 @@ impl Drop for LlamaLauncherApp {
     }
 }
 
-// 设置 Windows 原生标题栏（可拖动区域）颜色，使其与侧边栏/主内容区同色。
-// 依赖 DWMWA_CAPTION_COLOR（Windows 11 22H2+）；旧版系统调用会失败并静默忽略，
-// 标题栏回退为系统默认——符合需求中「不行就算了」的兜底预期。
+// 设置 Windows 原生标题栏（可拖动区域）为透明，让 Mica 材质延伸进去。
+// 材质窗口下把标题栏刷成实色会与半透明客户区割裂，故此处传 DWMWA_COLOR_NONE
+// 而非具体色值。旧版系统不支持该属性时调用失败并静默忽略，标题栏回退系统默认。
 #[cfg(target_os = "windows")]
-fn set_title_bar_color(dark: bool, frame: &eframe::Frame) {
+fn set_title_bar_color(_dark: bool, frame: &eframe::Frame) {
     use raw_window_handle::{HasWindowHandle, RawWindowHandle};
     use windows_sys::Win32::Foundation::HWND;
-    use windows_sys::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_CAPTION_COLOR};
-
-    // COLORREF 格式为 0x00BBGGRR（注意不是 RGB 顺序）
-    let (r, g, b): (u8, u8, u8) = if dark {
-        (0x2B, 0x2B, 0x2B) // #2B2B2B WinUI3 CardBackground，与侧边栏一致
-    } else {
-        (0xFF, 0xFF, 0xFF) // #FFFFFF WinUI3 CardBackground，与侧边栏一致
+    use windows_sys::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMWA_CAPTION_COLOR, DWMWA_COLOR_NONE,
     };
-    let colorref: u32 = ((b as u32) << 16) | ((g as u32) << 8) | (r as u32);
+
+    let colorref: u32 = DWMWA_COLOR_NONE;
 
     let hwnd: HWND = match frame.window_handle() {
         Ok(h) => match h.as_raw() {
