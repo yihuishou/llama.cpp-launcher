@@ -496,14 +496,20 @@ impl ServerManager {
             args.push(settings.spec_ngram_mod_n_match.to_string());
         }
 
-        // KV 缓存
+        // KV 缓存（与 start() 一致：true 拼 --kv-offload，false 拼 --no-kv-offload）
         if settings.kv_offload {
             args.push("--kv-offload".to_string());
+        } else {
+            args.push("--no-kv-offload".to_string());
         }
-        args.push("--cache-type-k".to_string());
-        args.push(settings.cache_type_k.clone());
-        args.push("--cache-type-v".to_string());
-        args.push(settings.cache_type_v.clone());
+        if settings.enable_cache_type_k && !settings.cache_type_k.is_empty() {
+            args.push("--cache-type-k".to_string());
+            args.push(settings.cache_type_k.clone());
+        }
+        if settings.enable_cache_type_v && !settings.cache_type_v.is_empty() {
+            args.push("--cache-type-v".to_string());
+            args.push(settings.cache_type_v.clone());
+        }
         // 注：--mlock / --no-mmap 已被 llama.cpp 标记为 DEPRECATED（由 --load-mode 取代），
         // 实际启动不发送它们；此处同样不拼接，保证「启动命令」预览与真实命令一致。
         if settings.kv_unified {
@@ -609,8 +615,8 @@ impl ServerManager {
             args.push("--no-log-timestamps".to_string());
         }
 
-        // 日志级别
-        if settings.log_verbosity > 0 {
+        // 日志级别（仅开启时拼接）
+        if settings.enable_log_verbosity {
             args.push("--log-verbosity".to_string());
             args.push(settings.log_verbosity.to_string());
         }
@@ -899,14 +905,20 @@ impl ServerManager {
             .arg("--ctx-size")
             .arg(settings.context_actual().to_string())
             .arg("--parallel")
-            .arg(settings.parallel_slots.to_string())
-            .arg("--batch-size")
-            .arg(settings.batch_size_actual().to_string())
-            .arg("--ubatch-size")
-            .arg(settings.ubatch_size_actual().to_string())
-            .arg("--timeout")
-            .arg(settings.session_timeout.to_string())
-            .arg("--gpu-layers")
+            .arg(settings.parallel_slots.to_string());
+
+        if settings.enable_batch_size {
+            cmd.arg("--batch-size").arg(settings.batch_size_actual().to_string());
+        }
+        if settings.enable_ubatch_size {
+            cmd.arg("--ubatch-size")
+                .arg(settings.ubatch_size_actual().to_string());
+        }
+        if settings.enable_session_timeout {
+            cmd.arg("--timeout").arg(settings.session_timeout.to_string());
+        }
+
+        cmd.arg("--gpu-layers")
             .arg(settings.gpu_layers_mode.to_arg());
 
         // 采样参数（根据启用标志决定是否拼接；ignore_* 系列为反向语义）
@@ -1152,10 +1164,10 @@ impl ServerManager {
         } else {
             cmd.arg("--no-kv-offload");
         }
-        if !settings.cache_type_k.is_empty() {
+        if settings.enable_cache_type_k && !settings.cache_type_k.is_empty() {
             cmd.arg("--cache-type-k").arg(&settings.cache_type_k);
         }
-        if !settings.cache_type_v.is_empty() {
+        if settings.enable_cache_type_v && !settings.cache_type_v.is_empty() {
             cmd.arg("--cache-type-v").arg(&settings.cache_type_v);
         }
         // 模型加载模式（--load-mode 替代已废弃的 --mmap/--mlock）
@@ -1264,9 +1276,11 @@ impl ServerManager {
             cmd.arg("--no-log-timestamps");
         }
 
-        // 日志级别（0=generic 1=error 2=warning 3=info 4=trace 5=debug）
-        cmd.arg("--log-verbosity")
-            .arg(settings.log_verbosity.to_string());
+        // 日志级别（仅开启时拼接；0=generic 1=error 2=warning 3=info 4=trace 5=debug）
+        if settings.enable_log_verbosity {
+            cmd.arg("--log-verbosity")
+                .arg(settings.log_verbosity.to_string());
+        }
 
         // 离线模式：拼接 --offline（如 llama.cpp 支持）
         if settings.offline_mode {

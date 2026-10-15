@@ -1934,6 +1934,11 @@ pub struct AppSettings {
     pub kv_offload: bool,
     pub cache_type_k: String,
     pub cache_type_v: String,
+    // KV 缓存类型启用开关（勾选时拼接 --cache-type-k/v，未勾选不拼接）
+    #[serde(default)]
+    pub enable_cache_type_k: bool,
+    #[serde(default)]
+    pub enable_cache_type_v: bool,
     pub kv_unified: bool, // --kv-unified
     #[serde(default)]
     pub swa_full: bool, // --swa-full
@@ -1985,6 +1990,9 @@ pub struct AppSettings {
     // 日志级别（--log-verbosity，0=generic 1=error 2=warning 3=info 4=trace 5=debug）
     #[serde(default = "default_log_verbosity")]
     pub log_verbosity: usize,
+    // 日志级别启用开关（勾选时拼接 --log-verbosity，未勾选不拼接）
+    #[serde(default)]
+    pub enable_log_verbosity: bool,
 
     // 会话超时（秒，追加 --timeout）
     #[serde(default = "default_session_timeout")]
@@ -2331,6 +2339,8 @@ impl Default for AppSettings {
             kv_offload: true,
             cache_type_k: "q8_0".to_string(),
             cache_type_v: "q8_0".to_string(),
+            enable_cache_type_k: false,
+            enable_cache_type_v: false,
             kv_unified: true,
             swa_full: false,
             kv_cache_ratio: default_kv_cache_ratio(),
@@ -2355,6 +2365,7 @@ impl Default for AppSettings {
             web_ui_enabled: default_web_ui_enabled(),
             log_timestamps: default_log_timestamps(),
             log_verbosity: default_log_verbosity(),
+            enable_log_verbosity: false,
             session_timeout: default_session_timeout(),
             reasoning: default_reasoning(),
             reasoning_format: default_reasoning_format(),
