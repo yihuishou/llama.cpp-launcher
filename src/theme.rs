@@ -57,6 +57,15 @@ pub fn apply_theme(ctx: &egui::Context, dark: bool, accent: [u8; 3]) {
         color: egui::Color32::from_black_alpha(64),
     };
 
+    // 分割线：库给的 WinUI 3 control_border 是半透明值，与卡片底色对比度仅 ~1.4:1，实际看不见，
+    // 故覆盖到 ~3.0:1（WCAG 1.4.11 非文本对比度）
+    let divider = if dark {
+        egui::Color32::from_gray(120)
+    } else {
+        egui::Color32::from_gray(145)
+    };
+    visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, divider);
+
     // 6px 是本项目约定，刻意覆盖 fluent-egui 的 WinUI 3 官方值（窗口/菜单 8px、控件 4px）
     let r = egui::CornerRadius::same(6);
     visuals.window_corner_radius = r;
