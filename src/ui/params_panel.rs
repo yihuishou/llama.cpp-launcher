@@ -568,10 +568,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !ffn_set,
-                        widgets::rounded_button(
-                            i18n::t(i18n::Key::BtnFfnOffloadToCpu, lang),
-                            None,
-                        ),
+                        widgets::rounded_button(i18n::t(i18n::Key::BtnFfnOffloadToCpu, lang), None),
                     )
                     .clicked()
                 {
@@ -675,10 +672,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .unwrap_or(false);
             let btn = ui.add_enabled(
                 server_available,
-                widgets::rounded_button(
-                    i18n::t(i18n::Key::BtnViewServerDeviceList, lang),
-                    None,
-                ),
+                widgets::rounded_button(i18n::t(i18n::Key::BtnViewServerDeviceList, lang), None),
             );
             if btn.clicked() {
                 if settings.show_server_device_list {
@@ -1261,17 +1255,26 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(k_n, lang));
                         ui.add(egui::DragValue::new(v_n).range(1..=256));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramSizeN, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpSpecNgramSizeN, lang),
+                        );
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(k_m, lang));
                         ui.add(egui::DragValue::new(v_m).range(1..=256));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramSizeM, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpSpecNgramSizeM, lang),
+                        );
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(k_h, lang));
                         ui.add(egui::DragValue::new(v_h).range(1..=128));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramMinHits, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpSpecNgramMinHits, lang),
+                        );
                     });
                 }
             }

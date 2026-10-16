@@ -108,7 +108,10 @@ fn fetch_body(ag: &ureq::Agent, url: &str) -> Result<String, String> {
         .header("User-Agent", net::USER_AGENT)
         .call()
         .map_err(|e| e.to_string())?;
-    response.body_mut().read_to_string().map_err(|e| e.to_string())
+    response
+        .body_mut()
+        .read_to_string()
+        .map_err(|e| e.to_string())
 }
 
 // ======================= 公开类型 =======================

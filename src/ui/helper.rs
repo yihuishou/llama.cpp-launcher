@@ -54,8 +54,7 @@ fn help_glyph() -> (String, Option<&'static str>) {
             iconflow::try_icon(Pack::FluentUi, "question-circle", style, size).ok()
         })
         .and_then(|icon| {
-            char::from_u32(icon.codepoint)
-                .map(|ch| (ch.to_string(), Some(icon.family)))
+            char::from_u32(icon.codepoint).map(|ch| (ch.to_string(), Some(icon.family)))
         })
         .unwrap_or_else(|| ("❓".to_string(), None))
 }
@@ -97,16 +96,19 @@ pub fn help_button_with_style(
     // 点击切换气泡：点自己 → 开/关；点其他任意位置 → 关。
     // 槽位存 ctx 临时数据（insert_temp 不持久化），全局只有一份。
     let slot = egui::Id::new("helper::open_help_tooltip");
-    let is_open = ui.ctx().data(|d| d.get_temp::<OpenHelpTooltip>(slot))
-        == Some(OpenHelpTooltip(id));
+    let is_open =
+        ui.ctx().data(|d| d.get_temp::<OpenHelpTooltip>(slot)) == Some(OpenHelpTooltip(id));
     if response.clicked() {
         if is_open {
             ui.ctx().data_mut(|d| d.remove::<OpenHelpTooltip>(slot));
         } else {
-            ui.ctx().data_mut(|d| d.insert_temp(slot, OpenHelpTooltip(id)));
+            ui.ctx()
+                .data_mut(|d| d.insert_temp(slot, OpenHelpTooltip(id)));
         }
     } else if is_open
-        && ui.ctx().input(|i| i.pointer.button_pressed(PointerButton::Primary))
+        && ui
+            .ctx()
+            .input(|i| i.pointer.button_pressed(PointerButton::Primary))
     {
         ui.ctx().data_mut(|d| d.remove::<OpenHelpTooltip>(slot));
     }
@@ -118,8 +120,7 @@ pub fn help_button_with_style(
         } else {
             Color32::from_rgb(246, 246, 246)
         };
-        ui.painter()
-            .rect_filled(rect, widgets::R_CTL, bg);
+        ui.painter().rect_filled(rect, widgets::R_CTL, bg);
     }
 
     // 配色：空闲 = 次要灰，悬停 = 主文本色（对齐 WinUI 3 图标按钮）

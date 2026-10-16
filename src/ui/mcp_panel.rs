@@ -237,8 +237,7 @@ fn editor_window(ctx: &egui::Context, settings: &mut AppSettings, lang: &i18n::L
                             .or_insert(s.is_object && !s.command.is_empty());
                     }
                     // 清理已不存在的 server 状态
-                    states
-                        .retain(|name, _| servers.iter().any(|s| &s.name == name));
+                    states.retain(|name, _| servers.iter().any(|s| &s.name == name));
                     settings.mcp_server_states = states;
                     settings.mcp_config_json = settings.mcp_editor_text.clone();
                     settings.mcp_editor_error.clear();

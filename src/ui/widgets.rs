@@ -171,7 +171,11 @@ where
 
     let mut close_clicked = false;
     let modal = egui::Modal::new(id)
-        .backdrop_color(Color32::from_black_alpha(if theme.is_dark() { 105 } else { 58 }))
+        .backdrop_color(Color32::from_black_alpha(if theme.is_dark() {
+            105
+        } else {
+            58
+        }))
         .frame(frame)
         .show(ctx, |ui| {
             ui.set_width(width);
@@ -181,7 +185,8 @@ where
             // 行高至少容纳 32x32 关闭按钮；上下各 12px 内边距（合计 24 → 标题栏高 56，与官方 MaxHeight 一致），标题与按钮因此垂直居中
             let title_row_h = title_row_h.max(32.0);
             let header_h = title_row_h + 24.0;
-            let (header_rect, _) = ui.allocate_exact_size(Vec2::new(width, header_h), Sense::hover());
+            let (header_rect, _) =
+                ui.allocate_exact_size(Vec2::new(width, header_h), Sense::hover());
             let title_center_y = header_rect.top() + header_h / 2.0;
             ui.painter().text(
                 Pos2::new(header_rect.left() + 24.0, title_center_y),
@@ -272,26 +277,34 @@ where
     C: FnOnce(&mut egui::Ui, f32),
     F: FnOnce(&mut egui::Ui) -> bool,
 {
-    dialog_skeleton(ctx, id_salt, title, width, max_height, |ui, body_h, id| {
-        // 内容区：WinUI3 官方左右内边距 24 + 上下内边距 12；超出 content_view_h 时内部纵向滚动
-        // 视口高度 = 总高 - 标题栏(动态) - 60(底部按钮区预留) - 24(内容区垂直内边距)
-        let content_view_h = (body_h - 24.0).max(80.0);
-        egui::Frame::new()
-            .inner_margin(egui::Margin::symmetric(24, 12))
-            .show(ui, |ui| {
-                // 浮动滚动条不占布局宽度（默认滚动条会吃掉右侧 10px），保证左右内边距严格对称
-                ui.style_mut().spacing.scroll = egui::style::ScrollStyle::floating();
-                egui::ScrollArea::vertical()
-                    .id_salt(id)
-                    .auto_shrink([false, false])
-                    .max_height(content_view_h)
-                    .show(ui, |ui| {
-                        // 短内容也占满整个视口
-                        ui.set_min_height(content_view_h);
-                        content(ui, content_view_h);
-                    });
-            });
-    }, footer)
+    dialog_skeleton(
+        ctx,
+        id_salt,
+        title,
+        width,
+        max_height,
+        |ui, body_h, id| {
+            // 内容区：WinUI3 官方左右内边距 24 + 上下内边距 12；超出 content_view_h 时内部纵向滚动
+            // 视口高度 = 总高 - 标题栏(动态) - 60(底部按钮区预留) - 24(内容区垂直内边距)
+            let content_view_h = (body_h - 24.0).max(80.0);
+            egui::Frame::new()
+                .inner_margin(egui::Margin::symmetric(24, 12))
+                .show(ui, |ui| {
+                    // 浮动滚动条不占布局宽度（默认滚动条会吃掉右侧 10px），保证左右内边距严格对称
+                    ui.style_mut().spacing.scroll = egui::style::ScrollStyle::floating();
+                    egui::ScrollArea::vertical()
+                        .id_salt(id)
+                        .auto_shrink([false, false])
+                        .max_height(content_view_h)
+                        .show(ui, |ui| {
+                            // 短内容也占满整个视口
+                            ui.set_min_height(content_view_h);
+                            content(ui, content_view_h);
+                        });
+                });
+        },
+        footer,
+    )
 }
 
 /// `dialog` 的带可选左侧面板变体。
@@ -319,70 +332,76 @@ where
     S: FnOnce(&mut egui::Ui),
     F: FnOnce(&mut egui::Ui) -> bool,
 {
-    dialog_skeleton(ctx, id_salt, title, width, max_height, |ui, body_h, id| {
-        // 内容区视口高度（与无侧栏版同式：主体高 - 上下各 12 内边距）
-        let content_view_h = (body_h - 24.0).max(80.0);
-        // 侧栏内部高度（主体高 - 上下各 8 内边距）
-        let side_inner_h = (body_h - 16.0).max(40.0);
-        // 库控件收 FluentTheme 枚举而非 egui::Theme，故从 dark_mode 推导（取分隔线颜色）
-        let theme = if ctx.theme() == egui::Theme::Dark {
-            FluentTheme::Dark
-        } else {
-            FluentTheme::Light
-        };
-        let p = winui::palette(theme);
-        let body_origin = ui.min_rect().min;
-        ui.horizontal(|ui| {
-            // 侧栏与内容区之间不留间距：分隔线恰好落在两者边界上
-            ui.spacing_mut().item_spacing.x = 0.0;
-            // 左侧栏：固定宽 side_width、占满主体区高度，内部纵向滚动（与内容区同等处理）
-            ui.allocate_ui_with_layout(
-                Vec2::new(side_width, body_h),
-                egui::Layout::top_down(egui::Align::LEFT),
-                |side_ui| {
-                    egui::Frame::new()
-                        .inner_margin(egui::Margin::symmetric(12, 8))
-                        .show(side_ui, |side_ui| {
-                            side_ui
-                                .style_mut()
-                                .spacing
-                                .scroll = egui::style::ScrollStyle::floating();
-                            egui::ScrollArea::vertical()
-                                .id_salt(id.with("side"))
-                                .auto_shrink([false, false])
-                                .max_height(side_inner_h)
-                                .show(side_ui, |side_ui| {
-                                    side_ui.set_min_height(side_inner_h);
-                                    side(side_ui);
-                                });
-                        });
-                },
-            );
-            // 侧栏与内容区之间的 1px 竖直分隔线（贯穿主体区全高）
-            let divider_x = body_origin.x + side_width;
-            ui.painter().line_segment(
-                [
-                    Pos2::new(divider_x, body_origin.y),
-                    Pos2::new(divider_x, body_origin.y + body_h),
-                ],
-                egui::Stroke::new(1.0, p.card_border),
-            );
-            // 右侧内容区：24px 水平内边距 + 内部纵向滚动（与无侧栏版一致）
-            egui::Frame::new()
-                .inner_margin(egui::Margin::symmetric(24, 12))
-                .show(ui, |ui| {
-                    ui.style_mut().spacing.scroll = egui::style::ScrollStyle::floating();
-                    egui::ScrollArea::vertical()
-                        .id_salt(id)
-                        .auto_shrink([false, false])
-                        .max_height(content_view_h)
-                        .show(ui, |ui| {
-                            ui.set_min_height(content_view_h);
-                            content(ui, content_view_h);
-                        });
-                });
-        });
-    }, footer)
+    dialog_skeleton(
+        ctx,
+        id_salt,
+        title,
+        width,
+        max_height,
+        |ui, body_h, id| {
+            // 内容区视口高度（与无侧栏版同式：主体高 - 上下各 12 内边距）
+            let content_view_h = (body_h - 24.0).max(80.0);
+            // 侧栏内部高度（主体高 - 上下各 8 内边距）
+            let side_inner_h = (body_h - 16.0).max(40.0);
+            // 库控件收 FluentTheme 枚举而非 egui::Theme，故从 dark_mode 推导（取分隔线颜色）
+            let theme = if ctx.theme() == egui::Theme::Dark {
+                FluentTheme::Dark
+            } else {
+                FluentTheme::Light
+            };
+            let p = winui::palette(theme);
+            let body_origin = ui.min_rect().min;
+            ui.horizontal(|ui| {
+                // 侧栏与内容区之间不留间距：分隔线恰好落在两者边界上
+                ui.spacing_mut().item_spacing.x = 0.0;
+                // 左侧栏：固定宽 side_width、占满主体区高度，内部纵向滚动（与内容区同等处理）
+                ui.allocate_ui_with_layout(
+                    Vec2::new(side_width, body_h),
+                    egui::Layout::top_down(egui::Align::LEFT),
+                    |side_ui| {
+                        egui::Frame::new()
+                            .inner_margin(egui::Margin::symmetric(12, 8))
+                            .show(side_ui, |side_ui| {
+                                side_ui.style_mut().spacing.scroll =
+                                    egui::style::ScrollStyle::floating();
+                                egui::ScrollArea::vertical()
+                                    .id_salt(id.with("side"))
+                                    .auto_shrink([false, false])
+                                    .max_height(side_inner_h)
+                                    .show(side_ui, |side_ui| {
+                                        side_ui.set_min_height(side_inner_h);
+                                        side(side_ui);
+                                    });
+                            });
+                    },
+                );
+                // 侧栏与内容区之间的 1px 竖直分隔线（贯穿主体区全高）
+                let divider_x = body_origin.x + side_width;
+                ui.painter().line_segment(
+                    [
+                        Pos2::new(divider_x, body_origin.y),
+                        Pos2::new(divider_x, body_origin.y + body_h),
+                    ],
+                    egui::Stroke::new(1.0, p.card_border),
+                );
+                // 右侧内容区：24px 水平内边距 + 内部纵向滚动（与无侧栏版一致）
+                egui::Frame::new()
+                    .inner_margin(egui::Margin::symmetric(24, 12))
+                    .show(ui, |ui| {
+                        ui.style_mut().spacing.scroll = egui::style::ScrollStyle::floating();
+                        egui::ScrollArea::vertical()
+                            .id_salt(id)
+                            .auto_shrink([false, false])
+                            .max_height(content_view_h)
+                            .show(ui, |ui| {
+                                ui.set_min_height(content_view_h);
+                                content(ui, content_view_h);
+                            });
+                    });
+            });
+        },
+        footer,
+    )
 }
 
 // ──── WinUI 3 开关 ────

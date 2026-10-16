@@ -503,7 +503,11 @@ impl ServerManager {
             }
         }
         // ngram-mod 专用参数（与 start() 一致：列表含 ngram-mod 时拼接）
-        if settings.spec_type.split(',').any(|s| s.trim() == "ngram-mod") {
+        if settings
+            .spec_type
+            .split(',')
+            .any(|s| s.trim() == "ngram-mod")
+        {
             args.push("--spec-ngram-mod-n-min".to_string());
             args.push(settings.spec_ngram_mod_n_min.to_string());
             args.push("--spec-ngram-mod-n-max".to_string());
@@ -938,14 +942,16 @@ impl ServerManager {
             .arg(settings.parallel_slots.to_string());
 
         if settings.enable_batch_size {
-            cmd.arg("--batch-size").arg(settings.batch_size_actual().to_string());
+            cmd.arg("--batch-size")
+                .arg(settings.batch_size_actual().to_string());
         }
         if settings.enable_ubatch_size {
             cmd.arg("--ubatch-size")
                 .arg(settings.ubatch_size_actual().to_string());
         }
         if settings.enable_session_timeout {
-            cmd.arg("--timeout").arg(settings.session_timeout.to_string());
+            cmd.arg("--timeout")
+                .arg(settings.session_timeout.to_string());
         }
 
         cmd.arg("--gpu-layers")

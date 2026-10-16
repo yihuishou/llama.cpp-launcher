@@ -406,10 +406,8 @@ pub fn ui(
                                 if should_close {
                                     match action {
                                         RenameAction::Confirm => {
-                                            let trimmed = settings
-                                                .rename_preset_new_name
-                                                .trim()
-                                                .to_string();
+                                            let trimmed =
+                                                settings.rename_preset_new_name.trim().to_string();
                                             if trimmed.is_empty() {
                                                 // 空名校验失败：保持打开，保留输入供用户修改
                                                 save_failed = true;
@@ -425,12 +423,11 @@ pub fn ui(
                                     }
                                 }
                                 // 校验失败时对话框保持打开，其余情形一律收起
-                                settings.rename_preset_index =
-                                    if !should_close || save_failed {
-                                        Some(idx)
-                                    } else {
-                                        None
-                                    };
+                                settings.rename_preset_index = if !should_close || save_failed {
+                                    Some(idx)
+                                } else {
+                                    None
+                                };
                             }
                         }
                     });
@@ -579,10 +576,7 @@ pub fn ui(
                 }
                 LinuxServiceAction::SaveFile => {
                     if let Some(path) = rfd::FileDialog::new()
-                        .set_title(i18n::t(
-                            i18n::Key::LinuxServiceFileWindowTitle,
-                            lang,
-                        ))
+                        .set_title(i18n::t(i18n::Key::LinuxServiceFileWindowTitle, lang))
                         .add_filter("Service File", &["service"])
                         .save_file()
                     {

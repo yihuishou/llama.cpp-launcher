@@ -507,44 +507,49 @@ pub fn ui(
                         });
 
                         // 节点行（ItemsRepeater 垂直布局，删除按钮紧跟地址，Fluent 风格）
-                        winui::ItemsRepeater::show(ui, endpoints.iter().enumerate(), |ui, (i, addr)| {
-                            ui.horizontal(|ui| {
-                                ui.scope(|ui| {
-                                    ui.set_min_width(INDEX_COL_W);
-                                    ui.label(format!("{}", i + 1));
-                                });
-                                // 判断是否多卡节点（末尾带 +）
-                                let is_multi_gpu = addr.ends_with('+');
-                                let display_addr = addr.trim_end_matches('+');
-                                ui.label(display_addr);
-                                if is_multi_gpu {
-                                    ui.label(
-                                        egui::RichText::new("MULTI-GPU")
-                                            .color(egui::Color32::from_rgb(255, 165, 0))
-                                            .small(),
+                        winui::ItemsRepeater::show(
+                            ui,
+                            endpoints.iter().enumerate(),
+                            |ui, (i, addr)| {
+                                ui.horizontal(|ui| {
+                                    ui.scope(|ui| {
+                                        ui.set_min_width(INDEX_COL_W);
+                                        ui.label(format!("{}", i + 1));
+                                    });
+                                    // 判断是否多卡节点（末尾带 +）
+                                    let is_multi_gpu = addr.ends_with('+');
+                                    let display_addr = addr.trim_end_matches('+');
+                                    ui.label(display_addr);
+                                    if is_multi_gpu {
+                                        ui.label(
+                                            egui::RichText::new("MULTI-GPU")
+                                                .color(egui::Color32::from_rgb(255, 165, 0))
+                                                .small(),
+                                        );
+                                    }
+                                    ui.add_space(10.0);
+                                    let delete_name =
+                                        i18n::t(i18n::Key::BtnRemoveEndpoint, lang).to_string();
+                                    let delete_resp = winui::FluentContentButton::new(
+                                        egui::vec2(24.0, 24.0),
+                                        delete_name.clone(),
+                                    )
+                                    .show(ui, |_ui| {});
+                                    // 图标直接绘制在按钮中心：控件内框被 shrink2(6px) 缩到 12x12，
+                                    // 用内部 Label 会溢出裁剪且其独立 widget 拦截中心点击
+                                    ui.painter().text(
+                                        delete_resp.response.rect.center(),
+                                        egui::Align2::CENTER_CENTER,
+                                        winui::FluentIcon::Delete.glyph(),
+                                        winui::icon_font_id(14.0),
+                                        egui::Color32::RED,
                                     );
-                                }
-                                ui.add_space(10.0);
-                                let delete_name = i18n::t(i18n::Key::BtnRemoveEndpoint, lang).to_string();
-                                let delete_resp = winui::FluentContentButton::new(
-                                    egui::vec2(24.0, 24.0),
-                                    delete_name.clone(),
-                                )
-                                .show(ui, |_ui| {});
-                                // 图标直接绘制在按钮中心：控件内框被 shrink2(6px) 缩到 12x12，
-                                // 用内部 Label 会溢出裁剪且其独立 widget 拦截中心点击
-                                ui.painter().text(
-                                    delete_resp.response.rect.center(),
-                                    egui::Align2::CENTER_CENTER,
-                                    winui::FluentIcon::Delete.glyph(),
-                                    winui::icon_font_id(14.0),
-                                    egui::Color32::RED,
-                                );
-                                if delete_resp.response.on_hover_text(delete_name).clicked() {
-                                    indices_to_remove.push(i);
-                                }
-                            });
-                        });
+                                    if delete_resp.response.on_hover_text(delete_name).clicked() {
+                                        indices_to_remove.push(i);
+                                    }
+                                });
+                            },
+                        );
 
                         // 删除操作（从后往前删避免索引偏移）
                         if !indices_to_remove.is_empty() {

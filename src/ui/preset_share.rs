@@ -1268,12 +1268,8 @@ pub fn config_window(
             }
             // 操作按钮右对齐（顺手好点），加大尺寸；确定为主操作（低饱和主题色填充）
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let primary_fill = egui::Color32::from_rgba_unmultiplied(
-                    accent.r(),
-                    accent.g(),
-                    accent.b(),
-                    175,
-                );
+                let primary_fill =
+                    egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), 175);
                 if ui
                     .add_sized(
                         [104.0, 32.0],
@@ -1289,10 +1285,7 @@ pub fn config_window(
                 if ui
                     .add_sized(
                         [104.0, 32.0],
-                        widgets::rounded_button(
-                            i18n::t(i18n::Key::ShareCancelBtn, lang),
-                            None,
-                        ),
+                        widgets::rounded_button(i18n::t(i18n::Key::ShareCancelBtn, lang), None),
                     )
                     .clicked()
                 {
