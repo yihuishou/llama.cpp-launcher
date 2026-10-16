@@ -488,55 +488,71 @@ pub fn ui(
                         .filter(|s| !s.is_empty())
                         .collect();
 
-                    // 节点列表（表格形式）
+                    // 节点列表（ItemsRepeater 形式：表头 + 每行「序号 + 地址 + 右侧删除」）
                     if endpoints.is_empty() {
                         ui.label(i18n::t(i18n::Key::HintRpcEndpointsEmpty, lang));
                     } else {
-                        egui::Grid::new("rpc_endpoints_grid")
-                            .striped(true)
-                            .show(ui, |ui| {
-                                // 表头
+                        // 序号列固定宽度，保证表头与各行列对齐
+                        const INDEX_COL_W: f32 = 28.0;
+                        let mut indices_to_remove: Vec<usize> = Vec::new();
+
+                        // 表头
+                        ui.horizontal(|ui| {
+                            ui.scope(|ui| {
+                                ui.set_min_width(INDEX_COL_W);
                                 ui.label(i18n::t(i18n::Key::LabelRpcEndpointIndex, lang));
-                                ui.label(i18n::t(i18n::Key::LabelRpcEndpointAddress, lang));
-                                ui.label(""); // 删除按钮列
-                                ui.end_row();
+                            });
+                            ui.label(i18n::t(i18n::Key::LabelRpcEndpointAddress, lang));
+                        });
 
-                                // 节点列表
-                                let mut indices_to_remove: Vec<usize> = Vec::new();
-                                for (i, addr) in endpoints.iter().enumerate() {
+                        // 节点行（ItemsRepeater 垂直布局，删除按钮紧跟地址，Fluent 风格）
+                        winui::ItemsRepeater::show(ui, endpoints.iter().enumerate(), |ui, (i, addr)| {
+                            ui.horizontal(|ui| {
+                                ui.scope(|ui| {
+                                    ui.set_min_width(INDEX_COL_W);
                                     ui.label(format!("{}", i + 1));
-                                    // 判断是否多卡节点（末尾带 +）
-                                    let is_multi_gpu = addr.ends_with('+');
-                                    let display_addr = addr.trim_end_matches('+');
-                                    ui.horizontal(|ui| {
-                                        ui.label(display_addr);
-                                        if is_multi_gpu {
-                                            ui.label(
-                                                egui::RichText::new("MULTI-GPU")
-                                                    .color(egui::Color32::from_rgb(255, 165, 0))
-                                                    .small(),
-                                            );
-                                        }
-                                    });
-                                    if ui
-                                        .small(egui::RichText::new("×").color(egui::Color32::RED))
-                                        .on_hover_text(i18n::t(i18n::Key::BtnRemoveEndpoint, lang))
-                                        .clicked()
-                                    {
-                                        indices_to_remove.push(i);
-                                    }
-                                    ui.end_row();
+                                });
+                                // 判断是否多卡节点（末尾带 +）
+                                let is_multi_gpu = addr.ends_with('+');
+                                let display_addr = addr.trim_end_matches('+');
+                                ui.label(display_addr);
+                                if is_multi_gpu {
+                                    ui.label(
+                                        egui::RichText::new("MULTI-GPU")
+                                            .color(egui::Color32::from_rgb(255, 165, 0))
+                                            .small(),
+                                    );
                                 }
-
-                                // 删除操作（从后往前删避免索引偏移）
-                                if !indices_to_remove.is_empty() {
-                                    let mut new_endpoints = endpoints.clone();
-                                    for &i in indices_to_remove.iter().rev() {
-                                        new_endpoints.remove(i);
-                                    }
-                                    settings.rpc_endpoints = new_endpoints.join(",");
+                                ui.add_space(10.0);
+                                let delete_name = i18n::t(i18n::Key::BtnRemoveEndpoint, lang).to_string();
+                                let delete_resp = winui::FluentContentButton::new(
+                                    egui::vec2(24.0, 24.0),
+                                    delete_name.clone(),
+                                )
+                                .show(ui, |_ui| {});
+                                // 图标直接绘制在按钮中心：控件内框被 shrink2(6px) 缩到 12x12，
+                                // 用内部 Label 会溢出裁剪且其独立 widget 拦截中心点击
+                                ui.painter().text(
+                                    delete_resp.response.rect.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    winui::FluentIcon::Delete.glyph(),
+                                    winui::icon_font_id(14.0),
+                                    egui::Color32::RED,
+                                );
+                                if delete_resp.response.on_hover_text(delete_name).clicked() {
+                                    indices_to_remove.push(i);
                                 }
                             });
+                        });
+
+                        // 删除操作（从后往前删避免索引偏移）
+                        if !indices_to_remove.is_empty() {
+                            let mut new_endpoints = endpoints.clone();
+                            for &i in indices_to_remove.iter().rev() {
+                                new_endpoints.remove(i);
+                            }
+                            settings.rpc_endpoints = new_endpoints.join(",");
+                        }
                     }
 
                     // 添加新节点地址
