@@ -636,11 +636,11 @@ impl ServerManager {
             args.push("--no-kv-offload".to_string());
         }
         // KVMem 版无这两个参数（已合并为 --kv-dtype），下发会导致启动失败
-        if settings.enable_cache_type_k && !settings.cache_type_k.is_empty() && !is_kvmem {
+        if settings.enable_cache_type_kv && !settings.cache_type_k.is_empty() && !is_kvmem {
             args.push("--cache-type-k".to_string());
             args.push(settings.cache_type_k.clone());
         }
-        if settings.enable_cache_type_v && !settings.cache_type_v.is_empty() && !is_kvmem {
+        if settings.enable_cache_type_kv && !settings.cache_type_v.is_empty() && !is_kvmem {
             args.push("--cache-type-v".to_string());
             args.push(settings.cache_type_v.clone());
         }
@@ -825,7 +825,7 @@ impl ServerManager {
         if settings.enable_no_host && settings.no_host {
             args.push("--no-host".to_string());
         }
-        if !settings.rope_scaling.is_empty() {
+        if settings.enable_rope_scaling && !settings.rope_scaling.is_empty() {
             args.push("--rope-scaling".to_string());
             args.push(settings.rope_scaling.clone());
         }
@@ -1370,10 +1370,10 @@ impl ServerManager {
             cmd.arg("--no-kv-offload");
         }
         // KVMem 版无这两个参数（已合并为 --kv-dtype），下发会导致启动失败
-        if settings.enable_cache_type_k && !settings.cache_type_k.is_empty() && !is_kvmem {
+        if settings.enable_cache_type_kv && !settings.cache_type_k.is_empty() && !is_kvmem {
             cmd.arg("--cache-type-k").arg(&settings.cache_type_k);
         }
-        if settings.enable_cache_type_v && !settings.cache_type_v.is_empty() && !is_kvmem {
+        if settings.enable_cache_type_kv && !settings.cache_type_v.is_empty() && !is_kvmem {
             cmd.arg("--cache-type-v").arg(&settings.cache_type_v);
         }
         // 模型加载模式（--load-mode 替代已废弃的 --mmap/--mlock）
@@ -1514,7 +1514,7 @@ impl ServerManager {
         if settings.enable_no_host && settings.no_host {
             cmd.arg("--no-host");
         }
-        if !settings.rope_scaling.is_empty() {
+        if settings.enable_rope_scaling && !settings.rope_scaling.is_empty() {
             cmd.arg("--rope-scaling").arg(&settings.rope_scaling);
         }
         if (settings.rope_scale - 1.0).abs() > f32::EPSILON {
@@ -2113,6 +2113,77 @@ mod adv_params_tests {
         }
     }
 
+    /// K/V 缓存类型共用一个启用开关：开启时同时拼接 --cache-type-k 与 --cache-type-v，
+    /// 关闭时两个都不拼接，但两者的取值仍各自独立
+    #[test]
+    fn test_cache_type_kv_single_switch_controls_both() {
+        let mgr = ServerManager::new();
+        let mut s = AppSettings::default();
+        s.cache_type_k = "q8_0".to_string();
+        s.cache_type_v = "f16".to_string();
+
+        s.enable_cache_type_kv = false;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in ["--cache-type-k", "--cache-type-v"] {
+            assert!(
+                !tokens.contains(&p),
+                "开关关闭时不应包含参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+
+        s.enable_cache_type_kv = true;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in ["--cache-type-k", "--cache-type-v"] {
+            assert!(
+                tokens.contains(&p),
+                "开关开启时应包含参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+
+        let pos_k = tokens.iter().position(|t| *t == "--cache-type-k").unwrap();
+        let pos_v = tokens.iter().position(|t| *t == "--cache-type-v").unwrap();
+        assert_eq!(tokens[pos_k + 1], "q8_0", "K 缓存类型取值应独立生效");
+        assert_eq!(tokens[pos_v + 1], "f16", "V 缓存类型取值应独立生效");
+    }
+
+    /// --rope-scaling 由独立开关控制：关闭时不拼接；开启且取值非空时拼接
+    #[test]
+    fn test_rope_scaling_enable_switch() {
+        let mgr = ServerManager::new();
+        let mut s = AppSettings::default();
+
+        let cmd = mgr.build_launch_command(&s);
+        assert!(
+            !cmd.split_whitespace().any(|t| t == "--rope-scaling"),
+            "默认开关开启但取值为空时不应拼接 --rope-scaling，实际命令：\n{}",
+            cmd
+        );
+
+        s.enable_rope_scaling = false;
+        s.rope_scaling = "yarn".to_string();
+        let cmd = mgr.build_launch_command(&s);
+        assert!(
+            !cmd.split_whitespace().any(|t| t == "--rope-scaling"),
+            "开关关闭时不应拼接 --rope-scaling，实际命令：\n{}",
+            cmd
+        );
+
+        s.enable_rope_scaling = true;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        let pos = tokens
+            .iter()
+            .position(|t| *t == "--rope-scaling")
+            .expect("开关开启且取值非空时应拼接 --rope-scaling");
+        assert_eq!(tokens[pos + 1], "yarn", "应拼接所选缩放方式");
+    }
+
     /// KVMem 参数只在 llama_cpp_type 判定为 Kvmem 时出现，且等于默认值的字段不拼接
     #[test]
     fn test_kvmem_params_gated_by_llama_cpp_type() {
@@ -2259,9 +2330,8 @@ mod adv_params_tests {
 
         let mut s = AppSettings::default();
         s.server_path = std::path::PathBuf::from("llama-kvmem-server.exe");
-        s.enable_cache_type_k = true;
+        s.enable_cache_type_kv = true;
         s.cache_type_k = "q8_0".to_string();
-        s.enable_cache_type_v = true;
         s.cache_type_v = "q8_0".to_string();
         s.spec_type = "draft-mtp".to_string();
         s.enable_spec_draft_type_k = true;

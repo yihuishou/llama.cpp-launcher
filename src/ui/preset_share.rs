@@ -172,6 +172,8 @@ pub struct ParamsExport {
     pub kv_offload: bool,
     pub cache_type_k: String,
     pub cache_type_v: String,
+    #[serde(default)]
+    pub enable_cache_type_kv: bool,
     // --mlock / --no-mmap 已被 llama.cpp 弃用（由 --load-mode 取代），对应设置字段
     // 已从 AppSettings/Preset 移除。此处保留是为了让分享码 JSON 结构保持稳定：
     // 旧版本反序列化时这些字段没有 #[serde(default)]，缺失会导致导入失败。
@@ -331,6 +333,7 @@ impl ParamsExport {
             kv_offload: s.kv_offload,
             cache_type_k: s.cache_type_k.clone(),
             cache_type_v: s.cache_type_v.clone(),
+            enable_cache_type_kv: s.enable_cache_type_kv,
             kv_mlock: false,
             kv_mmap: true,
             kv_unified: s.kv_unified,
@@ -433,6 +436,7 @@ impl ParamsExport {
             s.kv_offload = self.kv_offload;
         s.cache_type_k = self.cache_type_k;
         s.cache_type_v = self.cache_type_v;
+        s.enable_cache_type_kv = self.enable_cache_type_kv;
         s.kv_unified = self.kv_unified;
         s.swa_full = self.swa_full;
         s.kvmem_enabled = self.kvmem_enabled;
@@ -535,6 +539,7 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
             kv_offload: p.kv_offload,
             cache_type_k: p.cache_type_k.clone(),
             cache_type_v: p.cache_type_v.clone(),
+            enable_cache_type_kv: p.enable_cache_type_kv,
             kv_mlock: false,
             kv_mmap: true,
             kv_unified: p.kv_unified,
@@ -640,6 +645,7 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
             p.kv_offload = self.kv_offload;
         p.cache_type_k = self.cache_type_k;
         p.cache_type_v = self.cache_type_v;
+        p.enable_cache_type_kv = self.enable_cache_type_kv;
         p.kv_unified = self.kv_unified;
         p.swa_full = self.swa_full;
         p.kvmem_enabled = self.kvmem_enabled;

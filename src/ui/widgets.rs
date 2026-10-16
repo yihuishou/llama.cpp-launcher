@@ -852,7 +852,7 @@ pub fn nav_icon_paint(painter: &Painter, rect: Rect, kind: NavIcon, color: Color
 
 #[cfg(test)]
 mod nav_icon_tests {
-    use super::{nav_icon_glyph, NavIcon};
+    use super::NavIcon;
 
     const ALL: [NavIcon; 10] = [
         NavIcon::Server,

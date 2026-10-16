@@ -995,6 +995,9 @@ pub struct Preset {
     pub cache_ram: i32, // --cache-ram N (MiB, -1 不限, 0 禁用)
     #[serde(default = "default_no_host")]
     pub no_host: bool, // --no-host (绕过 host buffer 以使用额外缓冲区)
+    // RoPE 缩放方式启用开关（关闭时不拼接 --rope-scaling，由模型自带配置决定）
+    #[serde(default = "default_true")]
+    pub enable_rope_scaling: bool,
     #[serde(default = "default_rope_scaling")]
     pub rope_scaling: String, // --rope-scaling {none,linear,yarn} (空不拼接)
     #[serde(default = "default_rope_scale")]
@@ -1131,6 +1134,9 @@ pub struct Preset {
     pub kv_offload: bool,
     pub cache_type_k: String,
     pub cache_type_v: String,
+    // K/V 缓存类型启用开关（勾选时同时拼接 --cache-type-k 与 --cache-type-v）
+    #[serde(default)]
+    pub enable_cache_type_kv: bool,
     pub kv_unified: bool, // --kv-unified
     #[serde(default)]
     pub swa_full: bool, // --swa-full
@@ -1407,6 +1413,7 @@ impl Default for Preset {
             cache_ram_enabled: default_cache_ram_enabled(),
             cache_ram: default_cache_ram(),
             no_host: default_no_host(),
+            enable_rope_scaling: true,
             rope_scaling: default_rope_scaling(),
             rope_scale: default_rope_scale(),
             rope_freq_base: default_rope_freq_base(),
@@ -1473,6 +1480,7 @@ enable_warmup: true,
             kv_offload: true,
             cache_type_k: "q8_0".to_string(),
             cache_type_v: "q8_0".to_string(),
+            enable_cache_type_kv: false,
             kv_unified: true,
             swa_full: false,
             kv_cache_ratio: default_kv_cache_ratio(),
@@ -1654,6 +1662,7 @@ impl Preset {
             cache_ram_enabled: settings.cache_ram_enabled,
             cache_ram: settings.cache_ram,
             no_host: settings.no_host,
+            enable_rope_scaling: settings.enable_rope_scaling,
             rope_scaling: settings.rope_scaling.clone(),
             rope_scale: settings.rope_scale,
             rope_freq_base: settings.rope_freq_base,
@@ -1720,6 +1729,7 @@ impl Preset {
             kv_offload: settings.kv_offload,
             cache_type_k: settings.cache_type_k.clone(),
             cache_type_v: settings.cache_type_v.clone(),
+            enable_cache_type_kv: settings.enable_cache_type_kv,
             kv_unified: settings.kv_unified,
             swa_full: settings.swa_full,
             kv_cache_ratio: settings.kv_cache_ratio,
@@ -1902,6 +1912,7 @@ impl Preset {
         settings.cache_ram_enabled = self.cache_ram_enabled;
         settings.cache_ram = self.cache_ram;
         settings.no_host = self.no_host;
+        settings.enable_rope_scaling = self.enable_rope_scaling;
         settings.rope_scaling = self.rope_scaling;
         settings.rope_scale = self.rope_scale;
         settings.rope_freq_base = self.rope_freq_base;
@@ -1969,6 +1980,7 @@ impl Preset {
         settings.kv_offload = self.kv_offload;
         settings.cache_type_k = self.cache_type_k;
         settings.cache_type_v = self.cache_type_v;
+        settings.enable_cache_type_kv = self.enable_cache_type_kv;
         settings.kv_unified = self.kv_unified;
         settings.swa_full = self.swa_full;
         settings.kv_cache_ratio = self.kv_cache_ratio;
@@ -2335,6 +2347,9 @@ pub struct AppSettings {
     pub cache_ram: i32, // --cache-ram N (MiB, -1 不限, 0 禁用)
     #[serde(default = "default_no_host")]
     pub no_host: bool, // --no-host (绕过 host buffer 以使用额外缓冲区)
+    // RoPE 缩放方式启用开关（关闭时不拼接 --rope-scaling，由模型自带配置决定）
+    #[serde(default = "default_true")]
+    pub enable_rope_scaling: bool,
     #[serde(default = "default_rope_scaling")]
     pub rope_scaling: String, // --rope-scaling {none,linear,yarn} (空不拼接)
     #[serde(default = "default_rope_scale")]
@@ -2471,11 +2486,9 @@ pub struct AppSettings {
     pub kv_offload: bool,
     pub cache_type_k: String,
     pub cache_type_v: String,
-    // KV 缓存类型启用开关（勾选时拼接 --cache-type-k/v，未勾选不拼接）
+    // K/V 缓存类型启用开关（勾选时同时拼接 --cache-type-k 与 --cache-type-v，未勾选都不拼接）
     #[serde(default)]
-    pub enable_cache_type_k: bool,
-    #[serde(default)]
-    pub enable_cache_type_v: bool,
+    pub enable_cache_type_kv: bool,
     pub kv_unified: bool, // --kv-unified
     #[serde(default)]
     pub swa_full: bool, // --swa-full
@@ -2912,6 +2925,7 @@ enable_mmproj_auto: true,
             cache_ram_enabled: default_cache_ram_enabled(),
             cache_ram: default_cache_ram(),
             no_host: default_no_host(),
+            enable_rope_scaling: true,
             rope_scaling: default_rope_scaling(),
             rope_scale: default_rope_scale(),
             rope_freq_base: default_rope_freq_base(),
@@ -2978,8 +2992,7 @@ enable_warmup: true,
             kv_offload: true,
             cache_type_k: "q8_0".to_string(),
             cache_type_v: "q8_0".to_string(),
-            enable_cache_type_k: false,
-            enable_cache_type_v: false,
+            enable_cache_type_kv: false,
             kv_unified: true,
             swa_full: false,
             kv_cache_ratio: default_kv_cache_ratio(),

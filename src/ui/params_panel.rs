@@ -1127,14 +1127,14 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 }
             });
         } else {
-            // K 缓存类型启用开关
+            // K/V 缓存类型启用开关（同时控制 --cache-type-k 与 --cache-type-v）
             ui.horizontal(|ui| {
-                widgets::toggle(ui, &mut settings.enable_cache_type_k, "", accent);
-                ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeK, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeK, lang));
+                widgets::toggle(ui, &mut settings.enable_cache_type_kv, "", accent);
+                ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeKv, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeKv, lang));
             });
-            if settings.enable_cache_type_k {
-                ui.indent("cache_type_k_opt", |ui| {
+            if settings.enable_cache_type_kv {
+                ui.indent("cache_type_kv_opt", |ui| {
                     // K 缓存类型：标签 + ❓提示框同一行
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelCacheTypeK, lang));
@@ -1155,17 +1155,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             }
                         }
                     });
-                });
-            }
 
-            // V 缓存类型启用开关
-            ui.horizontal(|ui| {
-                widgets::toggle(ui, &mut settings.enable_cache_type_v, "", accent);
-                ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeV, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeV, lang));
-            });
-            if settings.enable_cache_type_v {
-                ui.indent("cache_type_v_opt", |ui| {
                     // V 缓存类型：标签 + ❓提示框同一行
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelCacheTypeV, lang));
@@ -2351,7 +2341,7 @@ ui.horizontal(|ui| {
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelTopNSigma, lang));
                         ui.add(
-                            winui::FluentSlider::new(&mut settings.top_n_sigma, 0.0..=3.0)
+                            winui::FluentSlider::new(&mut settings.top_n_sigma, -1.0..=1.0)
                                 .step_by(0.01)
                                 .show_value(true),
                         );
@@ -2516,23 +2506,27 @@ ui.horizontal(|ui| {
         i18n::t(i18n::Key::SectionAdvLongContext, lang),
         accent,
         |ui| {
+            // 启用开关
             ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::AdvRopeScaling, lang));
-                let vals = ["", "none", "linear", "yarn"];
-                let labels = [
-                    i18n::t(i18n::Key::AdvNotSet, lang),
-                    vals[1],
-                    vals[2],
-                    vals[3],
-                ];
-                let mut idx = vals
-                    .iter()
-                    .position(|v| *v == settings.rope_scaling)
-                    .unwrap_or(0);
-                widgets::segmented(ui, &labels, &mut idx, accent);
-                settings.rope_scaling = vals[idx].to_string();
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeScalingHint, lang));
+                widgets::toggle(ui, &mut settings.enable_rope_scaling, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableRopeScaling, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableRopeScaling, lang));
             });
+            if settings.enable_rope_scaling {
+                ui.indent("rope_scaling_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::AdvRopeScaling, lang));
+                        let vals = ["none", "linear", "yarn"];
+                        let mut idx = vals
+                            .iter()
+                            .position(|v| *v == settings.rope_scaling)
+                            .unwrap_or(0);
+                        widgets::segmented(ui, &vals, &mut idx, accent);
+                        settings.rope_scaling = vals[idx].to_string();
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeScalingHint, lang));
+                    });
+                });
+            }
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvRopeScale, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeScaleHint, lang));
