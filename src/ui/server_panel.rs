@@ -666,6 +666,20 @@ pub fn ui(
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvApiKeyFile, lang));
                 ui.add(winui::FluentTextEdit::new(&mut settings.api_key_file));
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnBrowseCert,
+                        lang,
+                    )))
+                    .clicked()
+                {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_title(i18n::t(i18n::Key::AdvApiKeyFile, lang))
+                        .pick_file()
+                    {
+                        settings.api_key_file = path.to_string_lossy().to_string();
+                    }
+                }
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvApiKeyFileHint, lang));
             });
             // CORS Origins
