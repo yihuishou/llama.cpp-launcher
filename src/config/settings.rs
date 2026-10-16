@@ -756,8 +756,8 @@ fn default_true() -> bool {
 }
 
 // 多模态（mmproj / mtmd / video）默认值
-fn default_mmproj_auto() -> bool {
-    true
+fn default_mmproj_auto() -> String {
+    "auto".to_string()
 }
 
 fn default_mmproj_offload() -> bool {
@@ -765,7 +765,7 @@ fn default_mmproj_offload() -> bool {
 }
 
 fn default_mmproj_device() -> String {
-    "auto".to_string()
+    String::new()
 }
 
 fn default_image_min_tokens() -> i64 {
@@ -1209,8 +1209,12 @@ pub struct Preset {
     #[serde(default)]
     pub mmproj_path: PathBuf,
     // ── 多模态（mmproj / mtmd / video）──
+    #[serde(default = "default_true")]
+    pub enable_mmproj_auto: bool,
     #[serde(default = "default_mmproj_auto")]
-    pub mmproj_auto: bool,
+    pub mmproj_auto: String,
+    #[serde(default = "default_true")]
+    pub enable_mmproj_offload: bool,
     #[serde(default = "default_mmproj_offload")]
     pub mmproj_offload: bool,
     #[serde(default = "default_mmproj_device")]
@@ -1503,8 +1507,10 @@ enable_warmup: true,
             model_path: PathBuf::new(),
             mmproj_path: PathBuf::new(),
             // 多模态
-            mmproj_auto: default_mmproj_auto(),
-            mmproj_offload: default_mmproj_offload(),
+enable_mmproj_auto: true,
+        mmproj_auto: default_mmproj_auto(),
+        enable_mmproj_offload: true,
+        mmproj_offload: default_mmproj_offload(),
             mmproj_device: default_mmproj_device(),
             image_min_tokens: default_image_min_tokens(),
             image_max_tokens: default_image_max_tokens(),
@@ -1745,7 +1751,9 @@ impl Preset {
             rpc_endpoints: settings.rpc_endpoints.clone(),
             model_path: settings.model_path.clone(),
             mmproj_path: settings.mmproj_path.clone(),
-            mmproj_auto: settings.mmproj_auto,
+            enable_mmproj_auto: settings.enable_mmproj_auto,
+            mmproj_auto: settings.mmproj_auto.clone(),
+            enable_mmproj_offload: settings.enable_mmproj_offload,
             mmproj_offload: settings.mmproj_offload,
             mmproj_device: settings.mmproj_device.clone(),
             image_min_tokens: settings.image_min_tokens,
@@ -1989,7 +1997,9 @@ impl Preset {
         settings.rpc_endpoints = self.rpc_endpoints;
         settings.model_path = self.model_path;
         settings.mmproj_path = self.mmproj_path;
-        settings.mmproj_auto = self.mmproj_auto;
+        settings.enable_mmproj_auto = self.enable_mmproj_auto;
+        settings.mmproj_auto = self.mmproj_auto.clone();
+        settings.enable_mmproj_offload = self.enable_mmproj_offload;
         settings.mmproj_offload = self.mmproj_offload;
         settings.mmproj_device = self.mmproj_device.clone();
         settings.image_min_tokens = self.image_min_tokens;
@@ -2085,8 +2095,12 @@ pub struct AppSettings {
     pub model_path: PathBuf,
     pub mmproj_path: PathBuf,
     // ── 多模态（mmproj / mtmd / video）──
+    #[serde(default = "default_true")]
+    pub enable_mmproj_auto: bool,
     #[serde(default = "default_mmproj_auto")]
-    pub mmproj_auto: bool,
+    pub mmproj_auto: String,
+    #[serde(default = "default_true")]
+    pub enable_mmproj_offload: bool,
     #[serde(default = "default_mmproj_offload")]
     pub mmproj_offload: bool,
     #[serde(default = "default_mmproj_device")]
@@ -2611,6 +2625,12 @@ pub struct AppSettings {
     #[serde(skip, default)]
     pub server_device_list_output: String,
 
+    // 投影设备列表 UI 状态（不序列化）
+    #[serde(skip, default)]
+    pub show_mmproj_device_list: bool,
+    #[serde(skip, default)]
+    pub mmproj_device_list_output: String,
+
     // Linux 服务文件窗口 UI 状态（不序列化）
     #[serde(skip, default)]
     pub show_linux_service_file: bool,
@@ -2772,8 +2792,10 @@ impl Default for AppSettings {
             model_path: PathBuf::new(),
             mmproj_path: PathBuf::new(),
             // 多模态
-            mmproj_auto: default_mmproj_auto(),
-            mmproj_offload: default_mmproj_offload(),
+enable_mmproj_auto: true,
+        mmproj_auto: default_mmproj_auto(),
+        enable_mmproj_offload: true,
+        mmproj_offload: default_mmproj_offload(),
             mmproj_device: default_mmproj_device(),
             image_min_tokens: default_image_min_tokens(),
             image_max_tokens: default_image_max_tokens(),
@@ -3009,8 +3031,10 @@ enable_warmup: true,
             mcp_editor_error: String::new(),
             show_device_list: false,
             device_list_output: String::new(),
-            show_server_device_list: false,
-            server_device_list_output: String::new(),
+show_server_device_list: false,
+        server_device_list_output: String::new(),
+        show_mmproj_device_list: false,
+        mmproj_device_list_output: String::new(),
             show_linux_service_file: false,
             linux_service_file_copied: false,
             rpc_endpoint_input: String::new(),

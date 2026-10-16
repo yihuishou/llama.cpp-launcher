@@ -1794,37 +1794,233 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
     // ── 多模态 ──
     widgets::card(ui, i18n::t(i18n::Key::Multimodal, lang), accent, |ui| {
         // 多模态投影文件 --mmproj-auto / --no-mmproj
-        ui.horizontal(|ui| {
-            ui.label(i18n::t(i18n::Key::LabelMmprojAuto, lang));
-            let mm_vals = ["auto", "off"];
-            let mm_labels = [
-                i18n::t(i18n::Key::MmprojAuto, lang),
-                i18n::t(i18n::Key::MmprojOff, lang),
-            ];
-            let mut mm_idx = if settings.mmproj_auto { 0 } else { 1 };
-            widgets::segmented(ui, &mm_labels, &mut mm_idx, accent);
-            settings.mmproj_auto = mm_vals[mm_idx] == "auto";
-            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojAuto, lang));
-        });
+ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_mmproj_auto, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableMmprojAuto, lang));
+            });
+            if settings.enable_mmproj_auto {
+                ui.indent("mmproj_auto_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelMmprojAuto, lang));
+                        let mm_vals = ["auto", "no-mmproj", "no-mmproj-auto"];
+                        let mm_labels = [
+                            i18n::t(i18n::Key::MmprojAuto, lang),
+                            i18n::t(i18n::Key::MmprojOff, lang),
+                            i18n::t(i18n::Key::MmprojNoAuto, lang),
+                        ];
+                        let mut mm_idx = mm_vals
+                            .iter()
+                            .position(|v| *v == settings.mmproj_auto)
+                            .unwrap_or(0);
+                        widgets::segmented(ui, &mm_labels, &mut mm_idx, accent);
+                        settings.mmproj_auto = mm_vals[mm_idx].to_string();
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojAuto, lang));
+                    });
+                });
+            }
         // 投影 GPU 卸载 --mmproj-offload / --no-mmproj-offload
         ui.horizontal(|ui| {
-            ui.label(i18n::t(i18n::Key::LabelMmprojOffload, lang));
-            let offload_vals = [true, false];
-            let offload_labels = [
-                i18n::t(i18n::Key::MmprojOffloadOn, lang),
-                i18n::t(i18n::Key::MmprojOffloadOff, lang),
-            ];
-            let mut offload_idx = if settings.mmproj_offload { 0 } else { 1 };
-            widgets::segmented(ui, &offload_labels, &mut offload_idx, accent);
-            settings.mmproj_offload = offload_vals[offload_idx];
-            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojOffload, lang));
-        });
+                widgets::toggle(ui, &mut settings.enable_mmproj_offload, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableMmprojOffload, lang));
+            });
+            if settings.enable_mmproj_offload {
+                ui.indent("mmproj_offload_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelMmprojOffload, lang));
+                        let offload_vals = [true, false];
+                        let offload_labels = [
+                            i18n::t(i18n::Key::MmprojOffloadOn, lang),
+                            i18n::t(i18n::Key::MmprojOffloadOff, lang),
+                        ];
+                        let mut offload_idx = if settings.mmproj_offload { 0 } else { 1 };
+                        widgets::segmented(ui, &offload_labels, &mut offload_idx, accent);
+                        settings.mmproj_offload = offload_vals[offload_idx];
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojOffload, lang));
+                    });
+                });
+            }
         // 投影设备 --mmproj-device
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelMmprojDevice, lang));
             ui.add(egui::TextEdit::singleline(&mut settings.mmproj_device).desired_width(120.0));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojDevice, lang));
         });
+        // 查看设备列表按钮（与「设备 --device」一致）
+        let mmproj_server_available = !settings.server_path.as_os_str().is_empty()
+            && settings
+                .server_path
+                .file_name()
+                .map(|f| f.to_string_lossy().contains("llama-server"))
+                .unwrap_or(false);
+        let mmproj_btn = ui.add_enabled(
+            mmproj_server_available,
+            winui::FluentButton::new(i18n::t(i18n::Key::BtnViewServerDeviceList, lang)),
+        );
+        if mmproj_btn.clicked() {
+            if settings.show_mmproj_device_list {
+                settings.show_mmproj_device_list = false;
+            } else {
+                settings.mmproj_device_list_output.clear();
+                let mut cmd = std::process::Command::new(&settings.server_path);
+                cmd.arg("--list-devices")
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::piped());
+                #[cfg(target_os = "windows")]
+                {
+                    use std::os::windows::process::CommandExt;
+                    cmd.creation_flags(0x0800_0000u32);
+                }
+                match cmd.output() {
+                    Ok(output) => {
+                        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                        let raw = if !stdout.is_empty() {
+                            stdout
+                        } else if !stderr.is_empty() {
+                            stderr
+                        } else {
+                            String::new()
+                        };
+                        // 只保留设备行：缩进且含 ":" 的行（如 "CUDA0: NVIDIA RTX 3090 (24576 MiB)"）
+                        let devices: Vec<String> = raw
+                            .lines()
+                            .filter(|line| {
+                                line.starts_with(char::is_whitespace)
+                                    && line.trim().contains(':')
+                                    && !line.contains("Available devices")
+                            })
+                            .map(|line| line.trim().to_string())
+                            .collect();
+                        if devices.is_empty() {
+                            settings.mmproj_device_list_output =
+                                i18n::t(i18n::Key::HintServerDeviceListEmpty, lang).to_string();
+                        } else {
+                            settings.mmproj_device_list_output = devices.join("\n");
+                        }
+                    }
+                    Err(e) => {
+                        settings.mmproj_device_list_output = format!("执行失败: {}", e);
+                    }
+                }
+                settings.show_mmproj_device_list = true;
+            }
+        }
+        if settings.show_mmproj_device_list {
+            ui.label(i18n::t(i18n::Key::LabelDeviceListTitle, lang));
+            if settings.mmproj_device_list_output.is_empty()
+                || settings.mmproj_device_list_output
+                    == i18n::t(i18n::Key::HintServerDeviceListEmpty, lang)
+            {
+                ui.label(i18n::t(i18n::Key::HintServerDeviceListEmpty, lang));
+            } else {
+                let mmproj_rpc_nodes: Vec<String> = settings
+                    .rpc_endpoints
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+
+                for line in settings.mmproj_device_list_output.lines() {
+                    if !line.is_empty() {
+                        let dot_color = if line.contains("AMD") {
+                            egui::Color32::from_rgb(220, 50, 50) // AMD 红色
+                        } else if line.contains("NVIDIA") {
+                            egui::Color32::from_rgb(50, 180, 50) // NVIDIA 绿色
+                        } else if line.contains("Intel") || line.contains("INTEL") {
+                            egui::Color32::from_rgb(50, 100, 220) // Intel 蓝色
+                        } else {
+                            accent // 其他使用主题色
+                        };
+
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new("●").color(dot_color).size(10.0));
+                            ui.label(
+                                egui::RichText::new(line)
+                                    .color(ui.visuals().text_color())
+                                    .size(13.0),
+                            );
+
+                            let device_entry =
+                                line.split(':').next().map(|s| s.trim().to_string());
+
+                            if let Some(ref entry) = device_entry {
+                                let already_added = settings
+                                    .mmproj_device
+                                    .split(',')
+                                    .any(|s| s.trim() == entry);
+                                let add_btn = ui.add_enabled(
+                                    !already_added,
+                                    winui::FluentButton::new(i18n::t(
+                                        i18n::Key::BtnAddToMmprojDevice,
+                                        lang,
+                                    )),
+                                );
+                                if add_btn.clicked() {
+                                    if settings.mmproj_device.is_empty() {
+                                        settings.mmproj_device = entry.clone();
+                                    } else {
+                                        settings.mmproj_device =
+                                            format!("{},{}", settings.mmproj_device, entry);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+
+                if !mmproj_rpc_nodes.is_empty() {
+                    let rpc_color = egui::Color32::from_rgb(180, 120, 255); // 紫色
+                    let mut rpc_idx = 0usize;
+                    for addr in mmproj_rpc_nodes.iter() {
+                        let is_multi_gpu = addr.ends_with('+');
+                        let display_addr = addr.trim_end_matches('+');
+                        let count = if is_multi_gpu { 2 } else { 1 };
+                        for offset in 0..count {
+                            let idx = rpc_idx + offset;
+                            ui.horizontal(|ui| {
+                                ui.label(egui::RichText::new("●").color(rpc_color).size(10.0));
+                                let rpc_label = format!("RPC{}: {}", idx, display_addr);
+                                ui.label(
+                                    egui::RichText::new(&rpc_label)
+                                        .color(ui.visuals().text_color())
+                                        .size(13.0),
+                                );
+                                if is_multi_gpu {
+                                    let tag_color = egui::Color32::from_rgb(255, 165, 0);
+                                    ui.label(
+                                        egui::RichText::new("MULTI-GPU")
+                                            .color(tag_color)
+                                            .size(10.0),
+                                    );
+                                }
+
+                                let rpc_entry = format!("RPC{}", idx);
+                                let already_added = settings
+                                    .mmproj_device
+                                    .split(',')
+                                    .any(|s| s.trim() == rpc_entry);
+                                let add_btn = ui.add_enabled(
+                                    !already_added,
+                                    winui::FluentButton::new(i18n::t(
+                                        i18n::Key::BtnAddToMmprojDevice,
+                                        lang,
+                                    )),
+                                );
+                                if add_btn.clicked() {
+                                    if settings.mmproj_device.is_empty() {
+                                        settings.mmproj_device = rpc_entry;
+                                    } else {
+                                        settings.mmproj_device =
+                                            format!("{},{}", settings.mmproj_device, rpc_entry);
+                                    }
+                                }
+                            });
+                        }
+                        rpc_idx += count;
+                    }
+                }
+            }
+        }
         ui.separator();
         // 图片最小 Token --image-min-tokens
         ui.horizontal(|ui| {

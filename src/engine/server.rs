@@ -483,17 +483,21 @@ impl ServerManager {
         }
 
         // 多模态参数
-        if settings.mmproj_auto {
-            args.push("--mmproj-auto".to_string());
-        } else {
-            args.push("--no-mmproj".to_string());
+        if settings.enable_mmproj_auto {
+            match settings.mmproj_auto.as_str() {
+                "no-mmproj" => args.push("--no-mmproj".to_string()),
+                "no-mmproj-auto" => args.push("--no-mmproj-auto".to_string()),
+                _ => args.push("--mmproj-auto".to_string()),
+            }
         }
-        if settings.mmproj_offload {
-            args.push("--mmproj-offload".to_string());
-        } else {
-            args.push("--no-mmproj-offload".to_string());
+        if settings.enable_mmproj_offload {
+            if settings.mmproj_offload {
+                args.push("--mmproj-offload".to_string());
+            } else {
+                args.push("--no-mmproj-offload".to_string());
+            }
         }
-        if settings.mmproj_device != "auto" {
+        if !settings.mmproj_device.is_empty() {
             args.push("--mmproj-device".to_string());
             args.push(settings.mmproj_device.clone());
         }
@@ -1196,17 +1200,27 @@ impl ServerManager {
         }
 
         // 多模态参数
-        if settings.mmproj_auto {
-            cmd.arg("--mmproj-auto");
-        } else {
-            cmd.arg("--no-mmproj");
+        if settings.enable_mmproj_auto {
+            match settings.mmproj_auto.as_str() {
+                "no-mmproj" => {
+                    cmd.arg("--no-mmproj");
+                }
+                "no-mmproj-auto" => {
+                    cmd.arg("--no-mmproj-auto");
+                }
+                _ => {
+                    cmd.arg("--mmproj-auto");
+                }
+            }
         }
-        if settings.mmproj_offload {
-            cmd.arg("--mmproj-offload");
-        } else {
-            cmd.arg("--no-mmproj-offload");
+        if settings.enable_mmproj_offload {
+            if settings.mmproj_offload {
+                cmd.arg("--mmproj-offload");
+            } else {
+                cmd.arg("--no-mmproj-offload");
+            }
         }
-        if settings.mmproj_device != "auto" {
+        if !settings.mmproj_device.is_empty() {
             cmd.arg("--mmproj-device").arg(&settings.mmproj_device);
         }
         if settings.image_min_tokens > 0 {

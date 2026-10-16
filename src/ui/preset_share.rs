@@ -41,14 +41,14 @@ fn default_jinja_enabled() -> bool {
 
 // 多模态（mmproj / mtmd / video）默认值（与 AppSettings 保持一致，
 // 保证旧版导出 JSON 直接反序列化时缺失的新字段有默认值）
-fn default_mmproj_auto() -> bool {
-    true
+fn default_mmproj_auto() -> String {
+    "auto".to_string()
 }
 fn default_mmproj_offload() -> bool {
     true
 }
 fn default_mmproj_device() -> String {
-    "auto".to_string()
+    String::new()
 }
 fn default_image_min_tokens() -> i64 {
     0
@@ -259,8 +259,12 @@ pub struct ParamsExport {
     #[serde(default)]
     pub chat_template_file: PathBuf,
     // 多模态（mmproj / mtmd / video）
+    #[serde(default = "default_true")]
+    pub enable_mmproj_auto: bool,
     #[serde(default = "default_mmproj_auto")]
-    pub mmproj_auto: bool,
+    pub mmproj_auto: String,
+    #[serde(default = "default_true")]
+    pub enable_mmproj_offload: bool,
     #[serde(default = "default_mmproj_offload")]
     pub mmproj_offload: bool,
     #[serde(default = "default_mmproj_device")]
@@ -368,7 +372,9 @@ impl ParamsExport {
             jinja_enabled: s.jinja_enabled,
             chat_template: s.chat_template.clone(),
             chat_template_file: s.chat_template_file.clone(),
-            mmproj_auto: s.mmproj_auto,
+            enable_mmproj_auto: s.enable_mmproj_auto,
+            mmproj_auto: s.mmproj_auto.clone(),
+            enable_mmproj_offload: s.enable_mmproj_offload,
             mmproj_offload: s.mmproj_offload,
             mmproj_device: s.mmproj_device.clone(),
             image_min_tokens: s.image_min_tokens,
@@ -465,8 +471,10 @@ impl ParamsExport {
         s.jinja_enabled = self.jinja_enabled;
         s.chat_template = self.chat_template;
         s.chat_template_file = self.chat_template_file;
-        s.mmproj_auto = self.mmproj_auto;
-        s.mmproj_offload = self.mmproj_offload;
+s.enable_mmproj_auto = self.enable_mmproj_auto;
+            s.mmproj_auto = self.mmproj_auto.clone();
+            s.enable_mmproj_offload = self.enable_mmproj_offload;
+            s.mmproj_offload = self.mmproj_offload;
         s.mmproj_device = self.mmproj_device;
         s.image_min_tokens = self.image_min_tokens;
         s.image_max_tokens = self.image_max_tokens;
@@ -566,7 +574,9 @@ impl ParamsExport {
             jinja_enabled: p.jinja_enabled,
             chat_template: p.chat_template.clone(),
             chat_template_file: p.chat_template_file.clone(),
-            mmproj_auto: p.mmproj_auto,
+            enable_mmproj_auto: p.enable_mmproj_auto,
+            mmproj_auto: p.mmproj_auto.clone(),
+            enable_mmproj_offload: p.enable_mmproj_offload,
             mmproj_offload: p.mmproj_offload,
             mmproj_device: p.mmproj_device.clone(),
             image_min_tokens: p.image_min_tokens,
@@ -666,8 +676,10 @@ impl ParamsExport {
         p.jinja_enabled = self.jinja_enabled;
         p.chat_template = self.chat_template;
         p.chat_template_file = self.chat_template_file;
-        p.mmproj_auto = self.mmproj_auto;
-        p.mmproj_offload = self.mmproj_offload;
+p.enable_mmproj_auto = self.enable_mmproj_auto;
+            p.mmproj_auto = self.mmproj_auto.clone();
+            p.enable_mmproj_offload = self.enable_mmproj_offload;
+            p.mmproj_offload = self.mmproj_offload;
         p.mmproj_device = self.mmproj_device;
         p.image_min_tokens = self.image_min_tokens;
         p.image_max_tokens = self.image_max_tokens;
