@@ -209,10 +209,107 @@ impl ServerManager {
         self.launch_command.clone()
     }
 
+    /// KVMem 专有参数的 CLI 片段：19 个 `--kvmem*` 开关 + `--kv-dtype` + `--spec-kv-dtype`。
+    ///
+    /// 返回空 Vec = 当前非 KVMem 版本（标准版不认这些参数，遇到即 argparse 失败退出）。
+    /// 预览命令与 start() 必须共用本函数，两处各抄一份清单必然漂移。
+    fn kvmem_args(settings: &AppSettings) -> Vec<String> {
+        if !settings.llama_cpp_type_effective().is_kvmem() {
+            return Vec::new();
+        }
+        let mut args: Vec<String> = Vec::new();
+        args.push(if settings.kvmem_enabled {
+            "--kvmem".to_string()
+        } else {
+            "--no-kvmem".to_string()
+        });
+        args.push(if settings.kvmem_trace {
+            "--kvmem-trace".to_string()
+        } else {
+            "--no-kvmem-trace".to_string()
+        });
+        if settings.kvmem_budget != 0 {
+            args.push("--kvmem-budget".to_string());
+            args.push(settings.kvmem_budget.to_string());
+        }
+        if settings.kvmem_block_tokens != 128 {
+            args.push("--kvmem-block-tokens".to_string());
+            args.push(settings.kvmem_block_tokens.to_string());
+        }
+        if settings.kvmem_sink_tokens != 0 {
+            args.push("--kvmem-sink-tokens".to_string());
+            args.push(settings.kvmem_sink_tokens.to_string());
+        }
+        if settings.kvmem_gen_reserve != 256 {
+            args.push("--kvmem-gen-reserve".to_string());
+            args.push(settings.kvmem_gen_reserve.to_string());
+        }
+        if (settings.kvmem_gpu_ratio - 0.50).abs() > f32::EPSILON {
+            args.push("--kvmem-gpu-ratio".to_string());
+            args.push(settings.kvmem_gpu_ratio.to_string());
+        }
+        if settings.kvmem_cpu_gb != 0.0 {
+            args.push("--kvmem-cpu-gb".to_string());
+            args.push(settings.kvmem_cpu_gb.to_string());
+        }
+        if settings.kvmem_nvme_gb != 0.0 {
+            args.push("--kvmem-nvme-gb".to_string());
+            args.push(settings.kvmem_nvme_gb.to_string());
+        }
+        if settings.kvmem_recent_tokens != 0 {
+            args.push("--kvmem-recent-tokens".to_string());
+            args.push(settings.kvmem_recent_tokens.to_string());
+        }
+        if settings.kvmem_method != "retrieval" {
+            args.push("--kvmem-method".to_string());
+            args.push(settings.kvmem_method.clone());
+        }
+        if settings.kvmem_query_last != 64 {
+            args.push("--kvmem-query-last".to_string());
+            args.push(settings.kvmem_query_last.to_string());
+        }
+        if settings.kvmem_query_max_tokens != 512 {
+            args.push("--kvmem-query-max-tokens".to_string());
+            args.push(settings.kvmem_query_max_tokens.to_string());
+        }
+        if settings.kvmem_query_replay != "auto" {
+            args.push("--kvmem-query-replay".to_string());
+            args.push(settings.kvmem_query_replay.clone());
+        }
+        if settings.kvmem_query_policy != "user" {
+            args.push("--kvmem-query-policy".to_string());
+            args.push(settings.kvmem_query_policy.clone());
+        }
+        if settings.kvmem_mtp_state != "replay" {
+            args.push("--kvmem-mtp-state".to_string());
+            args.push(settings.kvmem_mtp_state.clone());
+        }
+        // 留空 = 不下发，走服务端默认；beta2 默认是 Unix 路径 /tmp/kvmem_nvme，Windows 上不可用
+        if !settings.kvmem_nvme_dir.is_empty() {
+            args.push("--kvmem-nvme-dir".to_string());
+            args.push(settings.kvmem_nvme_dir.clone());
+        }
+        if settings.kvmem_harvest_v {
+            args.push("--kvmem-harvest-v".to_string());
+        }
+        // 文档：--kvmem-raw-k-nvme 需要配合 --kvmem-nvme-gb，NVMe 容量为 0 时下发无意义
+        if settings.kvmem_raw_k_nvme && settings.kvmem_nvme_gb > 0.0 {
+            args.push("--kvmem-raw-k-nvme".to_string());
+        }
+        // 这两个恒定下发（含默认值）：kvmem 的 --kv-dtype 默认 q8_0，
+        // 而标准版 --cache-type-k 默认 f16 —— 不显式下发会静默改变 KV 精度/显存/质量。
+        args.push("--kv-dtype".to_string());
+        args.push(settings.kv_dtype.clone());
+        args.push("--spec-kv-dtype".to_string());
+        args.push(settings.spec_kv_dtype.clone());
+        args
+    }
+
     /// 根据当前设置构建启动命令字符串（不启动服务器）
     pub fn build_launch_command(&self, settings: &AppSettings) -> String {
         let server_path = &settings.server_path;
         let model_path = &settings.model_path;
+        let is_kvmem = settings.llama_cpp_type_effective().is_kvmem();
 
         let mut args: Vec<String> = Vec::new();
 
@@ -461,11 +558,18 @@ impl ServerManager {
                 args.push("--spec-draft-p-split".to_string());
                 args.push(format!("{}", settings.spec_draft_p_split));
             }
-            if settings.enable_spec_draft_type_k && !settings.spec_draft_type_k.is_empty() {
+            // KVMem 版无这两个参数（已合并为 --spec-kv-dtype），下发会导致启动失败
+            if settings.enable_spec_draft_type_k
+                && !settings.spec_draft_type_k.is_empty()
+                && !is_kvmem
+            {
                 args.push("--spec-draft-type-k".to_string());
                 args.push(settings.spec_draft_type_k.clone());
             }
-            if settings.enable_spec_draft_type_v && !settings.spec_draft_type_v.is_empty() {
+            if settings.enable_spec_draft_type_v
+                && !settings.spec_draft_type_v.is_empty()
+                && !is_kvmem
+            {
                 args.push("--spec-draft-type-v".to_string());
                 args.push(settings.spec_draft_type_v.clone());
             }
@@ -522,11 +626,12 @@ impl ServerManager {
         } else {
             args.push("--no-kv-offload".to_string());
         }
-        if settings.enable_cache_type_k && !settings.cache_type_k.is_empty() {
+        // KVMem 版无这两个参数（已合并为 --kv-dtype），下发会导致启动失败
+        if settings.enable_cache_type_k && !settings.cache_type_k.is_empty() && !is_kvmem {
             args.push("--cache-type-k".to_string());
             args.push(settings.cache_type_k.clone());
         }
-        if settings.enable_cache_type_v && !settings.cache_type_v.is_empty() {
+        if settings.enable_cache_type_v && !settings.cache_type_v.is_empty() && !is_kvmem {
             args.push("--cache-type-v".to_string());
             args.push(settings.cache_type_v.clone());
         }
@@ -842,6 +947,8 @@ impl ServerManager {
             }
         }
 
+        args.extend(Self::kvmem_args(settings));
+
         format!("{} {}", server_path.display(), args.join(" "))
     }
 
@@ -917,6 +1024,7 @@ impl ServerManager {
         self._threads.clear();
 
         let mut cmd = Command::new(&server_path);
+        let is_kvmem = settings.llama_cpp_type_effective().is_kvmem();
 
         // RPC 模式（置于启动命令首位）
         if settings.rpc_mode {
@@ -1158,11 +1266,18 @@ impl ServerManager {
                 cmd.arg("--spec-draft-p-split")
                     .arg(format!("{}", settings.spec_draft_p_split));
             }
-            if settings.enable_spec_draft_type_k && !settings.spec_draft_type_k.is_empty() {
+            // KVMem 版无这两个参数（已合并为 --spec-kv-dtype），下发会导致启动失败
+            if settings.enable_spec_draft_type_k
+                && !settings.spec_draft_type_k.is_empty()
+                && !is_kvmem
+            {
                 cmd.arg("--spec-draft-type-k")
                     .arg(&settings.spec_draft_type_k);
             }
-            if settings.enable_spec_draft_type_v && !settings.spec_draft_type_v.is_empty() {
+            if settings.enable_spec_draft_type_v
+                && !settings.spec_draft_type_v.is_empty()
+                && !is_kvmem
+            {
                 cmd.arg("--spec-draft-type-v")
                     .arg(&settings.spec_draft_type_v);
             }
@@ -1216,10 +1331,11 @@ impl ServerManager {
         } else {
             cmd.arg("--no-kv-offload");
         }
-        if settings.enable_cache_type_k && !settings.cache_type_k.is_empty() {
+        // KVMem 版无这两个参数（已合并为 --kv-dtype），下发会导致启动失败
+        if settings.enable_cache_type_k && !settings.cache_type_k.is_empty() && !is_kvmem {
             cmd.arg("--cache-type-k").arg(&settings.cache_type_k);
         }
-        if settings.enable_cache_type_v && !settings.cache_type_v.is_empty() {
+        if settings.enable_cache_type_v && !settings.cache_type_v.is_empty() && !is_kvmem {
             cmd.arg("--cache-type-v").arg(&settings.cache_type_v);
         }
         // 模型加载模式（--load-mode 替代已废弃的 --mmap/--mlock）
@@ -1509,6 +1625,8 @@ impl ServerManager {
         if !settings.cpu_range_batch.is_empty() {
             cmd.arg("--cpu-range-batch").arg(&settings.cpu_range_batch);
         }
+
+        cmd.args(Self::kvmem_args(settings));
 
         // 记录启动命令
         let cmd_str = format!(
@@ -1802,5 +1920,242 @@ mod adv_params_tests {
         ] {
             assert!(cmd.contains(p), "命令应包含参数 {}，实际命令：\n{}", p, cmd);
         }
+    }
+
+    /// KVMem 参数只在 llama_cpp_type 判定为 Kvmem 时出现，且等于默认值的字段不拼接
+    #[test]
+    fn test_kvmem_params_gated_by_llama_cpp_type() {
+        let mgr = ServerManager::new();
+
+        let mut s = AppSettings::default();
+        s.server_path = std::path::PathBuf::from("llama-kvmem-server.exe");
+        let kvmem_default = mgr.build_launch_command(&s);
+        assert!(
+            kvmem_default.contains("--kvmem "),
+            "KVMem 模式应带 --kvmem，实际命令：\n{}",
+            kvmem_default
+        );
+        assert!(
+            kvmem_default.contains("--no-kvmem-trace"),
+            "trace 默认关闭应输出显式关闭开关，实际命令：\n{}",
+            kvmem_default
+        );
+        for p in [
+            "--kvmem-budget",
+            "--kvmem-block-tokens",
+            "--kvmem-sink-tokens",
+            "--kvmem-gen-reserve",
+            "--kvmem-gpu-ratio",
+            "--kvmem-cpu-gb",
+            "--kvmem-nvme-gb",
+        ] {
+            assert!(
+                !kvmem_default.contains(p),
+                "保持默认值时不应拼接 {}，实际命令：\n{}",
+                p,
+                kvmem_default
+            );
+        }
+
+        let mut std_s = s.clone();
+        std_s.llama_cpp_type = Some(crate::config::settings::LlamaCppType::Standard);
+        let std_cmd = mgr.build_launch_command(&std_s);
+        assert!(
+            !std_cmd.contains("--kvmem"),
+            "标准模式不得出现任何 --kvmem*，实际命令：\n{}",
+            std_cmd
+        );
+
+        s.kvmem_trace = true;
+        s.kvmem_enabled = false;
+        s.kvmem_budget = 4096;
+        s.kvmem_block_tokens = 256;
+        s.kvmem_sink_tokens = 512;
+        s.kvmem_gen_reserve = 1024;
+        s.kvmem_gpu_ratio = 0.75;
+        s.kvmem_cpu_gb = 8.0;
+        s.kvmem_nvme_gb = 64.0;
+        let cmd = mgr.build_launch_command(&s);
+        for p in [
+            "--no-kvmem",
+            "--kvmem-trace",
+            "--kvmem-budget 4096",
+            "--kvmem-block-tokens 256",
+            "--kvmem-sink-tokens 512",
+            "--kvmem-gen-reserve 1024",
+            "--kvmem-gpu-ratio 0.75",
+            "--kvmem-cpu-gb 8",
+            "--kvmem-nvme-gb 64",
+        ] {
+            assert!(cmd.contains(p), "命令应包含参数 {}，实际命令：\n{}", p, cmd);
+        }
+    }
+
+    /// Phase 2 检索策略 / 落盘参数；等于默认值的字段不拼接
+    #[test]
+    fn test_kvmem_phase2_retrieval_and_nvme_params() {
+        let mgr = ServerManager::new();
+
+        let mut s = AppSettings::default();
+        s.server_path = std::path::PathBuf::from("llama-kvmem-server.exe");
+        let default_cmd = mgr.build_launch_command(&s);
+        for p in [
+            "--kvmem-recent-tokens",
+            "--kvmem-method",
+            "--kvmem-query-last",
+            "--kvmem-query-max-tokens",
+            "--kvmem-query-replay",
+            "--kvmem-query-policy",
+            "--kvmem-mtp-state",
+            "--kvmem-nvme-dir",
+            "--kvmem-harvest-v",
+            "--kvmem-raw-k-nvme",
+        ] {
+            assert!(
+                !default_cmd.contains(p),
+                "Phase 2 参数 {} 保持默认值时不应拼接，实际命令：\n{}",
+                p,
+                default_cmd
+            );
+        }
+
+        s.kvmem_recent_tokens = 333;
+        s.kvmem_method = "recency".to_string();
+        s.kvmem_query_last = 11;
+        s.kvmem_query_max_tokens = 222;
+        s.kvmem_query_replay = "legacy".to_string();
+        s.kvmem_query_policy = "legacy".to_string();
+        s.kvmem_mtp_state = "snapshots".to_string();
+        s.kvmem_nvme_dir = "D:\\kvmem".to_string();
+        s.kvmem_harvest_v = true;
+        s.kvmem_raw_k_nvme = true;
+        s.kvmem_nvme_gb = 64.0;
+
+        let cmd = mgr.build_launch_command(&s);
+        for p in [
+            "--kvmem-recent-tokens 333",
+            "--kvmem-method recency",
+            "--kvmem-query-last 11",
+            "--kvmem-query-max-tokens 222",
+            "--kvmem-query-replay legacy",
+            "--kvmem-query-policy legacy",
+            "--kvmem-mtp-state snapshots",
+            "--kvmem-harvest-v",
+            "--kvmem-raw-k-nvme",
+        ] {
+            assert!(cmd.contains(p), "命令应包含参数 {}，实际命令：\n{}", p, cmd);
+        }
+        assert!(
+            cmd.contains("--kvmem-nvme-dir D:\\kvmem"),
+            "路径含空格时仍应作为单个参数下发，实际命令：\n{}",
+            cmd
+        );
+
+        s.kvmem_nvme_gb = 0.0;
+        let no_nvme = mgr.build_launch_command(&s);
+        assert!(
+            !no_nvme.contains("--kvmem-raw-k-nvme"),
+            "NVMe 容量为 0 时 raw-K 无处落盘，不应下发，实际命令：\n{}",
+            no_nvme
+        );
+    }
+
+    /// KVMem 版把 K/V 两类 KV dtype 合并成 --kv-dtype / --spec-kv-dtype，
+    /// 标准版那四个参数必须抑制，否则 kvmem 版 argparse 直接失败退出
+    #[test]
+    fn test_kvmem_suppresses_standard_only_kv_flags() {
+        let mgr = ServerManager::new();
+
+        let mut s = AppSettings::default();
+        s.server_path = std::path::PathBuf::from("llama-kvmem-server.exe");
+        s.enable_cache_type_k = true;
+        s.cache_type_k = "q8_0".to_string();
+        s.enable_cache_type_v = true;
+        s.cache_type_v = "q8_0".to_string();
+        s.spec_type = "draft-mtp".to_string();
+        s.enable_spec_draft_type_k = true;
+        s.spec_draft_type_k = "q8_0".to_string();
+        s.enable_spec_draft_type_v = true;
+        s.spec_draft_type_v = "q8_0".to_string();
+
+        let cmd = mgr.build_launch_command(&s);
+        for p in [
+            "--cache-type-k",
+            "--cache-type-v",
+            "--spec-draft-type-k",
+            "--spec-draft-type-v",
+        ] {
+            assert!(
+                !cmd.contains(p),
+                "KVMem 模式不得下发标准版专有参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+
+        // 恒定下发（含默认值），否则 KV 精度会静默从 f16 变成 q8_0
+        assert!(
+            cmd.contains("--kv-dtype q8_0"),
+            "KVMem 模式应恒定下发 --kv-dtype，实际命令：\n{}",
+            cmd
+        );
+        assert!(
+            cmd.contains("--spec-kv-dtype f16"),
+            "KVMem 模式应恒定下发 --spec-kv-dtype，实际命令：\n{}",
+            cmd
+        );
+
+        let mut std_s = s.clone();
+        std_s.llama_cpp_type = Some(crate::config::settings::LlamaCppType::Standard);
+        let std_cmd = mgr.build_launch_command(&std_s);
+        assert!(
+            std_cmd.contains("--cache-type-k q8_0"),
+            "标准模式必须保留 --cache-type-k，实际命令：\n{}",
+            std_cmd
+        );
+        assert!(
+            !std_cmd.contains("--kv-dtype"),
+            "标准模式不得出现 --kv-dtype，实际命令：\n{}",
+            std_cmd
+        );
+    }
+
+    /// Phase 1 回归：start() 曾完全漏掉 kvmem 参数（预览里有、真实进程 argv 里没有）。
+    /// 这里 spawn 真实进程来验证 kvmem 参数确实进了 argv。
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn test_start_passes_kvmem_args_to_spawned_process() {
+        let probe = std::path::PathBuf::from("C:\\Windows\\System32\\whoami.exe");
+        if !probe.is_file() {
+            return;
+        }
+
+        let mut s = AppSettings::default();
+        s.server_path = probe;
+        s.model_path = std::path::PathBuf::from("dummy.gguf");
+        s.rpc_port = s.port + 1;
+        s.llama_cpp_type = Some(crate::config::settings::LlamaCppType::Kvmem);
+        s.kvmem_budget = 4096;
+        s.kvmem_query_max_tokens = 222;
+        s.kv_dtype = "q4_0".to_string();
+
+        let mut mgr = ServerManager::new();
+        mgr.start(&s);
+        let cmd = mgr.launch_command().unwrap_or_default();
+        assert!(
+            cmd.contains("--kvmem-budget 4096"),
+            "start() 未把 --kvmem-budget 下发给真实进程，实际：\n{}",
+            cmd
+        );
+        assert!(
+            cmd.contains("--kvmem-query-max-tokens 222"),
+            "start() 未把 --kvmem-query-max-tokens 下发给真实进程，实际：\n{}",
+            cmd
+        );
+        assert!(
+            cmd.contains("--kv-dtype q4_0"),
+            "start() 未把 --kv-dtype 下发给真实进程，实际：\n{}",
+            cmd
+        );
     }
 }
