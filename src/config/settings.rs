@@ -342,10 +342,6 @@ fn default_api_key_file() -> String {
     String::new() // --api-key-file FNAME (空不拼接)
 }
 
-fn default_direct_io() -> bool {
-    false // --direct-io / --no-direct-io
-}
-
 fn default_check_tensors() -> bool {
     false // --check-tensors (加载时校验张量)
 }
@@ -856,8 +852,6 @@ pub struct Preset {
     pub metrics_enabled: bool, // --metrics (Prometheus 指标端点)
     #[serde(default = "default_api_key_file")]
     pub api_key_file: String, // --api-key-file FNAME (空不拼接)
-    #[serde(default = "default_direct_io")]
-    pub direct_io: bool, // --direct-io / --no-direct-io
     #[serde(default = "default_check_tensors")]
     pub check_tensors: bool, // --check-tensors (加载时校验张量)
     #[serde(default = "default_override_kv")]
@@ -1137,7 +1131,6 @@ impl Default for Preset {
             threads_http: default_threads_http(),
             metrics_enabled: default_metrics_enabled(),
             api_key_file: default_api_key_file(),
-            direct_io: default_direct_io(),
             check_tensors: default_check_tensors(),
             override_kv: default_override_kv(),
             prio: default_prio(),
@@ -1320,7 +1313,6 @@ impl Preset {
             threads_http: settings.threads_http,
             metrics_enabled: settings.metrics_enabled,
             api_key_file: settings.api_key_file.clone(),
-            direct_io: settings.direct_io,
             check_tensors: settings.check_tensors,
             override_kv: settings.override_kv.clone(),
             prio: settings.prio,
@@ -1504,7 +1496,6 @@ impl Preset {
         settings.threads_http = self.threads_http;
         settings.metrics_enabled = self.metrics_enabled;
         settings.api_key_file = self.api_key_file;
-        settings.direct_io = self.direct_io;
         settings.check_tensors = self.check_tensors;
         settings.override_kv = self.override_kv;
         settings.prio = self.prio;
@@ -1864,8 +1855,6 @@ pub struct AppSettings {
     pub metrics_enabled: bool, // --metrics (Prometheus 指标端点)
     #[serde(default = "default_api_key_file")]
     pub api_key_file: String, // --api-key-file FNAME (空不拼接)
-    #[serde(default = "default_direct_io")]
-    pub direct_io: bool, // --direct-io / --no-direct-io
     #[serde(default = "default_check_tensors")]
     pub check_tensors: bool, // --check-tensors (加载时校验张量)
     #[serde(default = "default_override_kv")]
@@ -2306,7 +2295,6 @@ impl Default for AppSettings {
             threads_http: default_threads_http(),
             metrics_enabled: default_metrics_enabled(),
             api_key_file: default_api_key_file(),
-            direct_io: default_direct_io(),
             check_tensors: default_check_tensors(),
             override_kv: default_override_kv(),
             prio: default_prio(),

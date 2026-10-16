@@ -761,9 +761,6 @@ impl ServerManager {
             args.push("--api-key-file".to_string());
             args.push(settings.api_key_file.clone());
         }
-        if settings.direct_io {
-            args.push("--direct-io".to_string());
-        }
         if settings.check_tensors {
             args.push("--check-tensors".to_string());
         }
@@ -1385,9 +1382,6 @@ impl ServerManager {
         if !settings.api_key_file.is_empty() {
             cmd.arg("--api-key-file").arg(&settings.api_key_file);
         }
-        if settings.direct_io {
-            cmd.arg("--direct-io");
-        }
         if settings.check_tensors {
             cmd.arg("--check-tensors");
         }
@@ -1657,7 +1651,6 @@ mod adv_params_tests {
             "--sleep-idle-seconds",
             "--threads-http",
             "--metrics",
-            "--direct-io",
             "--check-tensors",
             "--no-warmup",
             "--no-cont-batching",
@@ -1695,7 +1688,6 @@ mod adv_params_tests {
         s.threads_http = 4;
         s.metrics_enabled = true;
         s.api_key_file = "keys.txt".to_string();
-        s.direct_io = true;
         s.check_tensors = true;
         s.override_kv = "general.rope=float:8".to_string();
         s.prio = 2;
@@ -1730,7 +1722,6 @@ mod adv_params_tests {
             "--threads-http 4",
             "--metrics",
             "--api-key-file keys.txt",
-            "--direct-io",
             "--check-tensors",
             "--override-kv general.rope=float:8",
             "--prio 2",
