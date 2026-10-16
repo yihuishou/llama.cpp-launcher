@@ -1020,7 +1020,15 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
                 for (value, label) in &spec_options {
                     // 多选：spec_type 为逗号分隔列表，例如 "draft-mtp,ngram-map-k4v"
-                    let selected = settings.spec_type.split(',').any(|s| s == *value);
+                    // 选择规则：
+                    // - draft-* 基于草稿模型，最多选一个（点新的自动替换旧的）
+                    // - ngram-* 无草稿策略，不限数量
+                    // - "none" 排他：点击清空全部，仅在无任何选择时显示选中
+                    let selected = if *value == "none" {
+                        settings.spec_type == "none"
+                    } else {
+                        settings.spec_type.split(',').any(|s| s == *value)
+                    };
                     if ui.selectable_label(selected, *label).clicked() {
                         let mut parts: Vec<String> = settings
                             .spec_type
@@ -1028,8 +1036,14 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             .map(|s| s.trim().to_string())
                             .filter(|s| !s.is_empty() && s != "none")
                             .collect();
-                        if parts.iter().any(|s| s == value) {
+                        if *value == "none" {
+                            parts.clear();
+                        } else if parts.iter().any(|s| s == value) {
                             parts.retain(|s| s != value);
+                        } else if value.starts_with("draft-") {
+                            // draft 类互斥：移除已有 draft-* 选择后追加新的
+                            parts.retain(|s| !s.starts_with("draft-"));
+                            parts.push(value.to_string());
                         } else {
                             parts.push(value.to_string());
                         }
