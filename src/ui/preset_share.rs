@@ -78,6 +78,43 @@ fn default_fit_ctx() -> usize {
     4
 }
 
+fn default_kvmem_block_tokens() -> i64 {
+    128
+}
+fn default_kvmem_gen_reserve() -> i64 {
+    256
+}
+fn default_kvmem_gpu_ratio() -> f32 {
+    0.50
+}
+fn default_kvmem_method() -> String {
+    "retrieval".to_string()
+}
+fn default_kvmem_query_last() -> i64 {
+    64
+}
+fn default_kvmem_query_max_tokens() -> i64 {
+    512
+}
+fn default_kvmem_query_replay() -> String {
+    "auto".to_string()
+}
+fn default_kvmem_query_policy() -> String {
+    "user".to_string()
+}
+fn default_kvmem_mtp_state() -> String {
+    "replay".to_string()
+}
+fn default_kvmem_nvme_dir() -> String {
+    String::new()
+}
+fn default_kv_dtype() -> String {
+    "q8_0".to_string()
+}
+fn default_spec_kv_dtype() -> String {
+    "f16".to_string()
+}
+
 /// 导出/导入/分享的"参数面板"专用结构（不包含 Server/RPC/模型路径/密钥等）
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ParamsExport {
@@ -132,6 +169,50 @@ pub struct ParamsExport {
     pub kv_mmap: bool,
     pub kv_unified: bool,
     pub swa_full: bool,
+
+    // KVMem（llama-kvmem-server）
+    #[serde(default = "default_true")]
+    pub kvmem_enabled: bool,
+    #[serde(default)]
+    pub kvmem_trace: bool,
+    #[serde(default)]
+    pub kvmem_budget: i64,
+    #[serde(default = "default_kvmem_block_tokens")]
+    pub kvmem_block_tokens: i64,
+    #[serde(default)]
+    pub kvmem_sink_tokens: i64,
+    #[serde(default = "default_kvmem_gen_reserve")]
+    pub kvmem_gen_reserve: i64,
+    #[serde(default = "default_kvmem_gpu_ratio")]
+    pub kvmem_gpu_ratio: f32,
+    #[serde(default)]
+    pub kvmem_cpu_gb: f64,
+    #[serde(default)]
+    pub kvmem_nvme_gb: f64,
+    #[serde(default)]
+    pub kvmem_recent_tokens: i64,
+    #[serde(default = "default_kvmem_method")]
+    pub kvmem_method: String,
+    #[serde(default = "default_kvmem_query_last")]
+    pub kvmem_query_last: i64,
+    #[serde(default = "default_kvmem_query_max_tokens")]
+    pub kvmem_query_max_tokens: i64,
+    #[serde(default = "default_kvmem_query_replay")]
+    pub kvmem_query_replay: String,
+    #[serde(default = "default_kvmem_query_policy")]
+    pub kvmem_query_policy: String,
+    #[serde(default = "default_kvmem_mtp_state")]
+    pub kvmem_mtp_state: String,
+    #[serde(default = "default_kvmem_nvme_dir")]
+    pub kvmem_nvme_dir: String,
+    #[serde(default)]
+    pub kvmem_harvest_v: bool,
+    #[serde(default)]
+    pub kvmem_raw_k_nvme: bool,
+    #[serde(default = "default_kv_dtype")]
+    pub kv_dtype: String,
+    #[serde(default = "default_spec_kv_dtype")]
+    pub spec_kv_dtype: String,
 
     pub gpu_layers_mode: GpuLayersMode,
     pub split_mode: String,
@@ -220,6 +301,27 @@ impl ParamsExport {
             kv_mmap: true,
             kv_unified: s.kv_unified,
             swa_full: s.swa_full,
+            kvmem_enabled: s.kvmem_enabled,
+            kvmem_trace: s.kvmem_trace,
+            kvmem_budget: s.kvmem_budget,
+            kvmem_block_tokens: s.kvmem_block_tokens,
+            kvmem_sink_tokens: s.kvmem_sink_tokens,
+            kvmem_gen_reserve: s.kvmem_gen_reserve,
+            kvmem_gpu_ratio: s.kvmem_gpu_ratio,
+            kvmem_cpu_gb: s.kvmem_cpu_gb,
+            kvmem_nvme_gb: s.kvmem_nvme_gb,
+            kvmem_recent_tokens: s.kvmem_recent_tokens,
+            kvmem_method: s.kvmem_method.clone(),
+            kvmem_query_last: s.kvmem_query_last,
+            kvmem_query_max_tokens: s.kvmem_query_max_tokens,
+            kvmem_query_replay: s.kvmem_query_replay.clone(),
+            kvmem_query_policy: s.kvmem_query_policy.clone(),
+            kvmem_mtp_state: s.kvmem_mtp_state.clone(),
+            kvmem_nvme_dir: s.kvmem_nvme_dir.clone(),
+            kvmem_harvest_v: s.kvmem_harvest_v,
+            kvmem_raw_k_nvme: s.kvmem_raw_k_nvme,
+            kv_dtype: s.kv_dtype.clone(),
+            spec_kv_dtype: s.spec_kv_dtype.clone(),
             gpu_layers_mode: s.gpu_layers_mode,
             split_mode: s.split_mode.clone(),
             tensor_split: s.tensor_split.clone(),
@@ -285,6 +387,27 @@ impl ParamsExport {
         s.cache_type_v = self.cache_type_v;
         s.kv_unified = self.kv_unified;
         s.swa_full = self.swa_full;
+        s.kvmem_enabled = self.kvmem_enabled;
+        s.kvmem_trace = self.kvmem_trace;
+        s.kvmem_budget = self.kvmem_budget;
+        s.kvmem_block_tokens = self.kvmem_block_tokens;
+        s.kvmem_sink_tokens = self.kvmem_sink_tokens;
+        s.kvmem_gen_reserve = self.kvmem_gen_reserve;
+        s.kvmem_gpu_ratio = self.kvmem_gpu_ratio;
+        s.kvmem_cpu_gb = self.kvmem_cpu_gb;
+        s.kvmem_nvme_gb = self.kvmem_nvme_gb;
+        s.kvmem_recent_tokens = self.kvmem_recent_tokens;
+        s.kvmem_method = self.kvmem_method;
+        s.kvmem_query_last = self.kvmem_query_last;
+        s.kvmem_query_max_tokens = self.kvmem_query_max_tokens;
+        s.kvmem_query_replay = self.kvmem_query_replay;
+        s.kvmem_query_policy = self.kvmem_query_policy;
+        s.kvmem_mtp_state = self.kvmem_mtp_state;
+        s.kvmem_nvme_dir = self.kvmem_nvme_dir;
+        s.kvmem_harvest_v = self.kvmem_harvest_v;
+        s.kvmem_raw_k_nvme = self.kvmem_raw_k_nvme;
+        s.kv_dtype = self.kv_dtype;
+        s.spec_kv_dtype = self.spec_kv_dtype;
         s.gpu_layers_mode = self.gpu_layers_mode;
         s.split_mode = self.split_mode;
         s.tensor_split = self.tensor_split;
@@ -354,6 +477,27 @@ impl ParamsExport {
             kv_mmap: true,
             kv_unified: p.kv_unified,
             swa_full: p.swa_full,
+            kvmem_enabled: p.kvmem_enabled,
+            kvmem_trace: p.kvmem_trace,
+            kvmem_budget: p.kvmem_budget,
+            kvmem_block_tokens: p.kvmem_block_tokens,
+            kvmem_sink_tokens: p.kvmem_sink_tokens,
+            kvmem_gen_reserve: p.kvmem_gen_reserve,
+            kvmem_gpu_ratio: p.kvmem_gpu_ratio,
+            kvmem_cpu_gb: p.kvmem_cpu_gb,
+            kvmem_nvme_gb: p.kvmem_nvme_gb,
+            kvmem_recent_tokens: p.kvmem_recent_tokens,
+            kvmem_method: p.kvmem_method.clone(),
+            kvmem_query_last: p.kvmem_query_last,
+            kvmem_query_max_tokens: p.kvmem_query_max_tokens,
+            kvmem_query_replay: p.kvmem_query_replay.clone(),
+            kvmem_query_policy: p.kvmem_query_policy.clone(),
+            kvmem_mtp_state: p.kvmem_mtp_state.clone(),
+            kvmem_nvme_dir: p.kvmem_nvme_dir.clone(),
+            kvmem_harvest_v: p.kvmem_harvest_v,
+            kvmem_raw_k_nvme: p.kvmem_raw_k_nvme,
+            kv_dtype: p.kv_dtype.clone(),
+            spec_kv_dtype: p.spec_kv_dtype.clone(),
             gpu_layers_mode: p.gpu_layers_mode,
             split_mode: p.split_mode.clone(),
             tensor_split: p.tensor_split.clone(),
@@ -422,6 +566,27 @@ impl ParamsExport {
         p.cache_type_v = self.cache_type_v;
         p.kv_unified = self.kv_unified;
         p.swa_full = self.swa_full;
+        p.kvmem_enabled = self.kvmem_enabled;
+        p.kvmem_trace = self.kvmem_trace;
+        p.kvmem_budget = self.kvmem_budget;
+        p.kvmem_block_tokens = self.kvmem_block_tokens;
+        p.kvmem_sink_tokens = self.kvmem_sink_tokens;
+        p.kvmem_gen_reserve = self.kvmem_gen_reserve;
+        p.kvmem_gpu_ratio = self.kvmem_gpu_ratio;
+        p.kvmem_cpu_gb = self.kvmem_cpu_gb;
+        p.kvmem_nvme_gb = self.kvmem_nvme_gb;
+        p.kvmem_recent_tokens = self.kvmem_recent_tokens;
+        p.kvmem_method = self.kvmem_method;
+        p.kvmem_query_last = self.kvmem_query_last;
+        p.kvmem_query_max_tokens = self.kvmem_query_max_tokens;
+        p.kvmem_query_replay = self.kvmem_query_replay;
+        p.kvmem_query_policy = self.kvmem_query_policy;
+        p.kvmem_mtp_state = self.kvmem_mtp_state;
+        p.kvmem_nvme_dir = self.kvmem_nvme_dir;
+        p.kvmem_harvest_v = self.kvmem_harvest_v;
+        p.kvmem_raw_k_nvme = self.kvmem_raw_k_nvme;
+        p.kv_dtype = self.kv_dtype;
+        p.spec_kv_dtype = self.spec_kv_dtype;
         p.gpu_layers_mode = self.gpu_layers_mode;
         p.split_mode = self.split_mode;
         p.tensor_split = self.tensor_split;
@@ -1556,4 +1721,86 @@ fn format_decl_text(decl: &ShareDecl, lang: &i18n::Language) -> String {
         ));
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kvmem_fields_roundtrip_through_export() {
+        let mut src = AppSettings::default();
+        src.kvmem_enabled = false;
+        src.kvmem_trace = true;
+        src.kvmem_budget = 8192;
+        src.kvmem_block_tokens = 256;
+        src.kvmem_sink_tokens = 1024;
+        src.kvmem_gen_reserve = 512;
+        src.kvmem_gpu_ratio = 0.8;
+        src.kvmem_cpu_gb = 16.0;
+        src.kvmem_nvme_gb = 128.0;
+        src.kvmem_recent_tokens = 333;
+        src.kvmem_method = "recency".to_string();
+        src.kvmem_query_last = 11;
+        src.kvmem_query_max_tokens = 222;
+        src.kvmem_query_replay = "legacy".to_string();
+        src.kvmem_query_policy = "legacy".to_string();
+        src.kvmem_mtp_state = "snapshots".to_string();
+        src.kvmem_nvme_dir = r"D:\kvmem".to_string();
+        src.kvmem_harvest_v = true;
+        src.kvmem_raw_k_nvme = true;
+        src.kv_dtype = "q4_0".to_string();
+        src.spec_kv_dtype = "q5_0".to_string();
+
+        let exported = ParamsExport::from_settings(&src);
+        let json = serde_json::to_string(&exported).unwrap();
+        let roundtripped: ParamsExport = serde_json::from_str(&json).unwrap();
+        let mut dst = AppSettings::default();
+        roundtripped.apply_to(&mut dst);
+
+        assert_eq!(dst.kvmem_enabled, false);
+        assert_eq!(dst.kvmem_trace, true);
+        assert_eq!(dst.kvmem_budget, 8192);
+        assert_eq!(dst.kvmem_block_tokens, 256);
+        assert_eq!(dst.kvmem_sink_tokens, 1024);
+        assert_eq!(dst.kvmem_gen_reserve, 512);
+        assert_eq!(dst.kvmem_gpu_ratio, 0.8);
+        assert_eq!(dst.kvmem_cpu_gb, 16.0);
+        assert_eq!(dst.kvmem_nvme_gb, 128.0);
+        assert_eq!(dst.kvmem_recent_tokens, 333);
+        assert_eq!(dst.kvmem_method, "recency");
+        assert_eq!(dst.kvmem_query_last, 11);
+        assert_eq!(dst.kvmem_query_max_tokens, 222);
+        assert_eq!(dst.kvmem_query_replay, "legacy");
+        assert_eq!(dst.kvmem_query_policy, "legacy");
+        assert_eq!(dst.kvmem_mtp_state, "snapshots");
+        assert_eq!(dst.kvmem_nvme_dir, r"D:\kvmem");
+        assert_eq!(dst.kvmem_harvest_v, true);
+        assert_eq!(dst.kvmem_raw_k_nvme, true);
+        assert_eq!(dst.kv_dtype, "q4_0");
+        assert_eq!(dst.spec_kv_dtype, "q5_0");
+
+        let from_preset = ParamsExport::from_preset(&Preset::from_settings(&src, "x".to_string()));
+        assert_eq!(from_preset.kvmem_enabled, false);
+        assert_eq!(from_preset.kvmem_trace, true);
+        assert_eq!(from_preset.kvmem_budget, 8192);
+        assert_eq!(from_preset.kvmem_block_tokens, 256);
+        assert_eq!(from_preset.kvmem_sink_tokens, 1024);
+        assert_eq!(from_preset.kvmem_gen_reserve, 512);
+        assert_eq!(from_preset.kvmem_gpu_ratio, 0.8);
+        assert_eq!(from_preset.kvmem_cpu_gb, 16.0);
+        assert_eq!(from_preset.kvmem_nvme_gb, 128.0);
+        assert_eq!(from_preset.kvmem_recent_tokens, 333);
+        assert_eq!(from_preset.kvmem_method, "recency");
+        assert_eq!(from_preset.kvmem_query_last, 11);
+        assert_eq!(from_preset.kvmem_query_max_tokens, 222);
+        assert_eq!(from_preset.kvmem_query_replay, "legacy");
+        assert_eq!(from_preset.kvmem_query_policy, "legacy");
+        assert_eq!(from_preset.kvmem_mtp_state, "snapshots");
+        assert_eq!(from_preset.kvmem_nvme_dir, r"D:\kvmem");
+        assert_eq!(from_preset.kvmem_harvest_v, true);
+        assert_eq!(from_preset.kvmem_raw_k_nvme, true);
+        assert_eq!(from_preset.kv_dtype, "q4_0");
+        assert_eq!(from_preset.spec_kv_dtype, "q5_0");
+    }
 }
