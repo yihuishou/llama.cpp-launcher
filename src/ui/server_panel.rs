@@ -636,8 +636,9 @@ pub fn ui(
             );
 
             // 日志级别启用开关（开关位于行首）
+            // 直接放开关+标签（不复用 widgets::toggle），与「网页客户端」行保持单一间距
             ui.horizontal(|ui| {
-                widgets::toggle(ui, &mut settings.enable_log_verbosity, "", accent);
+                ui.add(winui::ToggleSwitch::new(&mut settings.enable_log_verbosity));
                 ui.label(i18n::t(i18n::Key::CheckboxEnableLogVerbosity, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableLogVerbosity, lang));
             });
