@@ -26,7 +26,7 @@ arboard = "3"
 
 # llama.cpp 下载/解压相关（ureq: 同步下载 release 资产; zip/tar/flate2: 解压资产）
 ureq = { version = "2", features = ["gzip"] }
-zip = "2"
+zip = "9"
 tar = "0.4"
 flate2 = "1"
 regex = "1"
