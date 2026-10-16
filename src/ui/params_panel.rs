@@ -38,7 +38,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             ui.horizontal(|ui| {
                 if ui
-                    .button(i18n::t(i18n::Key::BtnSetMaxContextVram, lang))
+                    .add(widgets::rounded_button(
+                        i18n::t(i18n::Key::BtnSetMaxContextVram, lang),
+                        None,
+                    ))
                     .clicked()
                     && can_start
                     && settings.max_context_promise.0.is_none()
@@ -129,7 +132,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
             ui.horizontal(|ui| {
                 if ui
-                    .button(i18n::t(i18n::Key::BtnCalcKvCache, lang))
+                    .add(widgets::rounded_button(
+                        i18n::t(i18n::Key::BtnCalcKvCache, lang),
+                        None,
+                    ))
                     .clicked()
                     && can_start
                     && settings.kv_cache_promise.0.is_none()
