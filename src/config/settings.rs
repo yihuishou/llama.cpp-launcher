@@ -230,6 +230,22 @@ fn default_numa() -> String {
     "".to_string() // --numa（空 = 不拼接）
 }
 
+fn default_cpu_mask() -> String {
+    "".to_string() // --cpu-mask（空 = 不拼接，CPU 亲和性掩码）
+}
+
+fn default_cpu_range() -> String {
+    "".to_string() // --cpu-range（空 = 不拼接，CPU 亲和性范围）
+}
+
+fn default_cpu_mask_batch() -> String {
+    "".to_string() // --cpu-mask-batch（空 = 不拼接，批量/提示处理阶段 CPU 掩码）
+}
+
+fn default_cpu_range_batch() -> String {
+    "".to_string() // --cpu-range-batch（空 = 不拼接，批量/提示处理阶段 CPU 范围）
+}
+
 fn default_cache_ram_enabled() -> bool {
     false // --cache-ram 启用开关 (prompt cache 内存上限)
 }
@@ -796,6 +812,14 @@ pub struct Preset {
     pub reuse_port: bool, // --reuse-port
     #[serde(default = "default_numa")]
     pub numa: String, // --numa (空不拼接)
+    #[serde(default = "default_cpu_mask")]
+    pub cpu_mask: String, // --cpu-mask (空不拼接, CPU 亲和性掩码)
+    #[serde(default = "default_cpu_range")]
+    pub cpu_range: String, // --cpu-range (空不拼接, CPU 亲和性范围)
+    #[serde(default = "default_cpu_mask_batch")]
+    pub cpu_mask_batch: String, // --cpu-mask-batch (空不拼接, 批量/提示处理阶段 CPU 掩码)
+    #[serde(default = "default_cpu_range_batch")]
+    pub cpu_range_batch: String, // --cpu-range-batch (空不拼接, 批量/提示处理阶段 CPU 范围)
     #[serde(default = "default_cache_ram_enabled")]
     pub cache_ram_enabled: bool, // --cache-ram 启用开关 (prompt cache 内存上限)
     #[serde(default = "default_cache_ram")]
@@ -1115,6 +1139,10 @@ impl Default for Preset {
             ssl_key_file: PathBuf::new(),
             reuse_port: false,
             numa: default_numa(),
+            cpu_mask: default_cpu_mask(),
+            cpu_range: default_cpu_range(),
+            cpu_mask_batch: default_cpu_mask_batch(),
+            cpu_range_batch: default_cpu_range_batch(),
             cache_ram_enabled: default_cache_ram_enabled(),
             cache_ram: default_cache_ram(),
             no_host: default_no_host(),
@@ -1303,6 +1331,10 @@ impl Preset {
             ssl_key_file: settings.ssl_key_file.clone(),
             reuse_port: settings.reuse_port,
             numa: settings.numa.clone(),
+            cpu_mask: settings.cpu_mask.clone(),
+            cpu_range: settings.cpu_range.clone(),
+            cpu_mask_batch: settings.cpu_mask_batch.clone(),
+            cpu_range_batch: settings.cpu_range_batch.clone(),
             cache_ram_enabled: settings.cache_ram_enabled,
             cache_ram: settings.cache_ram,
             no_host: settings.no_host,
@@ -1492,6 +1524,10 @@ impl Preset {
         settings.ssl_key_file = self.ssl_key_file;
         settings.reuse_port = self.reuse_port;
         settings.numa = self.numa;
+        settings.cpu_mask = self.cpu_mask;
+        settings.cpu_range = self.cpu_range;
+        settings.cpu_mask_batch = self.cpu_mask_batch;
+        settings.cpu_range_batch = self.cpu_range_batch;
         settings.cache_ram_enabled = self.cache_ram_enabled;
         settings.cache_ram = self.cache_ram;
         settings.no_host = self.no_host;
@@ -1829,6 +1865,14 @@ pub struct AppSettings {
     pub reuse_port: bool, // --reuse-port
     #[serde(default = "default_numa")]
     pub numa: String, // --numa (空不拼接)
+    #[serde(default = "default_cpu_mask")]
+    pub cpu_mask: String, // --cpu-mask (空不拼接, CPU 亲和性掩码)
+    #[serde(default = "default_cpu_range")]
+    pub cpu_range: String, // --cpu-range (空不拼接, CPU 亲和性范围)
+    #[serde(default = "default_cpu_mask_batch")]
+    pub cpu_mask_batch: String, // --cpu-mask-batch (空不拼接, 批量/提示处理阶段 CPU 掩码)
+    #[serde(default = "default_cpu_range_batch")]
+    pub cpu_range_batch: String, // --cpu-range-batch (空不拼接, 批量/提示处理阶段 CPU 范围)
     #[serde(default = "default_cache_ram_enabled")]
     pub cache_ram_enabled: bool, // --cache-ram 启用开关 (prompt cache 内存上限)
     #[serde(default = "default_cache_ram")]
@@ -2309,6 +2353,10 @@ impl Default for AppSettings {
             ssl_key_file: PathBuf::new(),
             reuse_port: false,
             numa: default_numa(),
+            cpu_mask: default_cpu_mask(),
+            cpu_range: default_cpu_range(),
+            cpu_mask_batch: default_cpu_mask_batch(),
+            cpu_range_batch: default_cpu_range_batch(),
             cache_ram_enabled: default_cache_ram_enabled(),
             cache_ram: default_cache_ram(),
             no_host: default_no_host(),

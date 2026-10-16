@@ -675,6 +675,22 @@ impl ServerManager {
             args.push("--numa".to_string());
             args.push(settings.numa.clone());
         }
+        if !settings.cpu_mask.is_empty() {
+            args.push("--cpu-mask".to_string());
+            args.push(settings.cpu_mask.clone());
+        }
+        if !settings.cpu_range.is_empty() {
+            args.push("--cpu-range".to_string());
+            args.push(settings.cpu_range.clone());
+        }
+        if !settings.cpu_mask_batch.is_empty() {
+            args.push("--cpu-mask-batch".to_string());
+            args.push(settings.cpu_mask_batch.clone());
+        }
+        if !settings.cpu_range_batch.is_empty() {
+            args.push("--cpu-range-batch".to_string());
+            args.push(settings.cpu_range_batch.clone());
+        }
 
         // ===== 高级参数（长上下文 / 采样 / 适配器 / 服务 / 加载性能）=====
         if settings.cache_ram_enabled {
@@ -813,10 +829,11 @@ impl ServerManager {
             args.push("--rerank".to_string());
         }
 
-        // MCP 配置
+        // MCP 配置（预览：内联 JSON 走 --mcp-servers-json，文档定义的内联形式；
+        // 实际启动用 --mcp-servers-config 传生成文件路径，两者语义等价）
         if settings.mcp_enabled {
             if let Some(mcp_json) = settings.build_effective_mcp_json() {
-                args.push("--mcp-servers-config".to_string());
+                args.push("--mcp-servers-json".to_string());
                 args.push(mcp_json.to_string());
             }
         }
@@ -1473,6 +1490,18 @@ impl ServerManager {
         }
         if !settings.numa.is_empty() {
             cmd.arg("--numa").arg(&settings.numa);
+        }
+        if !settings.cpu_mask.is_empty() {
+            cmd.arg("--cpu-mask").arg(&settings.cpu_mask);
+        }
+        if !settings.cpu_range.is_empty() {
+            cmd.arg("--cpu-range").arg(&settings.cpu_range);
+        }
+        if !settings.cpu_mask_batch.is_empty() {
+            cmd.arg("--cpu-mask-batch").arg(&settings.cpu_mask_batch);
+        }
+        if !settings.cpu_range_batch.is_empty() {
+            cmd.arg("--cpu-range-batch").arg(&settings.cpu_range_batch);
         }
 
         // 记录启动命令

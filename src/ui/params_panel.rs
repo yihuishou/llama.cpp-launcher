@@ -595,6 +595,34 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 settings.numa = numa_vals[numa_idx].to_string();
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpNuma, lang));
             });
+            // CPU 亲和性掩码
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::LabelCpuMask, lang));
+                ui.add(winui::FluentTextEdit::new(&mut settings.cpu_mask));
+                ui.small(i18n::t(i18n::Key::HintCpuMaskEmpty, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCpuMask, lang));
+            });
+            // CPU 亲和性范围
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::LabelCpuRange, lang));
+                ui.add(winui::FluentTextEdit::new(&mut settings.cpu_range));
+                ui.small(i18n::t(i18n::Key::HintCpuRangeEmpty, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCpuRange, lang));
+            });
+            // 批处理 CPU 掩码
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::LabelCpuMaskBatch, lang));
+                ui.add(winui::FluentTextEdit::new(&mut settings.cpu_mask_batch));
+                ui.small(i18n::t(i18n::Key::HintCpuMaskBatchEmpty, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCpuMaskBatch, lang));
+            });
+            // 批处理 CPU 范围
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::LabelCpuRangeBatch, lang));
+                ui.add(winui::FluentTextEdit::new(&mut settings.cpu_range_batch));
+                ui.small(i18n::t(i18n::Key::HintCpuRangeBatchEmpty, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCpuRangeBatch, lang));
+            });
             // 主 GPU（多卡时指定）
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelMainGpu, lang));
