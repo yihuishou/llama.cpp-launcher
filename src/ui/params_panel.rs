@@ -920,6 +920,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             .range(-1..=1048576)
                             .speed(512),
                     );
+                    ui.label("MiB");
                 });
             });
         }
