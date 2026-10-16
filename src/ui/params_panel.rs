@@ -524,10 +524,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     if ui
                         .add_enabled(
                             !split_empty,
-                            winui::FluentButton::new(i18n::t(
-                                i18n::Key::BtnClearTensorSplit,
-                                lang,
-                            )),
+                            winui::FluentButton::new(i18n::t(i18n::Key::BtnClearTensorSplit, lang)),
                         )
                         .clicked()
                     {
@@ -580,10 +577,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !ngram_set,
-                        winui::FluentButton::new(i18n::t(
-                            i18n::Key::BtnNGramOffloadToCpu,
-                            lang,
-                        )),
+                        winui::FluentButton::new(i18n::t(i18n::Key::BtnNGramOffloadToCpu, lang)),
                     )
                     .clicked()
                 {
@@ -593,10 +587,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !tensor_empty,
-                        winui::FluentButton::new(i18n::t(
-                            i18n::Key::BtnClearOverrideTensor,
-                            lang,
-                        )),
+                        winui::FluentButton::new(i18n::t(i18n::Key::BtnClearOverrideTensor, lang)),
                     )
                     .clicked()
                 {
