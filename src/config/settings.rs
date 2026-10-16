@@ -853,9 +853,50 @@ pub struct Preset {
     #[serde(default)]
     pub enable_fit_ctx: bool,
 
+    // KV 缓存与加载：独立启用开关（默认开启，关闭时不拼接对应参数）
+    #[serde(default = "default_true")]
+    pub enable_load_mode: bool,
+    #[serde(default = "default_true")]
+    pub enable_cache_prompt: bool,
+    #[serde(default = "default_true")]
+    pub enable_cache_reuse: bool,
+    #[serde(default = "default_true")]
+    pub enable_context_shift: bool,
+    #[serde(default = "default_true")]
+    pub enable_no_host: bool,
+    #[serde(default = "default_true")]
+    pub enable_kv_offload: bool,
+    #[serde(default = "default_true")]
+    pub enable_kv_unified: bool,
+    #[serde(default = "default_true")]
+    pub enable_swa_full: bool,
+    #[serde(default = "default_true")]
+    pub enable_ctx_checkpoints: bool,
+    #[serde(default = "default_true")]
+    pub enable_checkpoint_min_step: bool,
+
     // 加载模式（新版 --load-mode；"auto" 时沿用旧版 --mmap/--mlock 行为）
     #[serde(default = "default_load_mode")]
     pub load_mode: String, // --load-mode
+    // 加载与设备分配：独立启用开关（默认开启，关闭时不拼接对应参数）
+    #[serde(default = "default_true")]
+    pub enable_tensor_read_lazy: bool,
+    #[serde(default = "default_true")]
+    pub enable_split_mode: bool,
+    #[serde(default = "default_true")]
+    pub enable_override_tensor: bool,
+    #[serde(default = "default_true")]
+    pub enable_numa: bool,
+    #[serde(default = "default_true")]
+    pub enable_cpu_mask: bool,
+    #[serde(default = "default_true")]
+    pub enable_cpu_range: bool,
+    #[serde(default = "default_true")]
+    pub enable_cpu_mask_batch: bool,
+    #[serde(default = "default_true")]
+    pub enable_cpu_range_batch: bool,
+    #[serde(default = "default_true")]
+    pub enable_main_gpu: bool,
     #[serde(default = "default_tensor_read_lazy")]
     pub tensor_read_lazy: String, // --tensor-read-lazy
 
@@ -1209,7 +1250,17 @@ pub struct Preset {
     #[serde(default = "default_session_timeout")]
     pub session_timeout: usize,
 
-    // 思考与会话
+    // 思考与会话（enable 开关：默认开启，关闭时不拼接对应参数）
+    #[serde(default = "default_true")]
+    pub enable_reasoning: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_format: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_effort: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_budget: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_preserve: bool,
     #[serde(default = "default_reasoning")]
     pub reasoning: String, // --reasoning: auto/on/off
     #[serde(default = "default_reasoning_format")]
@@ -1276,8 +1327,27 @@ impl Default for Preset {
             fit_ctx: default_fit_ctx(),
             enable_fit_target: false,
             enable_fit_ctx: false,
-            load_mode: default_load_mode(),
-            tensor_read_lazy: default_tensor_read_lazy(),
+            enable_load_mode: true,
+        enable_cache_prompt: true,
+        enable_cache_reuse: true,
+        enable_context_shift: true,
+        enable_no_host: true,
+        enable_kv_offload: true,
+        enable_kv_unified: true,
+        enable_swa_full: true,
+        enable_ctx_checkpoints: true,
+        enable_checkpoint_min_step: true,
+        load_mode: default_load_mode(),
+            enable_tensor_read_lazy: true,
+        enable_split_mode: true,
+        enable_override_tensor: true,
+        enable_numa: true,
+        enable_cpu_mask: true,
+        enable_cpu_range: true,
+        enable_cpu_mask_batch: true,
+        enable_cpu_range_batch: true,
+        enable_main_gpu: true,
+        tensor_read_lazy: default_tensor_read_lazy(),
             threads: default_threads(),
             threads_batch: default_threads_batch(),
             n_predict: default_n_predict(),
@@ -1443,6 +1513,11 @@ impl Default for Preset {
             log_timestamps: default_log_timestamps(),
             log_verbosity: default_log_verbosity(),
             session_timeout: default_session_timeout(),
+            enable_reasoning: true,
+            enable_reasoning_format: true,
+            enable_reasoning_effort: true,
+            enable_reasoning_budget: true,
+            enable_reasoning_preserve: true,
             reasoning: default_reasoning(),
             reasoning_format: default_reasoning_format(),
             reasoning_effort: default_reasoning_effort(),
@@ -1492,8 +1567,27 @@ impl Preset {
             fit_ctx: settings.fit_ctx,
             enable_fit_target: settings.enable_fit_target,
             enable_fit_ctx: settings.enable_fit_ctx,
-            load_mode: settings.load_mode.clone(),
-            tensor_read_lazy: settings.tensor_read_lazy.clone(),
+            enable_load_mode: settings.enable_load_mode,
+        enable_cache_prompt: settings.enable_cache_prompt,
+        enable_cache_reuse: settings.enable_cache_reuse,
+        enable_context_shift: settings.enable_context_shift,
+        enable_no_host: settings.enable_no_host,
+        enable_kv_offload: settings.enable_kv_offload,
+        enable_kv_unified: settings.enable_kv_unified,
+        enable_swa_full: settings.enable_swa_full,
+        enable_ctx_checkpoints: settings.enable_ctx_checkpoints,
+        enable_checkpoint_min_step: settings.enable_checkpoint_min_step,
+        load_mode: settings.load_mode.clone(),
+            enable_tensor_read_lazy: settings.enable_tensor_read_lazy,
+        enable_split_mode: settings.enable_split_mode,
+        enable_override_tensor: settings.enable_override_tensor,
+        enable_numa: settings.enable_numa,
+        enable_cpu_mask: settings.enable_cpu_mask,
+        enable_cpu_range: settings.enable_cpu_range,
+        enable_cpu_mask_batch: settings.enable_cpu_mask_batch,
+        enable_cpu_range_batch: settings.enable_cpu_range_batch,
+        enable_main_gpu: settings.enable_main_gpu,
+        tensor_read_lazy: settings.tensor_read_lazy.clone(),
             threads: settings.threads,
             threads_batch: settings.threads_batch,
             n_predict: settings.n_predict,
@@ -1658,6 +1752,11 @@ impl Preset {
             log_timestamps: settings.log_timestamps,
             log_verbosity: settings.log_verbosity,
             session_timeout: settings.session_timeout,
+            enable_reasoning: settings.enable_reasoning,
+            enable_reasoning_format: settings.enable_reasoning_format,
+            enable_reasoning_effort: settings.enable_reasoning_effort,
+            enable_reasoning_budget: settings.enable_reasoning_budget,
+            enable_reasoning_preserve: settings.enable_reasoning_preserve,
             reasoning: settings.reasoning.clone(),
             reasoning_format: settings.reasoning_format.clone(),
             reasoning_effort: settings.reasoning_effort.clone(),
@@ -1704,7 +1803,26 @@ impl Preset {
         settings.enable_fit_target = self.enable_fit_target;
         settings.enable_fit_ctx = self.enable_fit_ctx;
         // 加载模式
+        settings.enable_load_mode = self.enable_load_mode;
+        settings.enable_cache_prompt = self.enable_cache_prompt;
+        settings.enable_cache_reuse = self.enable_cache_reuse;
+        settings.enable_context_shift = self.enable_context_shift;
+        settings.enable_no_host = self.enable_no_host;
+        settings.enable_kv_offload = self.enable_kv_offload;
+        settings.enable_kv_unified = self.enable_kv_unified;
+        settings.enable_swa_full = self.enable_swa_full;
+        settings.enable_ctx_checkpoints = self.enable_ctx_checkpoints;
+        settings.enable_checkpoint_min_step = self.enable_checkpoint_min_step;
         settings.load_mode = self.load_mode;
+        settings.enable_tensor_read_lazy = self.enable_tensor_read_lazy;
+        settings.enable_split_mode = self.enable_split_mode;
+        settings.enable_override_tensor = self.enable_override_tensor;
+        settings.enable_numa = self.enable_numa;
+        settings.enable_cpu_mask = self.enable_cpu_mask;
+        settings.enable_cpu_range = self.enable_cpu_range;
+        settings.enable_cpu_mask_batch = self.enable_cpu_mask_batch;
+        settings.enable_cpu_range_batch = self.enable_cpu_range_batch;
+        settings.enable_main_gpu = self.enable_main_gpu;
         settings.tensor_read_lazy = self.tensor_read_lazy;
         // 线程与生成长度
         settings.threads = self.threads;
@@ -1876,6 +1994,11 @@ impl Preset {
         settings.log_verbosity = self.log_verbosity;
         settings.session_timeout = self.session_timeout;
         // 思考与会话
+        settings.enable_reasoning = self.enable_reasoning;
+        settings.enable_reasoning_format = self.enable_reasoning_format;
+        settings.enable_reasoning_effort = self.enable_reasoning_effort;
+        settings.enable_reasoning_budget = self.enable_reasoning_budget;
+        settings.enable_reasoning_preserve = self.enable_reasoning_preserve;
         settings.reasoning = self.reasoning;
         settings.reasoning_format = self.reasoning_format;
         settings.reasoning_effort = self.reasoning_effort;
@@ -2029,9 +2152,50 @@ pub struct AppSettings {
     #[serde(default)]
     pub enable_fit_ctx: bool,
 
+    // KV 缓存与加载：独立启用开关（默认开启，关闭时不拼接对应参数）
+    #[serde(default = "default_true")]
+    pub enable_load_mode: bool,
+    #[serde(default = "default_true")]
+    pub enable_cache_prompt: bool,
+    #[serde(default = "default_true")]
+    pub enable_cache_reuse: bool,
+    #[serde(default = "default_true")]
+    pub enable_context_shift: bool,
+    #[serde(default = "default_true")]
+    pub enable_no_host: bool,
+    #[serde(default = "default_true")]
+    pub enable_kv_offload: bool,
+    #[serde(default = "default_true")]
+    pub enable_kv_unified: bool,
+    #[serde(default = "default_true")]
+    pub enable_swa_full: bool,
+    #[serde(default = "default_true")]
+    pub enable_ctx_checkpoints: bool,
+    #[serde(default = "default_true")]
+    pub enable_checkpoint_min_step: bool,
+
     // 加载模式（新版 --load-mode；"auto" 时沿用旧版 --mmap/--mlock 行为）
     #[serde(default = "default_load_mode")]
     pub load_mode: String, // --load-mode
+    // 加载与设备分配：独立启用开关（默认开启，关闭时不拼接对应参数）
+    #[serde(default = "default_true")]
+    pub enable_tensor_read_lazy: bool,
+    #[serde(default = "default_true")]
+    pub enable_split_mode: bool,
+    #[serde(default = "default_true")]
+    pub enable_override_tensor: bool,
+    #[serde(default = "default_true")]
+    pub enable_numa: bool,
+    #[serde(default = "default_true")]
+    pub enable_cpu_mask: bool,
+    #[serde(default = "default_true")]
+    pub enable_cpu_range: bool,
+    #[serde(default = "default_true")]
+    pub enable_cpu_mask_batch: bool,
+    #[serde(default = "default_true")]
+    pub enable_cpu_range_batch: bool,
+    #[serde(default = "default_true")]
+    pub enable_main_gpu: bool,
     #[serde(default = "default_tensor_read_lazy")]
     pub tensor_read_lazy: String, // --tensor-read-lazy
 
@@ -2368,7 +2532,17 @@ pub struct AppSettings {
     #[serde(default = "default_session_timeout")]
     pub session_timeout: usize,
 
-    // 思考与会话
+    // 思考与会话（enable 开关：默认开启，关闭时不拼接对应参数）
+    #[serde(default = "default_true")]
+    pub enable_reasoning: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_format: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_effort: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_budget: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_preserve: bool,
     #[serde(default = "default_reasoning")]
     pub reasoning: String, // --reasoning: auto/on/off
     #[serde(default = "default_reasoning_format")]
@@ -2613,8 +2787,27 @@ impl Default for AppSettings {
             fit_ctx: default_fit_ctx(),
             enable_fit_target: false,
             enable_fit_ctx: false,
-            load_mode: default_load_mode(),
-            tensor_read_lazy: default_tensor_read_lazy(),
+            enable_load_mode: true,
+        enable_cache_prompt: true,
+        enable_cache_reuse: true,
+        enable_context_shift: true,
+        enable_no_host: true,
+        enable_kv_offload: true,
+        enable_kv_unified: true,
+        enable_swa_full: true,
+        enable_ctx_checkpoints: true,
+        enable_checkpoint_min_step: true,
+        load_mode: default_load_mode(),
+            enable_tensor_read_lazy: true,
+        enable_split_mode: true,
+        enable_override_tensor: true,
+        enable_numa: true,
+        enable_cpu_mask: true,
+        enable_cpu_range: true,
+        enable_cpu_mask_batch: true,
+        enable_cpu_range_batch: true,
+        enable_main_gpu: true,
+        tensor_read_lazy: default_tensor_read_lazy(),
             threads: default_threads(),
             threads_batch: default_threads_batch(),
             n_predict: default_n_predict(),
@@ -2771,6 +2964,11 @@ impl Default for AppSettings {
             log_verbosity: default_log_verbosity(),
             enable_log_verbosity: false,
             session_timeout: default_session_timeout(),
+            enable_reasoning: true,
+            enable_reasoning_format: true,
+            enable_reasoning_effort: true,
+            enable_reasoning_budget: true,
+            enable_reasoning_preserve: true,
             reasoning: default_reasoning(),
             reasoning_format: default_reasoning_format(),
             reasoning_effort: default_reasoning_effort(),

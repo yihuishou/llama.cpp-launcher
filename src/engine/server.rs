@@ -373,25 +373,25 @@ impl ServerManager {
         }
 
         // 思考参数
-        if !settings.reasoning.is_empty() && settings.reasoning != "auto" {
+        if settings.enable_reasoning && !settings.reasoning.is_empty() && settings.reasoning != "auto" {
             args.push("--reasoning".to_string());
             args.push(settings.reasoning.clone());
         }
-        if !settings.reasoning_format.is_empty() && settings.reasoning_format != "auto" {
+        if settings.enable_reasoning_format && !settings.reasoning_format.is_empty() && settings.reasoning_format != "auto" {
             args.push("--reasoning-format".to_string());
             args.push(settings.reasoning_format.clone());
         }
-        if !settings.reasoning_effort.is_empty() && settings.reasoning_effort != "default" {
+        if settings.enable_reasoning_effort && !settings.reasoning_effort.is_empty() && settings.reasoning_effort != "default" {
             args.push("--reasoning-effort".to_string());
             args.push(settings.reasoning_effort.clone());
         }
-        if settings.reasoning_budget != -1 {
+        if settings.enable_reasoning_budget && settings.reasoning_budget != -1 {
             args.push("--reasoning-budget".to_string());
             args.push(settings.reasoning_budget.to_string());
         }
-        if settings.reasoning_preserve == Some(true) {
+        if settings.enable_reasoning_preserve && settings.reasoning_preserve == Some(true) {
             args.push("--reasoning-preserve".to_string());
-        } else if settings.reasoning_preserve == Some(false) {
+        } else if settings.enable_reasoning_preserve && settings.reasoning_preserve == Some(false) {
             args.push("--no-reasoning-preserve".to_string());
         }
 
@@ -621,9 +621,9 @@ impl ServerManager {
         }
 
         // KV 缓存（与 start() 一致：true 拼 --kv-offload，false 拼 --no-kv-offload）
-        if settings.kv_offload {
+        if settings.enable_kv_offload && settings.kv_offload {
             args.push("--kv-offload".to_string());
-        } else {
+        } else if settings.enable_kv_offload {
             args.push("--no-kv-offload".to_string());
         }
         // KVMem 版无这两个参数（已合并为 --kv-dtype），下发会导致启动失败
@@ -637,25 +637,25 @@ impl ServerManager {
         }
         // 注：--mlock / --no-mmap 已被 llama.cpp 标记为 DEPRECATED（由 --load-mode 取代），
         // 实际启动不发送它们；此处同样不拼接，保证「启动命令」预览与真实命令一致。
-        if settings.kv_unified {
+        if settings.enable_kv_unified && settings.kv_unified {
             args.push("--kv-unified".to_string());
         }
-        if settings.swa_full {
+        if settings.enable_swa_full && settings.swa_full {
             args.push("--swa-full".to_string());
         }
 
         // 上下文检查点
-        if settings.ctx_checkpoints != 32 {
+        if settings.enable_ctx_checkpoints && settings.ctx_checkpoints != 32 {
             args.push("--ctx-checkpoints".to_string());
             args.push(settings.ctx_checkpoints.to_string());
         }
-        if settings.checkpoint_min_step != 8192 {
+        if settings.enable_checkpoint_min_step && settings.checkpoint_min_step != 8192 {
             args.push("--checkpoint-min-step".to_string());
             args.push(settings.checkpoint_min_step.to_string());
         }
 
         // GPU 与设备分配
-        if !settings.split_mode.is_empty() && settings.split_mode != "layer" {
+        if settings.enable_split_mode && !settings.split_mode.is_empty() && settings.split_mode != "layer" {
             args.push("--split-mode".to_string());
             args.push(settings.split_mode.clone());
         }
@@ -670,7 +670,7 @@ impl ServerManager {
             args.push("--n-cpu-moe".to_string());
             args.push(settings.n_cpu_moe.to_string());
         }
-        if !settings.override_tensor.is_empty() {
+        if settings.enable_override_tensor && !settings.override_tensor.is_empty() {
             args.push("--override-tensor".to_string());
             args.push(settings.override_tensor.clone());
         }
@@ -696,7 +696,7 @@ impl ServerManager {
             args.push("--seed".to_string());
             args.push(settings.seed.to_string());
         }
-        if settings.main_gpu != 0 {
+        if settings.enable_main_gpu && settings.main_gpu != 0 {
             args.push("--main-gpu".to_string());
             args.push(settings.main_gpu.to_string());
         }
@@ -706,16 +706,16 @@ impl ServerManager {
         }
 
         // 长上下文 / 提示缓存
-        if settings.cache_prompt {
+        if settings.enable_cache_prompt && settings.cache_prompt {
             args.push("--cache-prompt".to_string());
-        } else {
+        } else if settings.enable_cache_prompt {
             args.push("--no-cache-prompt".to_string());
         }
-        if settings.cache_reuse > 0 {
+        if settings.enable_cache_reuse && settings.cache_reuse > 0 {
             args.push("--cache-reuse".to_string());
             args.push(settings.cache_reuse.to_string());
         }
-        if settings.context_shift {
+        if settings.enable_context_shift && settings.context_shift {
             args.push("--context-shift".to_string());
         }
 
@@ -747,11 +747,11 @@ impl ServerManager {
         }
 
         // 加载模式
-        if !settings.load_mode.is_empty() && settings.load_mode != "auto" {
+        if settings.enable_load_mode && !settings.load_mode.is_empty() && settings.load_mode != "auto" {
             args.push("--load-mode".to_string());
             args.push(settings.load_mode.clone());
         }
-        if !settings.tensor_read_lazy.is_empty() && settings.tensor_read_lazy != "auto" {
+        if settings.enable_tensor_read_lazy && !settings.tensor_read_lazy.is_empty() && settings.tensor_read_lazy != "auto" {
             args.push("--lazy-mode".to_string());
             args.push(settings.tensor_read_lazy.clone());
         }
@@ -780,23 +780,23 @@ impl ServerManager {
         if settings.reuse_port {
             args.push("--reuse-port".to_string());
         }
-        if !settings.numa.is_empty() {
+        if settings.enable_numa && !settings.numa.is_empty() {
             args.push("--numa".to_string());
             args.push(settings.numa.clone());
         }
-        if !settings.cpu_mask.is_empty() {
+        if settings.enable_cpu_mask && !settings.cpu_mask.is_empty() {
             args.push("--cpu-mask".to_string());
             args.push(settings.cpu_mask.clone());
         }
-        if !settings.cpu_range.is_empty() {
+        if settings.enable_cpu_range && !settings.cpu_range.is_empty() {
             args.push("--cpu-range".to_string());
             args.push(settings.cpu_range.clone());
         }
-        if !settings.cpu_mask_batch.is_empty() {
+        if settings.enable_cpu_mask_batch && !settings.cpu_mask_batch.is_empty() {
             args.push("--cpu-mask-batch".to_string());
             args.push(settings.cpu_mask_batch.clone());
         }
-        if !settings.cpu_range_batch.is_empty() {
+        if settings.enable_cpu_range_batch && !settings.cpu_range_batch.is_empty() {
             args.push("--cpu-range-batch".to_string());
             args.push(settings.cpu_range_batch.clone());
         }
@@ -806,7 +806,7 @@ impl ServerManager {
             args.push("--cache-ram".to_string());
             args.push(settings.cache_ram.to_string());
         }
-        if settings.no_host {
+        if settings.enable_no_host && settings.no_host {
             args.push("--no-host".to_string());
         }
         if !settings.rope_scaling.is_empty() {
@@ -1086,25 +1086,25 @@ impl ServerManager {
         }
 
         // 思考参数（--reasoning 系列，非默认值才拼接）
-        if !settings.reasoning.is_empty() && settings.reasoning != "auto" {
+        if settings.enable_reasoning && !settings.reasoning.is_empty() && settings.reasoning != "auto" {
             cmd.arg("--reasoning").arg(&settings.reasoning);
         }
-        if !settings.reasoning_format.is_empty() && settings.reasoning_format != "auto" {
+        if settings.enable_reasoning_format && !settings.reasoning_format.is_empty() && settings.reasoning_format != "auto" {
             cmd.arg("--reasoning-format")
                 .arg(&settings.reasoning_format);
         }
-        if !settings.reasoning_effort.is_empty() && settings.reasoning_effort != "default" {
+        if settings.enable_reasoning_effort && !settings.reasoning_effort.is_empty() && settings.reasoning_effort != "default" {
             cmd.arg("--reasoning-effort")
                 .arg(&settings.reasoning_effort);
         }
-        if settings.reasoning_budget != -1 {
+        if settings.enable_reasoning_budget && settings.reasoning_budget != -1 {
             cmd.arg("--reasoning-budget")
                 .arg(settings.reasoning_budget.to_string());
         }
         // 思考保留开关：开启 --reasoning-preserve，关闭 --no-reasoning-preserve，模型默认不拼接
-        if settings.reasoning_preserve == Some(true) {
+        if settings.enable_reasoning_preserve && settings.reasoning_preserve == Some(true) {
             cmd.arg("--reasoning-preserve");
-        } else if settings.reasoning_preserve == Some(false) {
+        } else if settings.enable_reasoning_preserve && settings.reasoning_preserve == Some(false) {
             cmd.arg("--no-reasoning-preserve");
         }
 
@@ -1326,9 +1326,9 @@ impl ServerManager {
         }
 
         // KV 缓存配置
-        if settings.kv_offload {
+        if settings.enable_kv_offload && settings.kv_offload {
             cmd.arg("--kv-offload");
-        } else {
+        } else if settings.enable_kv_offload {
             cmd.arg("--no-kv-offload");
         }
         // KVMem 版无这两个参数（已合并为 --kv-dtype），下发会导致启动失败
@@ -1340,33 +1340,33 @@ impl ServerManager {
         }
         // 模型加载模式（--load-mode 替代已废弃的 --mmap/--mlock）
         // 仅非 auto 时拼接；auto 不拼接任何参数，由 llama-server 使用默认行为
-        if !settings.load_mode.is_empty() && settings.load_mode != "auto" {
+        if settings.enable_load_mode && !settings.load_mode.is_empty() && settings.load_mode != "auto" {
             cmd.arg("--load-mode").arg(&settings.load_mode);
         }
-        if !settings.tensor_read_lazy.is_empty() && settings.tensor_read_lazy != "auto" {
+        if settings.enable_tensor_read_lazy && !settings.tensor_read_lazy.is_empty() && settings.tensor_read_lazy != "auto" {
             cmd.arg("--lazy-mode").arg(&settings.tensor_read_lazy);
         }
-        if settings.kv_unified {
+        if settings.enable_kv_unified && settings.kv_unified {
             cmd.arg("--kv-unified");
         }
-        if settings.swa_full {
+        if settings.enable_swa_full && settings.swa_full {
             cmd.arg("--swa-full");
         }
 
         // 上下文检查点
-        if settings.ctx_checkpoints != 32 {
+        if settings.enable_ctx_checkpoints && settings.ctx_checkpoints != 32 {
             cmd.arg("--ctx-checkpoints")
                 .arg(settings.ctx_checkpoints.to_string());
         }
 
         // 最小检查点步长
-        if settings.checkpoint_min_step != 8192 {
+        if settings.enable_checkpoint_min_step && settings.checkpoint_min_step != 8192 {
             cmd.arg("--checkpoint-min-step")
                 .arg(settings.checkpoint_min_step.to_string());
         }
 
         // GPU 与设备分配
-        if !settings.split_mode.is_empty() && settings.split_mode != "layer" {
+        if settings.enable_split_mode && !settings.split_mode.is_empty() && settings.split_mode != "layer" {
             cmd.arg("--split-mode").arg(&settings.split_mode);
         }
         if !settings.tensor_split.is_empty() {
@@ -1380,7 +1380,7 @@ impl ServerManager {
             cmd.arg("--n-cpu-moe").arg(settings.n_cpu_moe.to_string());
         }
         // 指定特定张量到缓冲区（非空才拼接）
-        if !settings.override_tensor.is_empty() {
+        if settings.enable_override_tensor && !settings.override_tensor.is_empty() {
             cmd.arg("--override-tensor").arg(&settings.override_tensor);
         }
 
@@ -1405,7 +1405,7 @@ impl ServerManager {
             cmd.arg("--seed").arg(settings.seed.to_string());
         }
         // 主 GPU（多卡时指定）
-        if settings.main_gpu != 0 {
+        if settings.enable_main_gpu && settings.main_gpu != 0 {
             cmd.arg("--main-gpu").arg(settings.main_gpu.to_string());
         }
         // 设备（多卡时指定）
@@ -1413,16 +1413,16 @@ impl ServerManager {
             cmd.arg("--device").arg(&settings.device);
         }
         // 长上下文 / 提示缓存
-        if settings.cache_prompt {
+        if settings.enable_cache_prompt && settings.cache_prompt {
             cmd.arg("--cache-prompt");
-        } else {
+        } else if settings.enable_cache_prompt {
             cmd.arg("--no-cache-prompt");
         }
-        if settings.cache_reuse > 0 {
+        if settings.enable_cache_reuse && settings.cache_reuse > 0 {
             cmd.arg("--cache-reuse")
                 .arg(settings.cache_reuse.to_string());
         }
-        if settings.context_shift {
+        if settings.enable_context_shift && settings.context_shift {
             cmd.arg("--context-shift");
         }
         // 结构化输出（JSON Schema / Grammar）
@@ -1466,7 +1466,7 @@ impl ServerManager {
         if settings.cache_ram_enabled {
             cmd.arg("--cache-ram").arg(settings.cache_ram.to_string());
         }
-        if settings.no_host {
+        if settings.enable_no_host && settings.no_host {
             cmd.arg("--no-host");
         }
         if !settings.rope_scaling.is_empty() {
@@ -1610,19 +1610,19 @@ impl ServerManager {
         if settings.reuse_port {
             cmd.arg("--reuse-port");
         }
-        if !settings.numa.is_empty() {
+        if settings.enable_numa && !settings.numa.is_empty() {
             cmd.arg("--numa").arg(&settings.numa);
         }
-        if !settings.cpu_mask.is_empty() {
+        if settings.enable_cpu_mask && !settings.cpu_mask.is_empty() {
             cmd.arg("--cpu-mask").arg(&settings.cpu_mask);
         }
-        if !settings.cpu_range.is_empty() {
+        if settings.enable_cpu_range && !settings.cpu_range.is_empty() {
             cmd.arg("--cpu-range").arg(&settings.cpu_range);
         }
-        if !settings.cpu_mask_batch.is_empty() {
+        if settings.enable_cpu_mask_batch && !settings.cpu_mask_batch.is_empty() {
             cmd.arg("--cpu-mask-batch").arg(&settings.cpu_mask_batch);
         }
-        if !settings.cpu_range_batch.is_empty() {
+        if settings.enable_cpu_range_batch && !settings.cpu_range_batch.is_empty() {
             cmd.arg("--cpu-range-batch").arg(&settings.cpu_range_batch);
         }
 

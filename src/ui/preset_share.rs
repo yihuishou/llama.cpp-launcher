@@ -163,6 +163,12 @@ pub struct ParamsExport {
     pub enable_spec_draft_type_k: bool,
     pub enable_spec_draft_type_v: bool,
 
+    #[serde(default = "default_true")]
+    pub enable_kv_offload: bool,
+    #[serde(default = "default_true")]
+    pub enable_kv_unified: bool,
+    #[serde(default = "default_true")]
+    pub enable_swa_full: bool,
     pub kv_offload: bool,
     pub cache_type_k: String,
     pub cache_type_v: String,
@@ -219,11 +225,23 @@ pub struct ParamsExport {
     pub spec_kv_dtype: String,
 
     pub gpu_layers_mode: GpuLayersMode,
+    #[serde(default = "default_true")]
+    pub enable_split_mode: bool,
     pub split_mode: String,
     pub tensor_split: String,
     pub cpu_moe: bool,
     pub n_cpu_moe: usize,
 
+    #[serde(default = "default_true")]
+    pub enable_reasoning: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_format: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_effort: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_budget: bool,
+    #[serde(default = "default_true")]
+    pub enable_reasoning_preserve: bool,
     #[serde(default = "default_reasoning")]
     pub reasoning: String,
     #[serde(default = "default_reasoning_format")]
@@ -300,6 +318,9 @@ impl ParamsExport {
             enable_spec_draft_p_split: s.enable_spec_draft_p_split,
             enable_spec_draft_type_k: s.enable_spec_draft_type_k,
             enable_spec_draft_type_v: s.enable_spec_draft_type_v,
+            enable_kv_offload: s.enable_kv_offload,
+            enable_kv_unified: s.enable_kv_unified,
+            enable_swa_full: s.enable_swa_full,
             kv_offload: s.kv_offload,
             cache_type_k: s.cache_type_k.clone(),
             cache_type_v: s.cache_type_v.clone(),
@@ -329,10 +350,16 @@ impl ParamsExport {
             kv_dtype: s.kv_dtype.clone(),
             spec_kv_dtype: s.spec_kv_dtype.clone(),
             gpu_layers_mode: s.gpu_layers_mode,
+            enable_split_mode: s.enable_split_mode,
             split_mode: s.split_mode.clone(),
             tensor_split: s.tensor_split.clone(),
             cpu_moe: s.cpu_moe,
             n_cpu_moe: s.n_cpu_moe,
+            enable_reasoning: s.enable_reasoning,
+            enable_reasoning_format: s.enable_reasoning_format,
+            enable_reasoning_effort: s.enable_reasoning_effort,
+            enable_reasoning_budget: s.enable_reasoning_budget,
+            enable_reasoning_preserve: s.enable_reasoning_preserve,
             reasoning: s.reasoning.clone(),
             reasoning_format: s.reasoning_format.clone(),
             reasoning_effort: s.reasoning_effort.clone(),
@@ -390,7 +417,10 @@ impl ParamsExport {
         s.enable_spec_draft_p_split = self.enable_spec_draft_p_split;
         s.enable_spec_draft_type_k = self.enable_spec_draft_type_k;
         s.enable_spec_draft_type_v = self.enable_spec_draft_type_v;
-        s.kv_offload = self.kv_offload;
+        s.enable_kv_offload = self.enable_kv_offload;
+            s.enable_kv_unified = self.enable_kv_unified;
+            s.enable_swa_full = self.enable_swa_full;
+            s.kv_offload = self.kv_offload;
         s.cache_type_k = self.cache_type_k;
         s.cache_type_v = self.cache_type_v;
         s.kv_unified = self.kv_unified;
@@ -417,10 +447,16 @@ impl ParamsExport {
         s.kv_dtype = self.kv_dtype;
         s.spec_kv_dtype = self.spec_kv_dtype;
         s.gpu_layers_mode = self.gpu_layers_mode;
-        s.split_mode = self.split_mode;
+        s.enable_split_mode = self.enable_split_mode;
+            s.split_mode = self.split_mode;
         s.tensor_split = self.tensor_split;
         s.cpu_moe = self.cpu_moe;
         s.n_cpu_moe = self.n_cpu_moe;
+        s.enable_reasoning = self.enable_reasoning;
+        s.enable_reasoning_format = self.enable_reasoning_format;
+        s.enable_reasoning_effort = self.enable_reasoning_effort;
+        s.enable_reasoning_budget = self.enable_reasoning_budget;
+        s.enable_reasoning_preserve = self.enable_reasoning_preserve;
         s.reasoning = self.reasoning;
         s.reasoning_format = self.reasoning_format;
         s.reasoning_effort = self.reasoning_effort;
@@ -480,6 +516,9 @@ impl ParamsExport {
             enable_spec_draft_p_split: p.enable_spec_draft_p_split,
             enable_spec_draft_type_k: p.enable_spec_draft_type_k,
             enable_spec_draft_type_v: p.enable_spec_draft_type_v,
+            enable_kv_offload: p.enable_kv_offload,
+            enable_kv_unified: p.enable_kv_unified,
+            enable_swa_full: p.enable_swa_full,
             kv_offload: p.kv_offload,
             cache_type_k: p.cache_type_k.clone(),
             cache_type_v: p.cache_type_v.clone(),
@@ -509,10 +548,16 @@ impl ParamsExport {
             kv_dtype: p.kv_dtype.clone(),
             spec_kv_dtype: p.spec_kv_dtype.clone(),
             gpu_layers_mode: p.gpu_layers_mode,
+            enable_split_mode: p.enable_split_mode,
             split_mode: p.split_mode.clone(),
             tensor_split: p.tensor_split.clone(),
             cpu_moe: p.cpu_moe,
             n_cpu_moe: p.n_cpu_moe,
+            enable_reasoning: p.enable_reasoning,
+            enable_reasoning_format: p.enable_reasoning_format,
+            enable_reasoning_effort: p.enable_reasoning_effort,
+            enable_reasoning_budget: p.enable_reasoning_budget,
+            enable_reasoning_preserve: p.enable_reasoning_preserve,
             reasoning: p.reasoning.clone(),
             reasoning_format: p.reasoning_format.clone(),
             reasoning_effort: p.reasoning_effort.clone(),
@@ -573,7 +618,10 @@ impl ParamsExport {
         p.enable_spec_draft_p_split = self.enable_spec_draft_p_split;
         p.enable_spec_draft_type_k = self.enable_spec_draft_type_k;
         p.enable_spec_draft_type_v = self.enable_spec_draft_type_v;
-        p.kv_offload = self.kv_offload;
+        p.enable_kv_offload = self.enable_kv_offload;
+            p.enable_kv_unified = self.enable_kv_unified;
+            p.enable_swa_full = self.enable_swa_full;
+            p.kv_offload = self.kv_offload;
         p.cache_type_k = self.cache_type_k;
         p.cache_type_v = self.cache_type_v;
         p.kv_unified = self.kv_unified;
@@ -600,10 +648,16 @@ impl ParamsExport {
         p.kv_dtype = self.kv_dtype;
         p.spec_kv_dtype = self.spec_kv_dtype;
         p.gpu_layers_mode = self.gpu_layers_mode;
-        p.split_mode = self.split_mode;
+        p.enable_split_mode = self.enable_split_mode;
+            p.split_mode = self.split_mode;
         p.tensor_split = self.tensor_split;
         p.cpu_moe = self.cpu_moe;
         p.n_cpu_moe = self.n_cpu_moe;
+        p.enable_reasoning = self.enable_reasoning;
+        p.enable_reasoning_format = self.enable_reasoning_format;
+        p.enable_reasoning_effort = self.enable_reasoning_effort;
+        p.enable_reasoning_budget = self.enable_reasoning_budget;
+        p.enable_reasoning_preserve = self.enable_reasoning_preserve;
         p.reasoning = self.reasoning;
         p.reasoning_format = self.reasoning_format;
         p.reasoning_effort = self.reasoning_effort;
