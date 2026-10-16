@@ -1149,11 +1149,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.horizontal(|ui| {
                     ui.label(i18n::t(i18n::Key::SpecDraftPMinLabel, lang));
                     ui.add(
-                        egui::Slider::new(&mut settings.spec_draft_p_min, 0.0..=1.0)
-                            .smallest_positive(0.01)
-                            .custom_formatter(|v, _| format!("{:.2}", v)),
+                        winui::FluentSlider::new(&mut settings.spec_draft_p_min, 0.0..=1.0)
+                            .step_by(0.01)
+                            .show_value(true),
                     );
-                    ui.label(format!("{:.2}", settings.spec_draft_p_min));
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftPMin, lang));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         widgets::toggle(ui, &mut settings.enable_spec_draft_p_min, "", accent);
@@ -1163,11 +1162,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.horizontal(|ui| {
                     ui.label(i18n::t(i18n::Key::SpecDraftPSplitLabel, lang));
                     ui.add(
-                        egui::Slider::new(&mut settings.spec_draft_p_split, 0.0..=1.0)
-                            .smallest_positive(0.01)
-                            .custom_formatter(|v, _| format!("{:.2}", v)),
+                        winui::FluentSlider::new(&mut settings.spec_draft_p_split, 0.0..=1.0)
+                            .step_by(0.01)
+                            .show_value(true),
                     );
-                    ui.label(format!("{:.2}", settings.spec_draft_p_split));
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftPSplit, lang));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         widgets::toggle(ui, &mut settings.enable_spec_draft_p_split, "", accent);
@@ -1468,10 +1466,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.label(i18n::t(i18n::Key::AdvFrequencyPenalty, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvFrequencyPenaltyHint, lang));
                 ui.add(
-                    egui::Slider::new(&mut settings.frequency_penalty, -2.0..=2.0)
-                        .fixed_decimals(2),
+                    winui::FluentSlider::new(&mut settings.frequency_penalty, -2.0..=2.0)
+                        .step_by(0.01)
+                        .show_value(true),
                 );
-                ui.label(format!("{:.2}", settings.frequency_penalty));
             });
             // 重复惩罚窗口（--repeat-last-n）
             ui.horizontal(|ui| {
@@ -1488,9 +1486,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.label(i18n::t(i18n::Key::AdvDryMultiplier, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvDryHint, lang));
                 ui.add(
-                    egui::Slider::new(&mut settings.dry_multiplier, 0.0..=5.0).fixed_decimals(2),
+                    winui::FluentSlider::new(&mut settings.dry_multiplier, 0.0..=5.0)
+                        .step_by(0.01)
+                        .show_value(true),
                 );
-                ui.label(format!("{:.2}", settings.dry_multiplier));
             });
             if settings.dry_multiplier > 0.0 {
                 ui.indent("dry_opt", |ui| {
@@ -1548,11 +1547,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelTemperature, lang));
                 ui.add(
-                    egui::Slider::new(&mut settings.temperature, 0.0..=2.0)
-                        .smallest_positive(0.01)
-                        .custom_formatter(|v, _| format!("{:.2}", v)),
+                    winui::FluentSlider::new(&mut settings.temperature, 0.0..=2.0)
+                        .step_by(0.01)
+                        .show_value(true),
                 );
-                ui.label(format!("{:.2}", settings.temperature));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTemperature, lang));
                 // 开关推到行最右侧（与顶栏 right_to_left 右对齐模式一致）
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -1563,11 +1561,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelTopP, lang));
                 ui.add(
-                    egui::Slider::new(&mut settings.top_p, 0.0..=1.0)
-                        .smallest_positive(0.01)
-                        .custom_formatter(|v, _| format!("{:.2}", v)),
+                    winui::FluentSlider::new(&mut settings.top_p, 0.0..=1.0)
+                        .step_by(0.01)
+                        .show_value(true),
                 );
-                ui.label(format!("{:.2}", settings.top_p));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTopP, lang));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     widgets::toggle(ui, &mut settings.enable_top_p, "", accent);
@@ -1586,11 +1583,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelRepeatPenalty, lang));
                 ui.add(
-                    egui::Slider::new(&mut settings.repeat_penalty, 0.0..=2.0)
-                        .smallest_positive(0.01)
-                        .custom_formatter(|v, _| format!("{:.2}", v)),
+                    winui::FluentSlider::new(&mut settings.repeat_penalty, 0.0..=2.0)
+                        .step_by(0.01)
+                        .show_value(true),
                 );
-                ui.label(format!("{:.2}", settings.repeat_penalty));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpRepeatPenalty, lang));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     widgets::toggle(ui, &mut settings.enable_repeat_penalty, "", accent);
@@ -1600,11 +1596,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::LabelPresencePenalty, lang));
                 ui.add(
-                    egui::Slider::new(&mut settings.presence_penalty, -2.0..=2.0)
-                        .smallest_positive(0.01)
-                        .custom_formatter(|v, _| format!("{:.2}", v)),
+                    winui::FluentSlider::new(&mut settings.presence_penalty, -2.0..=2.0)
+                        .step_by(0.01)
+                        .show_value(true),
                 );
-                ui.label(format!("{:.2}", settings.presence_penalty));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpPresencePenalty, lang));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     widgets::toggle(ui, &mut settings.enable_presence_penalty, "", accent);
@@ -1632,11 +1627,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelMinP, lang));
                         ui.add(
-                            egui::Slider::new(&mut settings.min_p, 0.0..=1.0)
-                                .smallest_positive(0.01)
-                                .custom_formatter(|v, _| format!("{:.3}", v)),
+                            winui::FluentSlider::new(&mut settings.min_p, 0.0..=1.0)
+                                .step_by(0.001)
+                                .show_value(true),
                         );
-                        ui.label(format!("{:.3}", settings.min_p));
                     });
                 });
             }
@@ -1653,11 +1647,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelTopNSigma, lang));
                         ui.add(
-                            egui::Slider::new(&mut settings.top_n_sigma, 0.0..=3.0)
-                                .smallest_positive(0.01)
-                                .custom_formatter(|v, _| format!("{:.2}", v)),
+                            winui::FluentSlider::new(&mut settings.top_n_sigma, 0.0..=3.0)
+                                .step_by(0.01)
+                                .show_value(true),
                         );
-                        ui.label(format!("{:.2}", settings.top_n_sigma));
                     });
                 });
             }
@@ -1674,20 +1667,18 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelXtcProbability, lang));
                         ui.add(
-                            egui::Slider::new(&mut settings.xtc_probability, 0.0..=1.0)
-                                .smallest_positive(0.01)
-                                .custom_formatter(|v, _| format!("{:.2}", v)),
+                            winui::FluentSlider::new(&mut settings.xtc_probability, 0.0..=1.0)
+                                .step_by(0.01)
+                                .show_value(true),
                         );
-                        ui.label(format!("{:.2}", settings.xtc_probability));
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelXtcThreshold, lang));
                         ui.add(
-                            egui::Slider::new(&mut settings.xtc_threshold, 0.0..=1.0)
-                                .smallest_positive(0.01)
-                                .custom_formatter(|v, _| format!("{:.2}", v)),
+                            winui::FluentSlider::new(&mut settings.xtc_threshold, 0.0..=1.0)
+                                .step_by(0.01)
+                                .show_value(true),
                         );
-                        ui.label(format!("{:.2}", settings.xtc_threshold));
                     });
                 });
             }
@@ -1704,11 +1695,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelTypicalP, lang));
                         ui.add(
-                            egui::Slider::new(&mut settings.typical_p, 0.0..=1.0)
-                                .smallest_positive(0.01)
-                                .custom_formatter(|v, _| format!("{:.2}", v)),
+                            winui::FluentSlider::new(&mut settings.typical_p, 0.0..=1.0)
+                                .step_by(0.01)
+                                .show_value(true),
                         );
-                        ui.label(format!("{:.2}", settings.typical_p));
                     });
                 });
             }
