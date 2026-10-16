@@ -1957,6 +1957,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1..=604800)
                         .speed(30),
                 );
+            });
+            ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvThreadsHttp, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvThreadsHttpHint, lang));
                 ui.add(
