@@ -2746,14 +2746,13 @@ ui.horizontal(|ui| {
                 ui.indent("pooling_opt", |ui| {
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::AdvPooling, lang));
-                        let vals = ["", "none", "mean", "cls", "last", "rank"];
+                        let vals = ["none", "mean", "cls", "last", "rank"];
                         let labels = [
-                            i18n::t(i18n::Key::AdvNotSet, lang),
+                            i18n::t(i18n::Key::PoolingNone, lang),
                             vals[1],
                             vals[2],
                             vals[3],
                             vals[4],
-                            vals[5],
                         ];
                         let mut idx = vals
                             .iter()

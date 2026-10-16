@@ -1872,7 +1872,6 @@ mod adv_params_tests {
             "--grammar-file",
             "--json-schema-file",
             "--embeddings",
-            "--pooling",
             "--rerank",
         ] {
             assert!(
@@ -1883,8 +1882,9 @@ mod adv_params_tests {
             );
         }
 
-        // 默认时这两个开关为「启用 + 正向」，显式发送正向参数。
+        // 默认时这三个开关为「启用 + 正向」，显式发送正向参数。
         // llama.cpp 本身默认即为开启，显式发送与不发送行为等价。
+        // --pooling 同理：默认值为 none，即 llama.cpp 的默认池化方式。
         let base_tokens: Vec<&str> = base.split_whitespace().collect();
         for p in ["--warmup", "--cont-batching"] {
             assert!(

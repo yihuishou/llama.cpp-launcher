@@ -429,7 +429,7 @@ fn default_embeddings_enabled() -> bool {
 }
 
 fn default_pooling() -> String {
-    String::new() // --pooling {none,mean,cls,last,rank} (空不拼接)
+    "none".to_string() // --pooling {none,mean,cls,last,rank}；空串为旧配置遗留，视为不拼接
 }
 
 fn default_rerank_enabled() -> bool {
