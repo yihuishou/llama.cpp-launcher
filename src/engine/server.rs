@@ -457,13 +457,13 @@ impl ServerManager {
         }
 
         // Flash Attention
-        if !settings.flash_attn.is_empty() {
+        if settings.enable_flash_attn && !settings.flash_attn.is_empty() {
             args.push("--flash-attn".to_string());
             args.push(settings.flash_attn.clone());
         }
 
         // 内存自动调优
-        if !settings.fit.is_empty() {
+        if settings.enable_fit && !settings.fit.is_empty() {
             args.push("--fit".to_string());
             args.push(settings.fit.clone());
         }
@@ -1166,12 +1166,12 @@ impl ServerManager {
         }
 
         // Flash Attention
-        if !settings.flash_attn.is_empty() {
+        if settings.enable_flash_attn && !settings.flash_attn.is_empty() {
             cmd.arg("--flash-attn").arg(&settings.flash_attn);
         }
 
         // 内存自动调优
-        if !settings.fit.is_empty() {
+        if settings.enable_fit && !settings.fit.is_empty() {
             cmd.arg("--fit").arg(&settings.fit);
         }
         if settings.enable_fit_target && !settings.fit_target.is_empty() {

@@ -189,37 +189,53 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
             // ── Flash Attention（上下文与批次 子项）──
             ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelFlashAttn, lang));
-                let fa_vals = ["on", "off", "auto"];
-                let fa_labels = [
-                    i18n::t(i18n::Key::FaModeOn, lang),
-                    i18n::t(i18n::Key::FaModeOff, lang),
-                    i18n::t(i18n::Key::FaModeAuto, lang),
-                ];
-                let mut fa_idx = fa_vals
-                    .iter()
-                    .position(|v| *v == settings.flash_attn)
-                    .unwrap_or(2);
-                widgets::segmented(ui, &fa_labels, &mut fa_idx, accent);
-                settings.flash_attn = fa_vals[fa_idx].to_string();
+                widgets::toggle(ui, &mut settings.enable_flash_attn, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableFlashAttn, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpFlashAttn, lang));
             });
+            if settings.enable_flash_attn {
+                ui.indent("flash_attn_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelFlashAttn, lang));
+                        let fa_vals = ["on", "off", "auto"];
+                        let fa_labels = [
+                            i18n::t(i18n::Key::FaModeOn, lang),
+                            i18n::t(i18n::Key::FaModeOff, lang),
+                            i18n::t(i18n::Key::FaModeAuto, lang),
+                        ];
+                        let mut fa_idx = fa_vals
+                            .iter()
+                            .position(|v| *v == settings.flash_attn)
+                            .unwrap_or(2);
+                        widgets::segmented(ui, &fa_labels, &mut fa_idx, accent);
+                        settings.flash_attn = fa_vals[fa_idx].to_string();
+                    });
+                });
+            }
             // ── 内存自动调优 --fit ──
             ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelFit, lang));
-                let fit_vals = ["on", "off"];
-                let fit_labels = [
-                    i18n::t(i18n::Key::FitModeOn, lang),
-                    i18n::t(i18n::Key::FitModeOff, lang),
-                ];
-                let mut fit_idx = fit_vals
-                    .iter()
-                    .position(|v| *v == settings.fit)
-                    .unwrap_or(0);
-                widgets::segmented(ui, &fit_labels, &mut fit_idx, accent);
-                settings.fit = fit_vals[fit_idx].to_string();
+                widgets::toggle(ui, &mut settings.enable_fit, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableFit, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpFit, lang));
             });
+            if settings.enable_fit {
+                ui.indent("fit_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelFit, lang));
+                        let fit_vals = ["on", "off"];
+                        let fit_labels = [
+                            i18n::t(i18n::Key::FitModeOn, lang),
+                            i18n::t(i18n::Key::FitModeOff, lang),
+                        ];
+                        let mut fit_idx = fit_vals
+                            .iter()
+                            .position(|v| *v == settings.fit)
+                            .unwrap_or(0);
+                        widgets::segmented(ui, &fit_labels, &mut fit_idx, accent);
+                        settings.fit = fit_vals[fit_idx].to_string();
+                    });
+                });
+            }
             // ── 显存预留 --fit-target ──
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_fit_target, "", accent);

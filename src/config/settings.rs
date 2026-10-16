@@ -835,9 +835,13 @@ pub struct Preset {
     pub enable_repeat_penalty: bool,
     #[serde(default)]
     pub enable_presence_penalty: bool,
+    #[serde(default = "default_true")]
+    pub enable_flash_attn: bool,
     #[serde(default = "default_flash_attn")]
     pub flash_attn: String,
     // 内存自动调优 (--fit / --fit-target / --fit-ctx)
+    #[serde(default = "default_true")]
+    pub enable_fit: bool,
     #[serde(default = "default_fit")]
     pub fit: String, // --fit on/off
     #[serde(default = "default_fit_target")]
@@ -1264,7 +1268,9 @@ impl Default for Preset {
             enable_top_k: false,
             enable_repeat_penalty: false,
             enable_presence_penalty: false,
+            enable_flash_attn: true,
             flash_attn: default_flash_attn(),
+            enable_fit: true,
             fit: default_fit(),
             fit_target: default_fit_target(),
             fit_ctx: default_fit_ctx(),
@@ -1478,7 +1484,9 @@ impl Preset {
             enable_top_k: settings.enable_top_k,
             enable_repeat_penalty: settings.enable_repeat_penalty,
             enable_presence_penalty: settings.enable_presence_penalty,
+            enable_flash_attn: settings.enable_flash_attn,
             flash_attn: settings.flash_attn.clone(),
+            enable_fit: settings.enable_fit,
             fit: settings.fit.clone(),
             fit_target: settings.fit_target.clone(),
             fit_ctx: settings.fit_ctx,
@@ -1687,7 +1695,9 @@ impl Preset {
         settings.enable_top_k = self.enable_top_k;
         settings.enable_repeat_penalty = self.enable_repeat_penalty;
         settings.enable_presence_penalty = self.enable_presence_penalty;
+        settings.enable_flash_attn = self.enable_flash_attn;
         settings.flash_attn = self.flash_attn;
+        settings.enable_fit = self.enable_fit;
         settings.fit = self.fit;
         settings.fit_target = self.fit_target;
         settings.fit_ctx = self.fit_ctx;
@@ -2001,9 +2011,13 @@ pub struct AppSettings {
     pub enable_repeat_penalty: bool,
     #[serde(default)]
     pub enable_presence_penalty: bool,
+    #[serde(default = "default_true")]
+    pub enable_flash_attn: bool,
     #[serde(default = "default_flash_attn")]
     pub flash_attn: String,
     // 内存自动调优 (--fit / --fit-target / --fit-ctx)
+    #[serde(default = "default_true")]
+    pub enable_fit: bool,
     #[serde(default = "default_fit")]
     pub fit: String, // --fit on/off
     #[serde(default = "default_fit_target")]
@@ -2591,7 +2605,9 @@ impl Default for AppSettings {
             enable_top_k: false,
             enable_repeat_penalty: false,
             enable_presence_penalty: false,
+            enable_flash_attn: true,
             flash_attn: default_flash_attn(),
+            enable_fit: true,
             fit: default_fit(),
             fit_target: default_fit_target(),
             fit_ctx: default_fit_ctx(),

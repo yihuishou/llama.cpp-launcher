@@ -135,7 +135,11 @@ pub struct ParamsExport {
     pub enable_top_k: bool,
     pub enable_repeat_penalty: bool,
     pub enable_presence_penalty: bool,
+    #[serde(default = "default_true")]
+    pub enable_flash_attn: bool,
     pub flash_attn: String,
+    #[serde(default = "default_true")]
+    pub enable_fit: bool,
     #[serde(default = "default_fit")]
     pub fit: String,
     #[serde(default = "default_fit_target")]
@@ -277,7 +281,9 @@ impl ParamsExport {
             enable_top_k: s.enable_top_k,
             enable_repeat_penalty: s.enable_repeat_penalty,
             enable_presence_penalty: s.enable_presence_penalty,
+            enable_flash_attn: s.enable_flash_attn,
             flash_attn: s.flash_attn.clone(),
+            enable_fit: s.enable_fit,
             fit: s.fit.clone(),
             fit_target: s.fit_target.clone(),
             fit_ctx: s.fit_ctx,
@@ -365,7 +371,9 @@ impl ParamsExport {
         s.enable_top_k = self.enable_top_k;
         s.enable_repeat_penalty = self.enable_repeat_penalty;
         s.enable_presence_penalty = self.enable_presence_penalty;
+        s.enable_flash_attn = self.enable_flash_attn;
         s.flash_attn = self.flash_attn;
+        s.enable_fit = self.enable_fit;
         s.fit = self.fit;
         s.fit_target = self.fit_target;
         s.fit_ctx = self.fit_ctx;
@@ -453,7 +461,9 @@ impl ParamsExport {
             enable_top_k: p.enable_top_k,
             enable_repeat_penalty: p.enable_repeat_penalty,
             enable_presence_penalty: p.enable_presence_penalty,
+            enable_flash_attn: p.enable_flash_attn,
             flash_attn: p.flash_attn.clone(),
+            enable_fit: p.enable_fit,
             fit: p.fit.clone(),
             fit_target: p.fit_target.clone(),
             fit_ctx: p.fit_ctx,
@@ -544,7 +554,9 @@ impl ParamsExport {
         p.enable_top_k = self.enable_top_k;
         p.enable_repeat_penalty = self.enable_repeat_penalty;
         p.enable_presence_penalty = self.enable_presence_penalty;
+        p.enable_flash_attn = self.enable_flash_attn;
         p.flash_attn = self.flash_attn;
+        p.enable_fit = self.enable_fit;
         p.fit = self.fit;
         p.fit_target = self.fit_target;
         p.fit_ctx = self.fit_ctx;
