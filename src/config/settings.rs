@@ -5,6 +5,44 @@ use std::path::{Path, PathBuf};
 
 const CONFIG_FILE: &str = "llama_cpp_launcher_settings.json";
 
+/// llama.cpp server 发行版类型
+///
+/// 标准版与 KVMem 定制版的 CLI 参数集不兼容：KVMem 专有参数（`--kvmem*`）
+/// 传给标准 llama-server 会因未知参数直接启动失败，反之亦然。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LlamaCppType {
+    #[default]
+    Standard,
+    Kvmem,
+}
+
+impl LlamaCppType {
+    /// 按 server 可执行文件名推断发行版类型
+    pub fn from_server_path(path: &Path) -> Self {
+        let is_kvmem = path
+            .file_name()
+            .map(|n| n.to_string_lossy().starts_with("llama-kvmem-server"))
+            .unwrap_or(false);
+        if is_kvmem {
+            Self::Kvmem
+        } else {
+            Self::Standard
+        }
+    }
+
+    pub fn is_kvmem(self) -> bool {
+        matches!(self, Self::Kvmem)
+    }
+
+    pub fn to_arg(self) -> &'static str {
+        match self {
+            Self::Standard => "standard",
+            Self::Kvmem => "kvmem",
+        }
+    }
+}
+
 /// GPU 层数卸载模式
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GpuLayersMode {
@@ -602,6 +640,92 @@ fn default_checkpoint_min_step() -> usize {
     8192
 }
 
+// KVMem 默认值（仅 llama-kvmem-server 生效）
+fn default_kvmem_enabled() -> bool {
+    true // KVMem beta2 中 KVMem 默认开启
+}
+
+fn default_kvmem_trace() -> bool {
+    false // KVMEM_* 原始诊断日志，默认关闭
+}
+
+fn default_kvmem_budget() -> i64 {
+    0 // 0 = 跟随 n_ctx
+}
+
+fn default_kvmem_block_tokens() -> i64 {
+    128
+}
+
+fn default_kvmem_sink_tokens() -> i64 {
+    0 // 0 = 1 块
+}
+
+fn default_kvmem_gen_reserve() -> i64 {
+    256
+}
+
+fn default_kvmem_gpu_ratio() -> f32 {
+    0.50 // slot 池占显存比例上限
+}
+
+fn default_kvmem_cpu_gb() -> f64 {
+    0.0 // 0 = 关闭 CPU spill arena
+}
+
+fn default_kvmem_nvme_gb() -> f64 {
+    0.0 // 0 = 关闭 NVMe 落盘
+}
+
+fn default_kvmem_recent_tokens() -> i64 {
+    0 // select 预算内始终保留的最新后缀长度
+}
+
+fn default_kvmem_method() -> String {
+    "retrieval".to_string() // recency | retrieval
+}
+
+fn default_kvmem_query_last() -> i64 {
+    64 // 末轮用户跨度缺失时的 query-last 回退值
+}
+
+fn default_kvmem_query_max_tokens() -> i64 {
+    512 // qw3-style，从跨度末尾截断检索 query
+}
+
+fn default_kvmem_query_replay() -> String {
+    "auto".to_string() // legacy | auto
+}
+
+fn default_kvmem_query_policy() -> String {
+    "user".to_string() // legacy | user
+}
+
+fn default_kvmem_mtp_state() -> String {
+    "replay".to_string() // snapshots | auto | replay（配 MTP）
+}
+
+fn default_kvmem_nvme_dir() -> String {
+    // 空 = 不拼接，沿用 server 自身默认（beta2 为 /tmp/kvmem_nvme，Windows 下不可用）
+    String::new()
+}
+
+fn default_kvmem_harvest_v() -> bool {
+    false // prefill 阶段 D2H 落 V + raw-K
+}
+
+fn default_kvmem_raw_k_nvme() -> bool {
+    false // raw-K/V 落 NVMe，需 kvmem_nvme_gb > 0
+}
+
+fn default_kv_dtype() -> String {
+    "q8_0".to_string() // KVMem 的 K/V 统一类型（上游同名参数默认 f16，KVMem 下必须显式下发）
+}
+
+fn default_spec_kv_dtype() -> String {
+    "f16".to_string() // MTP K/V 类型
+}
+
 // 思考与会话默认值
 fn default_reasoning() -> String {
     "auto".to_string() // --reasoning: auto/on/off
@@ -964,7 +1088,52 @@ pub struct Preset {
     #[serde(default = "default_ctx_checkpoints")]
     pub ctx_checkpoints: usize, // --ctx-checkpoints
     #[serde(default = "default_checkpoint_min_step")]
-    pub checkpoint_min_step: usize, // --checkpoint-min-step
+    pub checkpoint_min_step: usize, // --ctx-checkpoints
+
+    // ── KVMem（仅 llama-kvmem-server 生效，标准 llama-server 会因未知参数启动失败）──
+    #[serde(default = "default_kvmem_enabled")]
+    pub kvmem_enabled: bool, // --kvmem / --no-kvmem
+    #[serde(default = "default_kvmem_trace")]
+    pub kvmem_trace: bool, // --kvmem-trace / --no-kvmem-trace
+    #[serde(default = "default_kvmem_budget")]
+    pub kvmem_budget: i64, // --kvmem-budget (0 = n_ctx)
+    #[serde(default = "default_kvmem_block_tokens")]
+    pub kvmem_block_tokens: i64, // --kvmem-block-tokens
+    #[serde(default = "default_kvmem_sink_tokens")]
+    pub kvmem_sink_tokens: i64, // --kvmem-sink-tokens (0 = 1 块)
+    #[serde(default = "default_kvmem_gen_reserve")]
+    pub kvmem_gen_reserve: i64, // --kvmem-gen-reserve
+    #[serde(default = "default_kvmem_gpu_ratio")]
+    pub kvmem_gpu_ratio: f32, // --kvmem-gpu-ratio
+    #[serde(default = "default_kvmem_cpu_gb")]
+    pub kvmem_cpu_gb: f64, // --kvmem-cpu-gb (0 = 关闭)
+    #[serde(default = "default_kvmem_nvme_gb")]
+    pub kvmem_nvme_gb: f64, // --kvmem-nvme-gb (0 = 关闭)
+    #[serde(default = "default_kvmem_recent_tokens")]
+    pub kvmem_recent_tokens: i64, // --kvmem-recent-tokens
+    #[serde(default = "default_kvmem_method")]
+    pub kvmem_method: String, // --kvmem-method (recency | retrieval)
+    #[serde(default = "default_kvmem_query_last")]
+    pub kvmem_query_last: i64, // --kvmem-query-last
+    #[serde(default = "default_kvmem_query_max_tokens")]
+    pub kvmem_query_max_tokens: i64, // --kvmem-query-max-tokens
+    #[serde(default = "default_kvmem_query_replay")]
+    pub kvmem_query_replay: String, // --kvmem-query-replay (legacy | auto)
+    #[serde(default = "default_kvmem_query_policy")]
+    pub kvmem_query_policy: String, // --kvmem-query-policy (legacy | user)
+    #[serde(default = "default_kvmem_mtp_state")]
+    pub kvmem_mtp_state: String, // --kvmem-mtp-state (snapshots | auto | replay)
+    #[serde(default = "default_kvmem_nvme_dir")]
+    pub kvmem_nvme_dir: String, // --kvmem-nvme-dir (空 = 不拼接)
+    #[serde(default = "default_kvmem_harvest_v")]
+    pub kvmem_harvest_v: bool, // --kvmem-harvest-v
+    #[serde(default = "default_kvmem_raw_k_nvme")]
+    pub kvmem_raw_k_nvme: bool, // --kvmem-raw-k-nvme (需 kvmem_nvme_gb > 0)
+    #[serde(default = "default_kv_dtype")]
+    pub kv_dtype: String, // --kv-dtype (KVMem 下 K/V 统一类型)
+    #[serde(default = "default_spec_kv_dtype")]
+    pub spec_kv_dtype: String, // --spec-kv-dtype (MTP K/V 类型)
+
     // GPU 与设备分配
     pub gpu_layers_mode: GpuLayersMode,
     pub split_mode: String,
@@ -1214,6 +1383,28 @@ impl Default for Preset {
             kv_cache_ratio: default_kv_cache_ratio(),
             ctx_checkpoints: default_ctx_checkpoints(),
             checkpoint_min_step: default_checkpoint_min_step(),
+            // KVMem
+            kvmem_enabled: default_kvmem_enabled(),
+            kvmem_trace: default_kvmem_trace(),
+            kvmem_budget: default_kvmem_budget(),
+            kvmem_block_tokens: default_kvmem_block_tokens(),
+            kvmem_sink_tokens: default_kvmem_sink_tokens(),
+            kvmem_gen_reserve: default_kvmem_gen_reserve(),
+            kvmem_gpu_ratio: default_kvmem_gpu_ratio(),
+            kvmem_cpu_gb: default_kvmem_cpu_gb(),
+            kvmem_nvme_gb: default_kvmem_nvme_gb(),
+            kvmem_recent_tokens: default_kvmem_recent_tokens(),
+            kvmem_method: default_kvmem_method(),
+            kvmem_query_last: default_kvmem_query_last(),
+            kvmem_query_max_tokens: default_kvmem_query_max_tokens(),
+            kvmem_query_replay: default_kvmem_query_replay(),
+            kvmem_query_policy: default_kvmem_query_policy(),
+            kvmem_mtp_state: default_kvmem_mtp_state(),
+            kvmem_nvme_dir: default_kvmem_nvme_dir(),
+            kvmem_harvest_v: default_kvmem_harvest_v(),
+            kvmem_raw_k_nvme: default_kvmem_raw_k_nvme(),
+            kv_dtype: default_kv_dtype(),
+            spec_kv_dtype: default_spec_kv_dtype(),
             gpu_layers_mode: GpuLayersMode::All,
             split_mode: "none".to_string(),
             tensor_split: "".to_string(),
@@ -1406,6 +1597,28 @@ impl Preset {
             kv_cache_ratio: settings.kv_cache_ratio,
             ctx_checkpoints: settings.ctx_checkpoints,
             checkpoint_min_step: settings.checkpoint_min_step,
+            // KVMem
+            kvmem_enabled: settings.kvmem_enabled,
+            kvmem_trace: settings.kvmem_trace,
+            kvmem_budget: settings.kvmem_budget,
+            kvmem_block_tokens: settings.kvmem_block_tokens,
+            kvmem_sink_tokens: settings.kvmem_sink_tokens,
+            kvmem_gen_reserve: settings.kvmem_gen_reserve,
+            kvmem_gpu_ratio: settings.kvmem_gpu_ratio,
+            kvmem_cpu_gb: settings.kvmem_cpu_gb,
+            kvmem_nvme_gb: settings.kvmem_nvme_gb,
+            kvmem_recent_tokens: settings.kvmem_recent_tokens,
+            kvmem_method: settings.kvmem_method.clone(),
+            kvmem_query_last: settings.kvmem_query_last,
+            kvmem_query_max_tokens: settings.kvmem_query_max_tokens,
+            kvmem_query_replay: settings.kvmem_query_replay.clone(),
+            kvmem_query_policy: settings.kvmem_query_policy.clone(),
+            kvmem_mtp_state: settings.kvmem_mtp_state.clone(),
+            kvmem_nvme_dir: settings.kvmem_nvme_dir.clone(),
+            kvmem_harvest_v: settings.kvmem_harvest_v,
+            kvmem_raw_k_nvme: settings.kvmem_raw_k_nvme,
+            kv_dtype: settings.kv_dtype.clone(),
+            spec_kv_dtype: settings.spec_kv_dtype.clone(),
             gpu_layers_mode: settings.gpu_layers_mode,
             split_mode: settings.split_mode.clone(),
             tensor_split: settings.tensor_split.clone(),
@@ -1600,6 +1813,27 @@ impl Preset {
         settings.kv_cache_ratio = self.kv_cache_ratio;
         settings.ctx_checkpoints = self.ctx_checkpoints;
         settings.checkpoint_min_step = self.checkpoint_min_step;
+        settings.kvmem_enabled = self.kvmem_enabled;
+        settings.kvmem_trace = self.kvmem_trace;
+        settings.kvmem_budget = self.kvmem_budget;
+        settings.kvmem_block_tokens = self.kvmem_block_tokens;
+        settings.kvmem_sink_tokens = self.kvmem_sink_tokens;
+        settings.kvmem_gen_reserve = self.kvmem_gen_reserve;
+        settings.kvmem_gpu_ratio = self.kvmem_gpu_ratio;
+        settings.kvmem_cpu_gb = self.kvmem_cpu_gb;
+        settings.kvmem_nvme_gb = self.kvmem_nvme_gb;
+        settings.kvmem_recent_tokens = self.kvmem_recent_tokens;
+        settings.kvmem_method = self.kvmem_method;
+        settings.kvmem_query_last = self.kvmem_query_last;
+        settings.kvmem_query_max_tokens = self.kvmem_query_max_tokens;
+        settings.kvmem_query_replay = self.kvmem_query_replay;
+        settings.kvmem_query_policy = self.kvmem_query_policy;
+        settings.kvmem_mtp_state = self.kvmem_mtp_state;
+        settings.kvmem_nvme_dir = self.kvmem_nvme_dir;
+        settings.kvmem_harvest_v = self.kvmem_harvest_v;
+        settings.kvmem_raw_k_nvme = self.kvmem_raw_k_nvme;
+        settings.kv_dtype = self.kv_dtype;
+        settings.spec_kv_dtype = self.spec_kv_dtype;
         settings.gpu_layers_mode = self.gpu_layers_mode;
         settings.split_mode = self.split_mode;
         settings.tensor_split = self.tensor_split;
@@ -1692,6 +1926,9 @@ impl std::fmt::Debug for KvCachePromiseWrapper {
 pub struct AppSettings {
     // Server 配置
     pub server_path: PathBuf,
+    /// None = 按 server_path 文件名自动推断；Some = 用户手动锁定
+    #[serde(default)]
+    pub llama_cpp_type: Option<LlamaCppType>,
     pub host: String,
     pub port: u16,
     pub parallel_slots: i64,
@@ -2024,6 +2261,50 @@ pub struct AppSettings {
     #[serde(default = "default_checkpoint_min_step")]
     pub checkpoint_min_step: usize, // --checkpoint-min-step
 
+    // ── KVMem（仅 llama-kvmem-server 生效，标准 llama-server 会因未知参数启动失败）──
+    #[serde(default = "default_kvmem_enabled")]
+    pub kvmem_enabled: bool, // --kvmem / --no-kvmem
+    #[serde(default = "default_kvmem_trace")]
+    pub kvmem_trace: bool, // --kvmem-trace / --no-kvmem-trace
+    #[serde(default = "default_kvmem_budget")]
+    pub kvmem_budget: i64, // --kvmem-budget (0 = n_ctx)
+    #[serde(default = "default_kvmem_block_tokens")]
+    pub kvmem_block_tokens: i64, // --kvmem-block-tokens
+    #[serde(default = "default_kvmem_sink_tokens")]
+    pub kvmem_sink_tokens: i64, // --kvmem-sink-tokens (0 = 1 块)
+    #[serde(default = "default_kvmem_gen_reserve")]
+    pub kvmem_gen_reserve: i64, // --kvmem-gen-reserve
+    #[serde(default = "default_kvmem_gpu_ratio")]
+    pub kvmem_gpu_ratio: f32, // --kvmem-gpu-ratio
+    #[serde(default = "default_kvmem_cpu_gb")]
+    pub kvmem_cpu_gb: f64, // --kvmem-cpu-gb (0 = 关闭)
+    #[serde(default = "default_kvmem_nvme_gb")]
+    pub kvmem_nvme_gb: f64, // --kvmem-nvme-gb (0 = 关闭)
+    #[serde(default = "default_kvmem_recent_tokens")]
+    pub kvmem_recent_tokens: i64, // --kvmem-recent-tokens
+    #[serde(default = "default_kvmem_method")]
+    pub kvmem_method: String, // --kvmem-method (recency | retrieval)
+    #[serde(default = "default_kvmem_query_last")]
+    pub kvmem_query_last: i64, // --kvmem-query-last
+    #[serde(default = "default_kvmem_query_max_tokens")]
+    pub kvmem_query_max_tokens: i64, // --kvmem-query-max-tokens
+    #[serde(default = "default_kvmem_query_replay")]
+    pub kvmem_query_replay: String, // --kvmem-query-replay (legacy | auto)
+    #[serde(default = "default_kvmem_query_policy")]
+    pub kvmem_query_policy: String, // --kvmem-query-policy (legacy | user)
+    #[serde(default = "default_kvmem_mtp_state")]
+    pub kvmem_mtp_state: String, // --kvmem-mtp-state (snapshots | auto | replay)
+    #[serde(default = "default_kvmem_nvme_dir")]
+    pub kvmem_nvme_dir: String, // --kvmem-nvme-dir (空 = 不拼接)
+    #[serde(default = "default_kvmem_harvest_v")]
+    pub kvmem_harvest_v: bool, // --kvmem-harvest-v
+    #[serde(default = "default_kvmem_raw_k_nvme")]
+    pub kvmem_raw_k_nvme: bool, // --kvmem-raw-k-nvme (需 kvmem_nvme_gb > 0)
+    #[serde(default = "default_kv_dtype")]
+    pub kv_dtype: String, // --kv-dtype (KVMem 下 K/V 统一类型)
+    #[serde(default = "default_spec_kv_dtype")]
+    pub spec_kv_dtype: String, // --spec-kv-dtype (MTP K/V 类型)
+
     // GPU 与设备分配
     pub gpu_layers_mode: GpuLayersMode,
     pub split_mode: String,
@@ -2275,6 +2556,7 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             server_path: PathBuf::new(),
+            llama_cpp_type: None,
             host: "127.0.0.1".to_string(),
             port: 9931,
             parallel_slots: -1,
@@ -2430,6 +2712,28 @@ impl Default for AppSettings {
             kv_cache_ratio: default_kv_cache_ratio(),
             ctx_checkpoints: default_ctx_checkpoints(),
             checkpoint_min_step: default_checkpoint_min_step(),
+            // KVMem
+            kvmem_enabled: default_kvmem_enabled(),
+            kvmem_trace: default_kvmem_trace(),
+            kvmem_budget: default_kvmem_budget(),
+            kvmem_block_tokens: default_kvmem_block_tokens(),
+            kvmem_sink_tokens: default_kvmem_sink_tokens(),
+            kvmem_gen_reserve: default_kvmem_gen_reserve(),
+            kvmem_gpu_ratio: default_kvmem_gpu_ratio(),
+            kvmem_cpu_gb: default_kvmem_cpu_gb(),
+            kvmem_nvme_gb: default_kvmem_nvme_gb(),
+            kvmem_recent_tokens: default_kvmem_recent_tokens(),
+            kvmem_method: default_kvmem_method(),
+            kvmem_query_last: default_kvmem_query_last(),
+            kvmem_query_max_tokens: default_kvmem_query_max_tokens(),
+            kvmem_query_replay: default_kvmem_query_replay(),
+            kvmem_query_policy: default_kvmem_query_policy(),
+            kvmem_mtp_state: default_kvmem_mtp_state(),
+            kvmem_nvme_dir: default_kvmem_nvme_dir(),
+            kvmem_harvest_v: default_kvmem_harvest_v(),
+            kvmem_raw_k_nvme: default_kvmem_raw_k_nvme(),
+            kv_dtype: default_kv_dtype(),
+            spec_kv_dtype: default_spec_kv_dtype(),
             gpu_layers_mode: GpuLayersMode::All,
             split_mode: "none".to_string(),
             tensor_split: "".to_string(),
@@ -2527,6 +2831,13 @@ impl AppSettings {
     /// k 值 → 实际 --fit-ctx 参数值 (value * 1024)
     pub fn fit_ctx_actual(&self) -> usize {
         self.fit_ctx * 1024
+    }
+
+    /// 生效的 llama.cpp 类型：用户手动锁定值优先，否则按 server_path 文件名推断。
+    /// 保持 None（自动）时不回写字段，这样改 server_path 能立即改变推断结果。
+    pub fn llama_cpp_type_effective(&self) -> LlamaCppType {
+        self.llama_cpp_type
+            .unwrap_or_else(|| LlamaCppType::from_server_path(&self.server_path))
     }
 
     /// 构造"当前启用"的 MCP 配置 JSON（纯逻辑，便于测试）。
@@ -2783,11 +3094,9 @@ impl SettingsManager {
 
 /// 判断文件名是否为 llama-server 可执行文件（跨平台）
 pub fn is_server_binary_name(name: &str) -> bool {
-    if cfg!(target_os = "windows") {
-        name == "llama-server.exe"
-    } else {
-        name == "llama-server"
-    }
+    const STD: [&str; 2] = ["llama-server", "llama-server.exe"];
+    const KVMEM: [&str; 2] = ["llama-kvmem-server", "llama-kvmem-server.exe"];
+    STD.contains(&name) || KVMEM.contains(&name)
 }
 
 /// 判断文件名是否为 rpc-server（ggml-rpc-server）可执行文件（跨平台）
@@ -2878,6 +3187,177 @@ mod tests {
         let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"auto","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
         let settings: AppSettings = serde_json::from_str(json).expect("旧格式配置应可反序列化");
         assert_eq!(settings.download_variant, "cpu");
+    }
+
+    // ──── llama.cpp 发行版类型 ────
+
+    #[test]
+    fn llama_cpp_type_from_server_path() {
+        assert_eq!(
+            LlamaCppType::from_server_path(Path::new("llama-kvmem-server.exe")),
+            LlamaCppType::Kvmem
+        );
+        assert_eq!(
+            LlamaCppType::from_server_path(Path::new(
+                r"C:\AI\llama\llama-kvmem-server.exe"
+            )),
+            LlamaCppType::Kvmem
+        );
+        assert_eq!(
+            LlamaCppType::from_server_path(Path::new("llama-kvmem-server")),
+            LlamaCppType::Kvmem
+        );
+        assert_eq!(
+            LlamaCppType::from_server_path(Path::new("llama-server.exe")),
+            LlamaCppType::Standard
+        );
+        assert_eq!(
+            LlamaCppType::from_server_path(Path::new("")),
+            LlamaCppType::Standard
+        );
+        assert_eq!(
+            LlamaCppType::from_server_path(Path::new("not-an-exe.txt")),
+            LlamaCppType::Standard
+        );
+    }
+
+    #[test]
+    fn llama_cpp_type_effective_auto_then_locked() {
+        let mut s = AppSettings::default();
+        assert_eq!(s.llama_cpp_type, None);
+        s.server_path = PathBuf::from("llama-kvmem-server.exe");
+        assert_eq!(s.llama_cpp_type_effective(), LlamaCppType::Kvmem);
+        assert_eq!(s.llama_cpp_type, None, "自动模式下不应回写字段");
+
+        s.server_path = PathBuf::from("llama-server.exe");
+        assert_eq!(
+            s.llama_cpp_type_effective(),
+            LlamaCppType::Standard,
+            "自动模式改路径后应立刻改变推断结果"
+        );
+
+        s.llama_cpp_type = Some(LlamaCppType::Kvmem);
+        s.server_path = PathBuf::from("llama-server.exe");
+        assert_eq!(
+            s.llama_cpp_type_effective(),
+            LlamaCppType::Kvmem,
+            "手动锁定后不应被路径变化改写"
+        );
+
+        s.llama_cpp_type = Some(LlamaCppType::Standard);
+        s.server_path = PathBuf::from("llama-kvmem-server.exe");
+        assert_eq!(
+            s.llama_cpp_type_effective(),
+            LlamaCppType::Standard,
+            "手动锁定应优先于路径推断"
+        );
+    }
+
+    #[test]
+    fn llama_cpp_type_old_json_defaults_to_auto() {
+        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"auto","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
+        let settings: AppSettings = serde_json::from_str(json).expect("无 llama_cpp_type 键的旧配置应可反序列化");
+        assert_eq!(settings.llama_cpp_type, None);
+        assert_eq!(
+            settings.llama_cpp_type_effective(),
+            LlamaCppType::Standard
+        );
+        assert_eq!(settings.kvmem_enabled, default_kvmem_enabled());
+        assert_eq!(settings.kvmem_block_tokens, default_kvmem_block_tokens());
+        assert_eq!(settings.kvmem_gen_reserve, default_kvmem_gen_reserve());
+        assert_eq!(settings.kvmem_gpu_ratio, default_kvmem_gpu_ratio());
+    }
+
+    /// 断言必须比对 default_* 而非硬编码字面量，否则改成字面量后测试仍绿、再也抓不到 serde 属性被改动。
+    #[test]
+    fn kvmem_fields_absent_from_old_json_fall_back_to_defaults() {
+        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"auto","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
+        let s: AppSettings = serde_json::from_str(json).expect("无 kvmem 键的旧配置应可反序列化");
+
+        assert_eq!(s.kvmem_enabled, default_kvmem_enabled());
+        assert_eq!(s.kvmem_trace, default_kvmem_trace());
+        assert_eq!(s.kvmem_budget, default_kvmem_budget());
+        assert_eq!(s.kvmem_block_tokens, default_kvmem_block_tokens());
+        assert_eq!(s.kvmem_sink_tokens, default_kvmem_sink_tokens());
+        assert_eq!(s.kvmem_gen_reserve, default_kvmem_gen_reserve());
+        assert_eq!(s.kvmem_gpu_ratio, default_kvmem_gpu_ratio());
+        assert_eq!(s.kvmem_cpu_gb, default_kvmem_cpu_gb());
+        assert_eq!(s.kvmem_nvme_gb, default_kvmem_nvme_gb());
+        assert_eq!(s.kvmem_recent_tokens, default_kvmem_recent_tokens());
+        assert_eq!(s.kvmem_method, default_kvmem_method());
+        assert_eq!(s.kvmem_query_last, default_kvmem_query_last());
+        assert_eq!(s.kvmem_query_max_tokens, default_kvmem_query_max_tokens());
+        assert_eq!(s.kvmem_query_replay, default_kvmem_query_replay());
+        assert_eq!(s.kvmem_query_policy, default_kvmem_query_policy());
+        assert_eq!(s.kvmem_mtp_state, default_kvmem_mtp_state());
+        assert_eq!(s.kvmem_nvme_dir, default_kvmem_nvme_dir());
+        assert_eq!(s.kvmem_harvest_v, default_kvmem_harvest_v());
+        assert_eq!(s.kvmem_raw_k_nvme, default_kvmem_raw_k_nvme());
+        assert_eq!(s.kv_dtype, default_kv_dtype());
+        assert_eq!(s.spec_kv_dtype, default_spec_kv_dtype());
+    }
+
+    #[test]
+    fn server_binary_name_accepts_kvmem_build() {
+        assert!(is_server_binary_name(&exe_filename("llama-server")));
+        assert!(is_server_binary_name(&exe_filename("llama-kvmem-server")));
+        assert!(!is_server_binary_name(&exe_filename("rpc-server")));
+        assert!(!is_server_binary_name("llama-kvmem-server-helper.exe"));
+    }
+
+    /// kvmem 字段经 from_settings → apply_to 往返后必须逐项还原。
+    /// Preset 不含 server_path，所以 llama_cpp_type 不参与往返；类型由路径实时推断，不受预设影响。
+    #[test]
+    fn kvmem_fields_survive_preset_roundtrip() {
+        let mut src = AppSettings::default();
+        src.kvmem_enabled = false;
+        src.kvmem_trace = true;
+        src.kvmem_budget = 8192;
+        src.kvmem_block_tokens = 256;
+        src.kvmem_sink_tokens = 1024;
+        src.kvmem_gen_reserve = 512;
+        src.kvmem_gpu_ratio = 0.8;
+        src.kvmem_cpu_gb = 16.0;
+        src.kvmem_nvme_gb = 128.0;
+        src.kvmem_recent_tokens = 333;
+        src.kvmem_method = "recency".to_string();
+        src.kvmem_query_last = 11;
+        src.kvmem_query_max_tokens = 222;
+        src.kvmem_query_replay = "legacy".to_string();
+        src.kvmem_query_policy = "legacy".to_string();
+        src.kvmem_mtp_state = "snapshots".to_string();
+        src.kvmem_nvme_dir = r"D:\kvmem".to_string();
+        src.kvmem_harvest_v = true;
+        src.kvmem_raw_k_nvme = true;
+        src.kv_dtype = "q4_0".to_string();
+        src.spec_kv_dtype = "q5_0".to_string();
+
+        let preset = Preset::from_settings(&src, "kvmem 预设".to_string());
+
+        let mut dst = AppSettings::default();
+        preset.apply_to(&mut dst);
+
+        assert!(!dst.kvmem_enabled, "kvmem_enabled 应随预设应用");
+        assert!(dst.kvmem_trace);
+        assert_eq!(dst.kvmem_budget, 8192);
+        assert_eq!(dst.kvmem_block_tokens, 256);
+        assert_eq!(dst.kvmem_sink_tokens, 1024);
+        assert_eq!(dst.kvmem_gen_reserve, 512);
+        assert_eq!(dst.kvmem_gpu_ratio, 0.8);
+        assert_eq!(dst.kvmem_cpu_gb, 16.0);
+        assert_eq!(dst.kvmem_nvme_gb, 128.0);
+        assert_eq!(dst.kvmem_recent_tokens, 333);
+        assert_eq!(dst.kvmem_method, "recency");
+        assert_eq!(dst.kvmem_query_last, 11);
+        assert_eq!(dst.kvmem_query_max_tokens, 222);
+        assert_eq!(dst.kvmem_query_replay, "legacy");
+        assert_eq!(dst.kvmem_query_policy, "legacy");
+        assert_eq!(dst.kvmem_mtp_state, "snapshots");
+        assert_eq!(dst.kvmem_nvme_dir, r"D:\kvmem");
+        assert!(dst.kvmem_harvest_v);
+        assert!(dst.kvmem_raw_k_nvme);
+        assert_eq!(dst.kv_dtype, "q4_0");
+        assert_eq!(dst.spec_kv_dtype, "q5_0");
     }
 
     // ──── MCP 解析 / 生效配置 ────
