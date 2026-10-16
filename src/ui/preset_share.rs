@@ -252,6 +252,9 @@ pub struct ParamsExport {
     pub reasoning_budget: i32,
     #[serde(default = "default_true")]
     pub reasoning_preserve: bool,
+    // --jinja 外层启用开关（与 AppSettings 保持一致，旧版分享码缺失时默认为 true）
+    #[serde(default = "default_true")]
+    pub enable_jinja: bool,
     #[serde(default = "default_jinja_enabled")]
     pub jinja_enabled: bool,
     #[serde(default)]
@@ -369,6 +372,7 @@ impl ParamsExport {
             reasoning_effort: s.reasoning_effort.clone(),
             reasoning_budget: s.reasoning_budget,
             reasoning_preserve: s.reasoning_preserve,
+            enable_jinja: s.enable_jinja,
             jinja_enabled: s.jinja_enabled,
             chat_template: s.chat_template.clone(),
             chat_template_file: s.chat_template_file.clone(),
@@ -468,6 +472,7 @@ impl ParamsExport {
         s.reasoning_effort = self.reasoning_effort;
         s.reasoning_budget = self.reasoning_budget;
         s.reasoning_preserve = self.reasoning_preserve;
+        s.enable_jinja = self.enable_jinja;
         s.jinja_enabled = self.jinja_enabled;
         s.chat_template = self.chat_template;
         s.chat_template_file = self.chat_template_file;
@@ -571,6 +576,7 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
             reasoning_effort: p.reasoning_effort.clone(),
             reasoning_budget: p.reasoning_budget,
             reasoning_preserve: p.reasoning_preserve,
+            enable_jinja: p.enable_jinja,
             jinja_enabled: p.jinja_enabled,
             chat_template: p.chat_template.clone(),
             chat_template_file: p.chat_template_file.clone(),
@@ -673,6 +679,7 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
         p.reasoning_effort = self.reasoning_effort;
         p.reasoning_budget = self.reasoning_budget;
         p.reasoning_preserve = self.reasoning_preserve;
+        p.enable_jinja = self.enable_jinja;
         p.jinja_enabled = self.jinja_enabled;
         p.chat_template = self.chat_template;
         p.chat_template_file = self.chat_template_file;

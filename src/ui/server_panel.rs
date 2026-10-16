@@ -489,12 +489,23 @@ pub fn ui(
                 i18n::t(i18n::Key::CheckboxVerbose, lang),
                 accent,
             );
+            // 日志时间戳：外层启用开关 + 缩进内层开关
             widgets::toggle(
                 ui,
-                &mut settings.log_timestamps,
-                i18n::t(i18n::Key::CheckboxLogTimestamps, lang),
+                &mut settings.enable_log_timestamps,
+                i18n::t(i18n::Key::EnableLogTimestamps, lang),
                 accent,
             );
+            if settings.enable_log_timestamps {
+                ui.indent("log_timestamps_opt", |ui| {
+                    widgets::toggle(
+                        ui,
+                        &mut settings.log_timestamps,
+                        i18n::t(i18n::Key::CheckboxLogTimestamps, lang),
+                        accent,
+                    );
+                });
+            }
             widgets::toggle(
                 ui,
                 &mut settings.offline_mode,

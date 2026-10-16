@@ -441,12 +441,20 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .strong(),
             );
 
-            // Jinja 对话模板引擎开关：标签 + ❓提示框 + 开关
+            // Jinja 对话模板引擎开关：外层启用开关 + 缩进内层开关
             ui.horizontal(|ui| {
-                widgets::toggle(ui, &mut settings.jinja_enabled, "", accent);
-                ui.label(i18n::t(i18n::Key::CheckboxJinja, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpJinja, lang));
+                widgets::toggle(ui, &mut settings.enable_jinja, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableJinja, lang));
             });
+            if settings.enable_jinja {
+                ui.indent("jinja_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        widgets::toggle(ui, &mut settings.jinja_enabled, "", accent);
+                        ui.label(i18n::t(i18n::Key::CheckboxJinja, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpJinja, lang));
+                    });
+                });
+            }
 
             // 对话模板 (--chat-template)
             ui.horizontal(|ui| {

@@ -1248,6 +1248,9 @@ pub struct Preset {
     #[serde(default = "default_web_ui_enabled")]
     pub web_ui_enabled: bool,
 
+    // 日志时间戳外层启用开关（未勾选时不拼接 --log-timestamps / --no-log-timestamps）
+    #[serde(default = "default_true")]
+    pub enable_log_timestamps: bool,
     // 原生日志时间戳
     #[serde(default = "default_log_timestamps")]
     pub log_timestamps: bool,
@@ -1281,6 +1284,9 @@ pub struct Preset {
     pub reasoning_budget: i32, // --reasoning-budget: -1 = 不限制
     #[serde(default = "default_true")]
     pub reasoning_preserve: bool, // --reasoning-preserve / --no-reasoning-preserve
+    // --jinja 外层启用开关（未勾选时不拼接 --jinja / --no-jinja）
+    #[serde(default = "default_true")]
+    pub enable_jinja: bool,
     #[serde(default = "default_jinja_enabled")]
     pub jinja_enabled: bool, // --jinja / --no-jinja
     #[serde(default)]
@@ -1525,6 +1531,7 @@ enable_mmproj_auto: true,
             rpc_device: String::new(),
             rpc_cache: false,
             web_ui_enabled: default_web_ui_enabled(),
+            enable_log_timestamps: true,
             log_timestamps: default_log_timestamps(),
             log_verbosity: default_log_verbosity(),
             session_timeout: default_session_timeout(),
@@ -1538,6 +1545,7 @@ enable_mmproj_auto: true,
             reasoning_effort: default_reasoning_effort(),
             reasoning_budget: default_reasoning_budget(),
             reasoning_preserve: true,
+            enable_jinja: true,
             jinja_enabled: default_jinja_enabled(),
             chat_template: String::new(),
             chat_template_file: PathBuf::new(),
@@ -1769,6 +1777,7 @@ impl Preset {
             rpc_device: settings.rpc_device.clone(),
             rpc_cache: settings.rpc_cache,
             web_ui_enabled: settings.web_ui_enabled,
+            enable_log_timestamps: settings.enable_log_timestamps,
             log_timestamps: settings.log_timestamps,
             log_verbosity: settings.log_verbosity,
             session_timeout: settings.session_timeout,
@@ -1782,6 +1791,7 @@ impl Preset {
             reasoning_effort: settings.reasoning_effort.clone(),
             reasoning_budget: settings.reasoning_budget,
             reasoning_preserve: settings.reasoning_preserve,
+            enable_jinja: settings.enable_jinja,
             jinja_enabled: settings.jinja_enabled,
             chat_template: settings.chat_template.clone(),
             chat_template_file: settings.chat_template_file.clone(),
@@ -2015,6 +2025,7 @@ impl Preset {
         settings.rpc_device = self.rpc_device;
         settings.rpc_cache = self.rpc_cache;
         settings.web_ui_enabled = self.web_ui_enabled;
+        settings.enable_log_timestamps = self.enable_log_timestamps;
         settings.log_timestamps = self.log_timestamps;
         settings.log_verbosity = self.log_verbosity;
         settings.session_timeout = self.session_timeout;
@@ -2029,6 +2040,7 @@ impl Preset {
         settings.reasoning_effort = self.reasoning_effort;
         settings.reasoning_budget = self.reasoning_budget;
         settings.reasoning_preserve = self.reasoning_preserve;
+        settings.enable_jinja = self.enable_jinja;
         settings.jinja_enabled = self.jinja_enabled;
         settings.chat_template = self.chat_template;
         settings.chat_template_file = self.chat_template_file;
@@ -2552,6 +2564,9 @@ pub struct AppSettings {
     #[serde(default = "default_web_ui_enabled")]
     pub web_ui_enabled: bool,
 
+    // 日志时间戳外层启用开关（未勾选时不拼接 --log-timestamps / --no-log-timestamps）
+    #[serde(default = "default_true")]
+    pub enable_log_timestamps: bool,
     // 原生日志时间戳（默认启用）
     #[serde(default = "default_log_timestamps")]
     pub log_timestamps: bool,
@@ -2588,6 +2603,9 @@ pub struct AppSettings {
     pub reasoning_budget: i32, // --reasoning-budget: -1 = 不限制
     #[serde(default = "default_true")]
     pub reasoning_preserve: bool, // --reasoning-preserve / --no-reasoning-preserve
+    // --jinja 外层启用开关（未勾选时不拼接 --jinja / --no-jinja）
+    #[serde(default = "default_true")]
+    pub enable_jinja: bool,
     #[serde(default = "default_jinja_enabled")]
     pub jinja_enabled: bool, // --jinja / --no-jinja
     #[serde(default)]
@@ -3006,6 +3024,7 @@ enable_warmup: true,
             rpc_mode: false,
             rpc_endpoints: "127.0.0.1:50052".to_string(),
             web_ui_enabled: default_web_ui_enabled(),
+            enable_log_timestamps: true,
             log_timestamps: default_log_timestamps(),
             log_verbosity: default_log_verbosity(),
             enable_log_verbosity: false,
@@ -3020,6 +3039,7 @@ enable_warmup: true,
             reasoning_effort: default_reasoning_effort(),
             reasoning_budget: default_reasoning_budget(),
             reasoning_preserve: true,
+            enable_jinja: true,
             jinja_enabled: default_jinja_enabled(),
             chat_template: String::new(),
             chat_template_file: PathBuf::new(),

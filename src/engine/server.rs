@@ -406,10 +406,13 @@ impl ServerManager {
             args.push("--chat-template-file".to_string());
             args.push(settings.chat_template_file.display().to_string());
         }
-        if settings.jinja_enabled {
-            args.push("--jinja".to_string());
-        } else {
-            args.push("--no-jinja".to_string());
+        // Jinja 对话模板引擎开关：外层 enable 关闭时完全不发该参数，否则按内层值发正/负
+        if settings.enable_jinja {
+            if settings.jinja_enabled {
+                args.push("--jinja".to_string());
+            } else {
+                args.push("--no-jinja".to_string());
+            }
         }
 
         // 采样器扩展
@@ -643,8 +646,13 @@ impl ServerManager {
         }
         // 注：--mlock / --no-mmap 已被 llama.cpp 标记为 DEPRECATED（由 --load-mode 取代），
         // 实际启动不发送它们；此处同样不拼接，保证「启动命令」预览与真实命令一致。
-        if settings.enable_kv_unified && settings.kv_unified {
-            args.push("--kv-unified".to_string());
+        // KV 统一缓存开关：外层 enable 关闭时完全不发该参数，否则按内层值发正/负
+        if settings.enable_kv_unified {
+            if settings.kv_unified {
+                args.push("--kv-unified".to_string());
+            } else {
+                args.push("--no-kv-unified".to_string());
+            }
         }
         if settings.enable_swa_full && settings.swa_full {
             args.push("--swa-full".to_string());
@@ -739,11 +747,13 @@ impl ServerManager {
             args.push("--verbose".to_string());
         }
 
-        // 日志时间戳
-        if settings.log_timestamps {
-            args.push("--log-timestamps".to_string());
-        } else {
-            args.push("--no-log-timestamps".to_string());
+        // 日志时间戳：外层 enable 关闭时完全不发该参数，否则按内层值发正/负
+        if settings.enable_log_timestamps {
+            if settings.log_timestamps {
+                args.push("--log-timestamps".to_string());
+            } else {
+                args.push("--no-log-timestamps".to_string());
+            }
         }
 
         // 日志级别（仅开启时拼接）
@@ -1132,11 +1142,13 @@ impl ServerManager {
             cmd.arg("--chat-template-file")
                 .arg(&settings.chat_template_file);
         }
-        // Jinja 对话模板引擎开关：启用用 --jinja，禁用用 --no-jinja
-        if settings.jinja_enabled {
-            cmd.arg("--jinja");
-        } else {
-            cmd.arg("--no-jinja");
+        // Jinja 对话模板引擎开关：外层 enable 关闭时完全不发该参数，否则启用用 --jinja、禁用用 --no-jinja
+        if settings.enable_jinja {
+            if settings.jinja_enabled {
+                cmd.arg("--jinja");
+            } else {
+                cmd.arg("--no-jinja");
+            }
         }
 
         // 采样器扩展（llama.cpp b10488+ 新采样器）
@@ -1372,8 +1384,13 @@ impl ServerManager {
         if settings.enable_tensor_read_lazy && !settings.tensor_read_lazy.is_empty() && settings.tensor_read_lazy != "auto" {
             cmd.arg("--lazy-mode").arg(&settings.tensor_read_lazy);
         }
-        if settings.enable_kv_unified && settings.kv_unified {
-            cmd.arg("--kv-unified");
+        // KV 统一缓存开关：外层 enable 关闭时完全不发该参数，否则按内层值发正/负
+        if settings.enable_kv_unified {
+            if settings.kv_unified {
+                cmd.arg("--kv-unified");
+            } else {
+                cmd.arg("--no-kv-unified");
+            }
         }
         if settings.enable_swa_full && settings.swa_full {
             cmd.arg("--swa-full");
@@ -1463,11 +1480,13 @@ impl ServerManager {
             cmd.arg("--verbose");
         }
 
-        // 日志时间戳
-        if settings.log_timestamps {
-            cmd.arg("--log-timestamps");
-        } else {
-            cmd.arg("--no-log-timestamps");
+        // 日志时间戳：外层 enable 关闭时完全不发该参数，否则按内层值发正/负
+        if settings.enable_log_timestamps {
+            if settings.log_timestamps {
+                cmd.arg("--log-timestamps");
+            } else {
+                cmd.arg("--no-log-timestamps");
+            }
         }
 
         // 日志级别（仅开启时拼接；0=generic 1=error 2=warning 3=info 4=trace 5=debug）
@@ -2006,6 +2025,88 @@ mod adv_params_tests {
             assert!(
                 !tokens.contains(&p),
                 "内层关闭时不应出现正向参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+    }
+
+    /// --jinja / --kv-unified / --log-timestamps 三态：外层关闭时不发任何参数，
+    /// 外层开启时按内层值发正向或负向参数
+    #[test]
+    fn test_jinja_kv_unified_log_timestamps_tristate() {
+        let mgr = ServerManager::new();
+        let both_signs = [
+            "--jinja",
+            "--no-jinja",
+            "--kv-unified",
+            "--no-kv-unified",
+            "--log-timestamps",
+            "--no-log-timestamps",
+        ];
+        let positive = ["--jinja", "--kv-unified", "--log-timestamps"];
+        let negative = ["--no-jinja", "--no-kv-unified", "--no-log-timestamps"];
+
+        // 外层关闭：正负六个参数都不应出现
+        let mut s = AppSettings::default();
+        s.enable_jinja = false;
+        s.enable_kv_unified = false;
+        s.enable_log_timestamps = false;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in both_signs {
+            assert!(
+                !tokens.contains(&p),
+                "外层开关关闭时不应包含参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+
+        // 外层开启 + 内层关闭：只出现负向参数
+        s.enable_jinja = true;
+        s.jinja_enabled = false;
+        s.enable_kv_unified = true;
+        s.kv_unified = false;
+        s.enable_log_timestamps = true;
+        s.log_timestamps = false;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in negative {
+            assert!(
+                tokens.contains(&p),
+                "内层关闭时应包含负向参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+        for p in positive {
+            assert!(
+                !tokens.contains(&p),
+                "内层关闭时不应出现正向参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+
+        // 外层开启 + 内层开启：只出现正向参数
+        s.jinja_enabled = true;
+        s.kv_unified = true;
+        s.log_timestamps = true;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in positive {
+            assert!(
+                tokens.contains(&p),
+                "内层开启时应包含正向参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+        for p in negative {
+            assert!(
+                !tokens.contains(&p),
+                "内层开启时不应出现负向参数 {}，实际命令：\n{}",
                 p,
                 cmd
             );
