@@ -250,8 +250,8 @@ pub struct ParamsExport {
     pub reasoning_effort: String,
     #[serde(default = "default_reasoning_budget")]
     pub reasoning_budget: i32,
-    #[serde(default)]
-    pub reasoning_preserve: Option<bool>,
+    #[serde(default = "default_true")]
+    pub reasoning_preserve: bool,
     #[serde(default = "default_jinja_enabled")]
     pub jinja_enabled: bool,
     #[serde(default)]

@@ -1279,8 +1279,8 @@ pub struct Preset {
     pub reasoning_effort: String, // --reasoning-effort：纯字符串值（如 high）
     #[serde(default = "default_reasoning_budget")]
     pub reasoning_budget: i32, // --reasoning-budget: -1 = 不限制
-    #[serde(default)]
-    pub reasoning_preserve: Option<bool>, // --reasoning-preserve / --no-reasoning-preserve：None = 模型默认（不拼接）
+    #[serde(default = "default_true")]
+    pub reasoning_preserve: bool, // --reasoning-preserve / --no-reasoning-preserve
     #[serde(default = "default_jinja_enabled")]
     pub jinja_enabled: bool, // --jinja / --no-jinja
     #[serde(default)]
@@ -1537,7 +1537,7 @@ enable_mmproj_auto: true,
             reasoning_format: default_reasoning_format(),
             reasoning_effort: default_reasoning_effort(),
             reasoning_budget: default_reasoning_budget(),
-            reasoning_preserve: None,
+            reasoning_preserve: true,
             jinja_enabled: default_jinja_enabled(),
             chat_template: String::new(),
             chat_template_file: PathBuf::new(),
@@ -2586,8 +2586,8 @@ pub struct AppSettings {
     pub reasoning_effort: String, // --reasoning-effort：纯字符串值（如 high）
     #[serde(default = "default_reasoning_budget")]
     pub reasoning_budget: i32, // --reasoning-budget: -1 = 不限制
-    #[serde(default)]
-    pub reasoning_preserve: Option<bool>, // --reasoning-preserve / --no-reasoning-preserve：None = 模型默认（不拼接）
+    #[serde(default = "default_true")]
+    pub reasoning_preserve: bool, // --reasoning-preserve / --no-reasoning-preserve
     #[serde(default = "default_jinja_enabled")]
     pub jinja_enabled: bool, // --jinja / --no-jinja
     #[serde(default)]
@@ -3019,7 +3019,7 @@ enable_warmup: true,
             reasoning_format: default_reasoning_format(),
             reasoning_effort: default_reasoning_effort(),
             reasoning_budget: default_reasoning_budget(),
-            reasoning_preserve: None,
+            reasoning_preserve: true,
             jinja_enabled: default_jinja_enabled(),
             chat_template: String::new(),
             chat_template_file: PathBuf::new(),

@@ -396,7 +396,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 });
             }
 
-            // 保留思考 (--reasoning-preserve)：模型默认 / 开启 / 关闭
+            // 保留思考 (--reasoning-preserve)
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_reasoning_preserve, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableReasoningPreserve, lang));
@@ -404,19 +404,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             if settings.enable_reasoning_preserve {
                 ui.indent("reasoning_preserve_opt", |ui| {
                     ui.horizontal(|ui| {
+                        widgets::toggle(ui, &mut settings.reasoning_preserve, "", accent);
                         ui.label(i18n::t(i18n::Key::LabelReasoningPreserve, lang));
-                        let rp_vals: [Option<bool>; 3] = [None, Some(true), Some(false)];
-                        let rp_labels = [
-                            i18n::t(i18n::Key::ReasoningPreserveDefault, lang),
-                            i18n::t(i18n::Key::ReasoningPreserveOn, lang),
-                            i18n::t(i18n::Key::ReasoningPreserveOff, lang),
-                        ];
-                        let mut rp_idx = rp_vals
-                            .iter()
-                            .position(|v| *v == settings.reasoning_preserve)
-                            .unwrap_or(0);
-                        widgets::segmented(ui, &rp_labels, &mut rp_idx, accent);
-                        settings.reasoning_preserve = rp_vals[rp_idx];
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpReasoningPreserve, lang));
                     });
                 });

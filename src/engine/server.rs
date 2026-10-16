@@ -389,10 +389,12 @@ impl ServerManager {
             args.push("--reasoning-budget".to_string());
             args.push(settings.reasoning_budget.to_string());
         }
-        if settings.enable_reasoning_preserve && settings.reasoning_preserve == Some(true) {
-            args.push("--reasoning-preserve".to_string());
-        } else if settings.enable_reasoning_preserve && settings.reasoning_preserve == Some(false) {
-            args.push("--no-reasoning-preserve".to_string());
+        if settings.enable_reasoning_preserve {
+            if settings.reasoning_preserve {
+                args.push("--reasoning-preserve".to_string());
+            } else {
+                args.push("--no-reasoning-preserve".to_string());
+            }
         }
 
         // 会话模板参数
@@ -1113,11 +1115,13 @@ impl ServerManager {
             cmd.arg("--reasoning-budget")
                 .arg(settings.reasoning_budget.to_string());
         }
-        // 思考保留开关：开启 --reasoning-preserve，关闭 --no-reasoning-preserve，模型默认不拼接
-        if settings.enable_reasoning_preserve && settings.reasoning_preserve == Some(true) {
-            cmd.arg("--reasoning-preserve");
-        } else if settings.enable_reasoning_preserve && settings.reasoning_preserve == Some(false) {
-            cmd.arg("--no-reasoning-preserve");
+        // 思考保留开关：开启 --reasoning-preserve，关闭 --no-reasoning-preserve
+        if settings.enable_reasoning_preserve {
+            if settings.reasoning_preserve {
+                cmd.arg("--reasoning-preserve");
+            } else {
+                cmd.arg("--no-reasoning-preserve");
+            }
         }
 
         // 会话模板参数
