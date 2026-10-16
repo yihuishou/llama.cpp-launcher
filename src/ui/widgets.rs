@@ -791,7 +791,7 @@ fn nav_icon_glyph(kind: NavIcon) -> Option<(char, &'static str)> {
     FALLBACKS
         .iter()
         .find_map(|&(style, size)| {
-            iconflow::try_icon(Pack::Fluentui, nav_icon_name(kind), style, size).ok()
+            iconflow::try_icon(Pack::FluentUi, nav_icon_name(kind), style, size).ok()
         })
         .and_then(|icon| Some((char::from_u32(icon.codepoint)?, icon.family)))
 }

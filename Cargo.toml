@@ -8,24 +8,24 @@ eframe = { version = "0.35", default-features = false, features = ["glow", "defa
 egui = "0.35"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rfd = "0.14"
+rfd = "0.17"
 log = "0.4"
 chrono = "0.4"
 sys-locale = "0.3.2"
 
-dirs = "5.0"
+dirs = "7.0"
 
 gguf-rs = "0.1.8"
 poll-promise = "0.3"
 
 # WinUI 3 Fluent 主题/字体/控件/外壳，替代原 egui-thematic 与手写 CJK 字体注册
 fluent-egui = "0.1.1"
-iconflow = { version = "1.0.0", features = ["pack-fluentui"] }
+iconflow = { version = "2.1.0", features = ["pack-fluentui"] }
 image = "0.25"
 arboard = "3"
 
 # llama.cpp 下载/解压相关（ureq: 同步下载 release 资产; zip/tar/flate2: 解压资产）
-ureq = { version = "2", features = ["gzip"] }
+ureq = { version = "3", features = ["gzip"] }
 zip = "9"
 tar = "0.4"
 flate2 = "1"

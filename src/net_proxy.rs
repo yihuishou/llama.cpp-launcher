@@ -28,13 +28,13 @@ pub const ERR_NETWORK: &str = "network-error";
 /// 构建共享 ureq Agent：带超时 + User-Agent + 系统代理（有则用）。
 /// updater/downloader 统一调用，避免重复实现。
 pub fn build_agent() -> ureq::Agent {
-    let mut builder = ureq::AgentBuilder::new()
-        .timeout_connect(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS))
-        .timeout_read(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS));
+    let mut builder = ureq::Agent::config_builder()
+        .timeout_connect(Some(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS)))
+        .timeout_recv_body(Some(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS)));
     if let Some(proxy) = system_proxy() {
-        builder = builder.proxy(proxy);
+        builder = builder.proxy(Some(proxy));
     }
-    builder.build()
+    builder.build().into()
 }
 
 /// 读取 Windows 系统代理（注册表），返回 ureq Proxy（调试/堆积时返回 None）

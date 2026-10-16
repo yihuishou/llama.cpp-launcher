@@ -103,12 +103,12 @@ fn fetch_with_fallback(
 
 /// 单次 GET + 读取 body
 fn fetch_body(ag: &ureq::Agent, url: &str) -> Result<String, String> {
-    let response = ag
+    let mut response = ag
         .get(url)
-        .set("User-Agent", net::USER_AGENT)
+        .header("User-Agent", net::USER_AGENT)
         .call()
         .map_err(|e| e.to_string())?;
-    response.into_string().map_err(|e| e.to_string())
+    response.body_mut().read_to_string().map_err(|e| e.to_string())
 }
 
 // ======================= 公开类型 =======================
@@ -958,14 +958,14 @@ fn download_to_file(
     status: &Arc<Mutex<DownloadStatus>>,
 ) -> Result<(), DlError> {
     let ag = net::build_agent();
-    let response = ag
+    let mut response = ag
         .get(url)
-        .set("User-Agent", net::USER_AGENT)
+        .header("User-Agent", net::USER_AGENT)
         .call()
         .map_err(|e| DlError::Failed(e.to_string()))?;
     let file = File::create(out).map_err(|e| DlError::Failed(e.to_string()))?;
     let mut writer = BufWriter::new(file);
-    let mut reader = response.into_reader();
+    let mut reader = response.body_mut().as_reader();
     let mut buf = vec![0u8; net::CHUNK_SIZE];
     let mut done: u64 = 0;
     loop {

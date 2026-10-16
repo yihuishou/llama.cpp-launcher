@@ -127,12 +127,12 @@ fn fetch_with_fallback(
 
 /// 单次 GET + 读取 body
 fn fetch_body(ag: &ureq::Agent, url: &str) -> Result<String, String> {
-    let response = ag
+    let mut response = ag
         .get(url)
-        .set("User-Agent", net::USER_AGENT)
+        .header("User-Agent", net::USER_AGENT)
         .call()
         .map_err(|e| e.to_string())?;
-    response.into_string().map_err(|e| e.to_string())
+    response.body_mut().read_to_string().map_err(|e| e.to_string())
 }
 
 // ======================= 公开类型 =======================
@@ -460,7 +460,7 @@ fn run_download(cancel: &AtomicBool, status: &Arc<Mutex<UpdateStatus>>) -> Resul
             "官方源"
         };
         log::info!("[update] 尝试{}: {}", source, url);
-        let response = match agent.get(url).set("User-Agent", net::USER_AGENT).call() {
+        let mut response = match agent.get(url).header("User-Agent", net::USER_AGENT).call() {
             Ok(r) => r,
             Err(e) => {
                 log::warn!("[update] ✗ {} 失败: {}", source, e);
@@ -472,7 +472,7 @@ fn run_download(cancel: &AtomicBool, status: &Arc<Mutex<UpdateStatus>>) -> Resul
             let file =
                 File::create(&partial).map_err(|e| format!("create temp file failed: {}", e))?;
             let mut writer = BufWriter::new(file);
-            let mut reader = response.into_reader();
+            let mut reader = response.body_mut().as_reader();
             let mut buf = vec![0u8; net::CHUNK_SIZE];
             let mut done: u64 = 0;
             loop {

@@ -51,7 +51,7 @@ fn help_glyph() -> (String, Option<&'static str>) {
     FALLBACKS
         .iter()
         .find_map(|&(style, size)| {
-            iconflow::try_icon(Pack::Fluentui, "question-circle", style, size).ok()
+            iconflow::try_icon(Pack::FluentUi, "question-circle", style, size).ok()
         })
         .and_then(|icon| {
             char::from_u32(icon.codepoint)
