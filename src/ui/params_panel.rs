@@ -2489,15 +2489,31 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvCheckTensorsHint, lang));
             });
             ui.horizontal(|ui| {
-                widgets::toggle(ui, &mut settings.warmup_enabled, "", accent);
-                ui.label(i18n::t(i18n::Key::AdvWarmup, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvWarmupHint, lang));
+                widgets::toggle(ui, &mut settings.enable_warmup, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableWarmup, lang));
             });
+            if settings.enable_warmup {
+                ui.indent("warmup_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        widgets::toggle(ui, &mut settings.warmup_enabled, "", accent);
+                        ui.label(i18n::t(i18n::Key::AdvWarmup, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::AdvWarmupHint, lang));
+                    });
+                });
+            }
             ui.horizontal(|ui| {
-                widgets::toggle(ui, &mut settings.cont_batching, "", accent);
-                ui.label(i18n::t(i18n::Key::AdvContBatching, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvContBatchingHint, lang));
+                widgets::toggle(ui, &mut settings.enable_cont_batching, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableContBatching, lang));
             });
+            if settings.enable_cont_batching {
+                ui.indent("cont_batching_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        widgets::toggle(ui, &mut settings.cont_batching, "", accent);
+                        ui.label(i18n::t(i18n::Key::AdvContBatching, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::AdvContBatchingHint, lang));
+                    });
+                });
+            }
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvOverrideKv, lang));
                 ui.add(winui::FluentTextEdit::new(&mut settings.override_kv));
@@ -2527,24 +2543,32 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvEmbeddingsHint, lang));
             });
             ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::AdvPooling, lang));
-                let vals = ["", "none", "mean", "cls", "last", "rank"];
-                let labels = [
-                    i18n::t(i18n::Key::AdvNotSet, lang),
-                    vals[1],
-                    vals[2],
-                    vals[3],
-                    vals[4],
-                    vals[5],
-                ];
-                let mut idx = vals
-                    .iter()
-                    .position(|v| *v == settings.pooling)
-                    .unwrap_or(0);
-                widgets::segmented(ui, &labels, &mut idx, accent);
-                settings.pooling = vals[idx].to_string();
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvPoolingHint, lang));
+                widgets::toggle(ui, &mut settings.enable_pooling, "", accent);
+                ui.label(i18n::t(i18n::Key::EnablePooling, lang));
             });
+            if settings.enable_pooling {
+                ui.indent("pooling_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::AdvPooling, lang));
+                        let vals = ["", "none", "mean", "cls", "last", "rank"];
+                        let labels = [
+                            i18n::t(i18n::Key::AdvNotSet, lang),
+                            vals[1],
+                            vals[2],
+                            vals[3],
+                            vals[4],
+                            vals[5],
+                        ];
+                        let mut idx = vals
+                            .iter()
+                            .position(|v| *v == settings.pooling)
+                            .unwrap_or(0);
+                        widgets::segmented(ui, &labels, &mut idx, accent);
+                        settings.pooling = vals[idx].to_string();
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::AdvPoolingHint, lang));
+                    });
+                });
+            }
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.rerank_enabled, "", accent);
                 ui.label(i18n::t(i18n::Key::AdvRerank, lang));

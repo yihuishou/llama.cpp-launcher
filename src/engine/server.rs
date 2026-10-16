@@ -913,11 +913,19 @@ impl ServerManager {
             args.push("--prio".to_string());
             args.push(settings.prio.to_string());
         }
-        if !settings.warmup_enabled {
-            args.push("--no-warmup".to_string());
+        if settings.enable_warmup {
+            if settings.warmup_enabled {
+                args.push("--warmup".to_string());
+            } else {
+                args.push("--no-warmup".to_string());
+            }
         }
-        if !settings.cont_batching {
-            args.push("--no-cont-batching".to_string());
+        if settings.enable_cont_batching {
+            if settings.cont_batching {
+                args.push("--cont-batching".to_string());
+            } else {
+                args.push("--no-cont-batching".to_string());
+            }
         }
         if !settings.grammar_file.is_empty() {
             args.push("--grammar-file".to_string());
@@ -930,7 +938,7 @@ impl ServerManager {
         if settings.embeddings_enabled {
             args.push("--embeddings".to_string());
         }
-        if !settings.pooling.is_empty() {
+        if settings.enable_pooling && !settings.pooling.is_empty() {
             args.push("--pooling".to_string());
             args.push(settings.pooling.clone());
         }
@@ -1562,11 +1570,19 @@ impl ServerManager {
         if settings.prio != 0 {
             cmd.arg("--prio").arg(settings.prio.to_string());
         }
-        if !settings.warmup_enabled {
-            cmd.arg("--no-warmup");
+        if settings.enable_warmup {
+            if settings.warmup_enabled {
+                cmd.arg("--warmup");
+            } else {
+                cmd.arg("--no-warmup");
+            }
         }
-        if !settings.cont_batching {
-            cmd.arg("--no-cont-batching");
+        if settings.enable_cont_batching {
+            if settings.cont_batching {
+                cmd.arg("--cont-batching");
+            } else {
+                cmd.arg("--no-cont-batching");
+            }
         }
         if !settings.grammar_file.is_empty() {
             cmd.arg("--grammar-file").arg(&settings.grammar_file);
@@ -1578,7 +1594,7 @@ impl ServerManager {
         if settings.embeddings_enabled {
             cmd.arg("--embeddings");
         }
-        if !settings.pooling.is_empty() {
+        if settings.enable_pooling && !settings.pooling.is_empty() {
             cmd.arg("--pooling").arg(&settings.pooling);
         }
         if settings.rerank_enabled {
@@ -1853,6 +1869,18 @@ mod adv_params_tests {
             );
         }
 
+        // 默认时这两个开关为「启用 + 正向」，显式发送正向参数。
+        // llama.cpp 本身默认即为开启，显式发送与不发送行为等价。
+        let base_tokens: Vec<&str> = base.split_whitespace().collect();
+        for p in ["--warmup", "--cont-batching"] {
+            assert!(
+                base_tokens.contains(&p),
+                "默认设置应包含参数 {}，实际命令：\n{}",
+                p,
+                base
+            );
+        }
+
         // 2) 全部打开后：逐个校验是否拼接正确
         s.cache_ram_enabled = true;
         s.cache_ram = 32768;
@@ -1919,6 +1947,50 @@ mod adv_params_tests {
             "--rerank",
         ] {
             assert!(cmd.contains(p), "命令应包含参数 {}，实际命令：\n{}", p, cmd);
+        }
+    }
+
+    /// 启用开关关闭时不拼接任何形式；开启且内层为假时发送负向参数。
+    /// 按空白切分后精确比对 token，避免 "--warmup" 命中 "--no-warmup" 子串。
+    #[test]
+    fn test_warmup_cont_batching_enable_switch() {
+        let mgr = ServerManager::new();
+        let mut s = AppSettings::default();
+
+        s.enable_warmup = false;
+        s.enable_cont_batching = false;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in ["--warmup", "--no-warmup", "--cont-batching", "--no-cont-batching"] {
+            assert!(
+                !tokens.contains(&p),
+                "启用开关关闭时不应包含参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+
+        s.enable_warmup = true;
+        s.warmup_enabled = false;
+        s.enable_cont_batching = true;
+        s.cont_batching = false;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in ["--no-warmup", "--no-cont-batching"] {
+            assert!(
+                tokens.contains(&p),
+                "内层关闭时应包含参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+        for p in ["--warmup", "--cont-batching"] {
+            assert!(
+                !tokens.contains(&p),
+                "内层关闭时不应出现正向参数 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
         }
     }
 

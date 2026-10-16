@@ -1051,8 +1051,12 @@ pub struct Preset {
     pub override_kv: String, // --override-kv KEY=TYPE:VALUE,... (空不拼接)
     #[serde(default = "default_prio")]
     pub prio: i64, // --prio N (0 不拼接)
+    #[serde(default = "default_true")]
+    pub enable_warmup: bool,
     #[serde(default = "default_warmup_enabled")]
     pub warmup_enabled: bool, // --warmup / --no-warmup (关闭时发 --no-warmup)
+    #[serde(default = "default_true")]
+    pub enable_cont_batching: bool,
     #[serde(default = "default_cont_batching")]
     pub cont_batching: bool, // --cont-batching / --no-cont-batching (关闭时发 --no-)
     #[serde(default = "default_grammar_file")]
@@ -1061,6 +1065,8 @@ pub struct Preset {
     pub json_schema_file: String, // --json-schema-file FILE (空不拼接)
     #[serde(default = "default_embeddings_enabled")]
     pub embeddings_enabled: bool, // --embeddings (嵌入模式)
+    #[serde(default = "default_true")]
+    pub enable_pooling: bool,
     #[serde(default = "default_pooling")]
     pub pooling: String, // --pooling {none,mean,cls,last,rank} (空不拼接)
     #[serde(default = "default_rerank_enabled")]
@@ -1419,12 +1425,15 @@ impl Default for Preset {
             check_tensors: default_check_tensors(),
             override_kv: default_override_kv(),
             prio: default_prio(),
-            warmup_enabled: default_warmup_enabled(),
-            cont_batching: default_cont_batching(),
+enable_warmup: true,
+        warmup_enabled: default_warmup_enabled(),
+        enable_cont_batching: true,
+        cont_batching: default_cont_batching(),
             grammar_file: default_grammar_file(),
             json_schema_file: default_json_schema_file(),
             embeddings_enabled: default_embeddings_enabled(),
-            pooling: default_pooling(),
+            enable_pooling: true,
+        pooling: default_pooling(),
             rerank_enabled: default_rerank_enabled(),
             spec_type: default_spec_type(),
             spec_draft_n_max: default_spec_draft_n_max(),
@@ -1659,12 +1668,15 @@ impl Preset {
             check_tensors: settings.check_tensors,
             override_kv: settings.override_kv.clone(),
             prio: settings.prio,
+            enable_warmup: settings.enable_warmup,
             warmup_enabled: settings.warmup_enabled,
+            enable_cont_batching: settings.enable_cont_batching,
             cont_batching: settings.cont_batching,
             grammar_file: settings.grammar_file.clone(),
             json_schema_file: settings.json_schema_file.clone(),
             embeddings_enabled: settings.embeddings_enabled,
-            pooling: settings.pooling.clone(),
+            enable_pooling: settings.enable_pooling,
+        pooling: settings.pooling.clone(),
             rerank_enabled: settings.rerank_enabled,
             spec_type: settings.spec_type.clone(),
             spec_draft_n_max: settings.spec_draft_n_max,
@@ -1900,11 +1912,14 @@ impl Preset {
         settings.check_tensors = self.check_tensors;
         settings.override_kv = self.override_kv;
         settings.prio = self.prio;
+        settings.enable_warmup = self.enable_warmup;
         settings.warmup_enabled = self.warmup_enabled;
+        settings.enable_cont_batching = self.enable_cont_batching;
         settings.cont_batching = self.cont_batching;
         settings.grammar_file = self.grammar_file;
         settings.json_schema_file = self.json_schema_file;
         settings.embeddings_enabled = self.embeddings_enabled;
+        settings.enable_pooling = self.enable_pooling;
         settings.pooling = self.pooling;
         settings.rerank_enabled = self.rerank_enabled;
         // 推测解码（Speculative Decoding）配置
@@ -2350,8 +2365,12 @@ pub struct AppSettings {
     pub override_kv: String, // --override-kv KEY=TYPE:VALUE,... (空不拼接)
     #[serde(default = "default_prio")]
     pub prio: i64, // --prio N (0 不拼接)
+    #[serde(default = "default_true")]
+    pub enable_warmup: bool,
     #[serde(default = "default_warmup_enabled")]
     pub warmup_enabled: bool, // --warmup / --no-warmup (关闭时发 --no-warmup)
+    #[serde(default = "default_true")]
+    pub enable_cont_batching: bool,
     #[serde(default = "default_cont_batching")]
     pub cont_batching: bool, // --cont-batching / --no-cont-batching (关闭时发 --no-)
     #[serde(default = "default_grammar_file")]
@@ -2360,6 +2379,8 @@ pub struct AppSettings {
     pub json_schema_file: String, // --json-schema-file FILE (空不拼接)
     #[serde(default = "default_embeddings_enabled")]
     pub embeddings_enabled: bool, // --embeddings (嵌入模式)
+    #[serde(default = "default_true")]
+    pub enable_pooling: bool,
     #[serde(default = "default_pooling")]
     pub pooling: String, // --pooling {none,mean,cls,last,rank} (空不拼接)
     #[serde(default = "default_rerank_enabled")]
@@ -2879,12 +2900,15 @@ impl Default for AppSettings {
             check_tensors: default_check_tensors(),
             override_kv: default_override_kv(),
             prio: default_prio(),
-            warmup_enabled: default_warmup_enabled(),
-            cont_batching: default_cont_batching(),
+enable_warmup: true,
+        warmup_enabled: default_warmup_enabled(),
+        enable_cont_batching: true,
+        cont_batching: default_cont_batching(),
             grammar_file: default_grammar_file(),
             json_schema_file: default_json_schema_file(),
             embeddings_enabled: default_embeddings_enabled(),
-            pooling: default_pooling(),
+            enable_pooling: true,
+        pooling: default_pooling(),
             rerank_enabled: default_rerank_enabled(),
             spec_type: default_spec_type(),
             spec_draft_n_max: default_spec_draft_n_max(),
