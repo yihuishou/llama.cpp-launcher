@@ -2418,7 +2418,6 @@ ui.horizontal(|ui| {
                                 .range(0.0..=1.0)
                                 .speed(0.01),
                         );
-                        ui.label(format!("{:.2}", settings.mirostat_lr));
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelMirostatEnt, lang));
@@ -2427,7 +2426,6 @@ ui.horizontal(|ui| {
                                 .range(0.0..=20.0)
                                 .speed(0.1),
                         );
-                        ui.label(format!("{:.2}", settings.mirostat_ent));
                     });
                 });
             }
@@ -2446,7 +2444,6 @@ ui.horizontal(|ui| {
                                 .range(0.0..=1.0)
                                 .speed(0.05),
                         );
-                        ui.label(format!("{:.2}", settings.dynatemp_range));
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelDynatempExp, lang));
@@ -2455,7 +2452,6 @@ ui.horizontal(|ui| {
                                 .range(0.0..=2.0)
                                 .speed(0.05),
                         );
-                        ui.label(format!("{:.2}", settings.dynatemp_exp));
                     });
                 });
             }
