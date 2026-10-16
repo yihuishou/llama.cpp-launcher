@@ -540,7 +540,7 @@ impl ServerManager {
             args.push("--ctx-checkpoints".to_string());
             args.push(settings.ctx_checkpoints.to_string());
         }
-        if settings.checkpoint_min_step != 512 {
+        if settings.checkpoint_min_step != 8192 {
             args.push("--checkpoint-min-step".to_string());
             args.push(settings.checkpoint_min_step.to_string());
         }
@@ -1238,7 +1238,7 @@ impl ServerManager {
         }
 
         // 最小检查点步长
-        if settings.checkpoint_min_step != 512 {
+        if settings.checkpoint_min_step != 8192 {
             cmd.arg("--checkpoint-min-step")
                 .arg(settings.checkpoint_min_step.to_string());
         }

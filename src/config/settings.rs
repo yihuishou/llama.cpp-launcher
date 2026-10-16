@@ -599,7 +599,7 @@ fn default_ctx_checkpoints() -> usize {
 
 // 最小检查点步长默认值
 fn default_checkpoint_min_step() -> usize {
-    512
+    8192
 }
 
 // 思考与会话默认值
