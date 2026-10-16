@@ -1,0 +1,87 @@
+  -m, --model PATH           GGUF path
+  --mmproj PATH              vision projector GGUF
+  --mmproj-offload           place vision encoder on GPU (default)
+  --no-mmproj-offload        place vision encoder on CPU
+  --image-min-tokens N       native minimum image token count
+  --image-max-tokens N       native maximum image token count
+  -lv, --verbosity N         log level: 0 silent, 1 error, 2 warn, 3 info (default), 4 trace, 5 debug
+  --log-verbosity N          alias of --verbosity
+  --kvmem-trace              raw KVMEM_* diagnostics (or KVMEM_TRACE=1)
+  --no-kvmem-trace           disable diagnostics, overriding the environment
+  --host HOST                bind address (default 127.0.0.1)
+  --port N                   port (default 8080)
+  --ui-dir PATH              serve static chat UI from PATH
+  --no-ui                    disable bundled chat UI
+  -c, --ctx-size N           context size (default 2048)
+  -n, --n-predict N          default max_tokens (-1 = no extra cap, default -1)
+  -b, --batch-size N         logical batch (default 512)
+  -ngl, --n-gpu-layers N     GPU layers (default 99)
+  --gpu-layers N             alias of --n-gpu-layers; all supported, auto unsupported
+  -t, --threads N            CPU generation threads; <=0 = hardware concurrency
+  -tb, --threads-batch N     CPU batch threads (defaults to --threads)
+  -ub, --ubatch-size N       physical batch size (defaults to --batch-size)
+  -fa, --flash-attn MODE     on | off | auto
+  -a, --alias NAME           model name exposed by the API
+  --api-key KEY[,KEY...]     allowed API keys
+  --api-key-file PATH        one key per line; blank/# lines ignored
+  -np, --parallel N          only 1 is currently supported
+  -lm, --load-mode MODE      auto | none | mmap | mlock | mmap+mlock | dio
+  --mmap / --no-mmap         legacy aliases for load-mode mmap / none
+  --mlock                   legacy alias for load-mode mlock
+  --timeout, -to N          HTTP read/write timeout seconds (default 1800)
+  --threads-http N          HTTP worker threads; <=0 = automatic
+  --device, -dev NAME       one offload device, e.g. CUDA0; none = CPU
+  --list-devices            list available offload devices and exit
+  --main-gpu, -mg N         main device index (default 0)
+  --split-mode, -sm MODE    none | layer; multi-GPU modes are not supported
+  --tensor-split, -ts N     one device proportion; multiple entries are rejected
+  Aliases: --usage, --predict, -s, -mm, --no-webui, --path
+  Environment: supported LLAMA_ARG_* settings apply before CLI; API keys append.
+  --ui / --webui            enable UI (overrides LLAMA_ARG_UI=0)
+  Sampling defaults: Qwen3.8-27B Thinking / non-Thinking, selected per request.
+  --temp, --temperature T    temperature [0,2] (1.0 / 0.7); 0 = greedy
+  --top-p P                  nucleus threshold [0,1] (0.95 / 0.80)
+  --top-k K                  integer >= 0; 0 disables (20)
+  --min-p P                  minimum relative probability [0,1] (0)
+  --presence-penalty P       presence penalty [-2,2] (0 / 1.5)
+  --frequency-penalty P      frequency penalty [-2,2] (0)
+  --repeat-penalty P         repetition penalty > 0 (1); --repetition-penalty alias
+  --seed N                   uint32 seed (default random)
+                            request fields override these process defaults
+  --kvmem / --no-kvmem       enable KVMem (default on)
+  --kvmem-budget N           GPU working-set tokens; 0 = n_ctx
+  --kvmem-block-tokens N     block size (default 128)
+  --kvmem-sink-tokens N      always-kept prefix; default 0 = one block; rounds down, minimum one block
+  --kvmem-gen-reserve N      decode slack (default 256)
+  --kvmem-recent-tokens N    always-kept newest suffix in select budget (default 0)
+  --kvmem-method NAME        recency | retrieval (default retrieval)
+  --kvmem-query-last N       fallback query-last if last-user span missing (default 64)
+  --kvmem-query-max-tokens N cap last-user retrieval query to this many tokens
+                            from the end of the span (default 512; qw3-style)
+  --kvmem-query-replay MODE  legacy or auto (default auto)
+  --kvmem-query-policy MODE  legacy or user (default user)
+  --kvmem-mtp-state MODE     snapshots, auto or replay (default replay with MTP)
+  --kvmem-gpu-ratio R        cap slot pool at this fraction of GPU VRAM (default 0.50)
+  --kvmem-cpu-gb GB          CPU spill arena in GiB (0 = off)
+  --kvmem-nvme-gb GB         NVMe file in GiB (0 = off)
+  --kvmem-nvme-dir PATH      NVMe directory (default /tmp/kvmem_nvme)
+  --kvmem-harvest-v          prefill D2H V with raw-K (default off; RAM until NVMe flush)
+  --kvmem-raw-k-nvme         store raw-K and V on NVMe (needs --kvmem-nvme-gb)
+  --kv-dtype NAME            GPU KV cache type for K and V: f16 | f32 | q8_0 | q5_0 | q4_0 (default q8_0)
+  -ctk, --cache-type-k TYPE  GPU K cache type (llama.cpp name; default q8_0)
+  -ctv, --cache-type-v TYPE  GPU V cache type (quantized: independently q8_0 | q5_0 | q4_0)
+  --spec-type TYPE           none | draft-mtp (default none)
+  --spec-kv-dtype TYPE       MTP K/V type (default f16)
+  --spec-draft-n-max N       MTP draft tokens (default 3)
+  --spec-draft-p-min P       min draft probability (default 0)
+  --jinja                    native Jinja rendering (always enabled)
+  --chat-template TEMPLATE   override model chat template (Jinja text)
+  --chat-template-file PATH  load a Jinja template file
+  --chat-template-kwargs JSON  default template arguments
+  --reasoning-effort LEVEL   template effort; default uses template default, none disables thinking
+  --enable-thinking          Qwen thinking on (default off; request can override)
+  --no-think                 force thinking off
+  --reasoning-budget N       thinking token budget: -1 unlimited, 0 end immediately,
+                            N>0 force </think> after N think tokens (default -1)
+  --reasoning-budget-message MSG  injected before forced </think> (default none)
+  --webui                    serve bundled chat UI (default on)
