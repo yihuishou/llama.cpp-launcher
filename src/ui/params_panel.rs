@@ -937,60 +937,78 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvOffload, lang));
         });
 
-        // K 缓存类型启用开关
-        ui.horizontal(|ui| {
-            widgets::toggle(ui, &mut settings.enable_cache_type_k, "", accent);
-            ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeK, lang));
-            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeK, lang));
-        });
-
-        // K 缓存类型：标签 + ❓提示框同一行
-        ui.horizontal(|ui| {
-            ui.label(i18n::t(i18n::Key::LabelCacheTypeK, lang));
-            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeK, lang));
-        });
-        let k_types = [
-            "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
-            "turbo3", "turbo4",
-        ];
-
-        ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
-
-            for k_type in &k_types {
-                let selected = settings.cache_type_k == *k_type;
-                if ui.selectable_label(selected, *k_type).clicked() {
-                    settings.cache_type_k = k_type.to_string();
+        // KVMem 版把 K/V 两类合并为 --kv-dtype（取值也更窄），故两组控件二选一。
+        // 隐藏控件不清零字段值，切回标准版原样恢复。
+        if settings.llama_cpp_type_effective().is_kvmem() {
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::LabelKvDtype, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvDtype, lang));
+            });
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 6.0;
+                for kv_dtype in ["f16", "f32", "q8_0", "q5_0", "q4_0"] {
+                    let selected = settings.kv_dtype == kv_dtype;
+                    if ui.selectable_label(selected, kv_dtype).clicked() {
+                        settings.kv_dtype = kv_dtype.to_string();
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            // K 缓存类型启用开关
+            ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_cache_type_k, "", accent);
+                ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeK, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeK, lang));
+            });
 
-        // V 缓存类型启用开关
-        ui.horizontal(|ui| {
-            widgets::toggle(ui, &mut settings.enable_cache_type_v, "", accent);
-            ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeV, lang));
-            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeV, lang));
-        });
+            // K 缓存类型：标签 + ❓提示框同一行
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::LabelCacheTypeK, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeK, lang));
+            });
+            let k_types = [
+                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
+                "turbo3", "turbo4",
+            ];
 
-        // V 缓存类型：标签 + ❓提示框同一行
-        ui.horizontal(|ui| {
-            ui.label(i18n::t(i18n::Key::LabelCacheTypeV, lang));
-            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeV, lang));
-        });
-        let v_types = [
-            "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
-            "turbo3", "turbo4",
-        ];
-        ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 6.0;
 
-            for v_type in &v_types {
-                let selected = settings.cache_type_v == *v_type;
-                if ui.selectable_label(selected, *v_type).clicked() {
-                    settings.cache_type_v = v_type.to_string();
+                for k_type in &k_types {
+                    let selected = settings.cache_type_k == *k_type;
+                    if ui.selectable_label(selected, *k_type).clicked() {
+                        settings.cache_type_k = k_type.to_string();
+                    }
                 }
-            }
-        });
+            });
+
+            // V 缓存类型启用开关
+            ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_cache_type_v, "", accent);
+                ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeV, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeV, lang));
+            });
+
+            // V 缓存类型：标签 + ❓提示框同一行
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::LabelCacheTypeV, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeV, lang));
+            });
+            let v_types = [
+                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
+                "turbo3", "turbo4",
+            ];
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 6.0;
+
+                for v_type in &v_types {
+                    let selected = settings.cache_type_v == *v_type;
+                    if ui.selectable_label(selected, *v_type).clicked() {
+                        settings.cache_type_v = v_type.to_string();
+                    }
+                }
+            });
+        }
 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.kv_unified, "", accent);
@@ -1025,6 +1043,220 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCheckpointMinStep, lang));
         });
     });
+
+    // ── KVMem 分层缓存（仅 llama-kvmem-server）──
+    if settings.llama_cpp_type_effective().is_kvmem() {
+        widgets::card(ui, i18n::t(i18n::Key::SectionKvmem, lang), accent, |ui| {
+            ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.kvmem_enabled, "", accent);
+                ui.label(i18n::t(i18n::Key::LabelKvmemEnabled, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemEnabled, lang));
+            });
+            ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.kvmem_trace, "", accent);
+                ui.label(i18n::t(i18n::Key::LabelKvmemTrace, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemTrace, lang));
+            });
+
+            if settings.kvmem_enabled {
+                ui.indent("kvmem_block_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemBudget, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_budget)
+                                .range(0..=1048576)
+                                .speed(256),
+                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemBudget, lang));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemBlockTokens, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_block_tokens)
+                                .range(16..=8192)
+                                .speed(16),
+                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemBlockTokens, lang));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemSinkTokens, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_sink_tokens)
+                                .range(0..=1048576)
+                                .speed(128),
+                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemSinkTokens, lang));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemGenReserve, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_gen_reserve)
+                                .range(0..=65536)
+                                .speed(16),
+                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemGenReserve, lang));
+                    });
+                });
+
+                ui.indent("kvmem_tier_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemGpuRatio, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_gpu_ratio)
+                                .range(0.0..=1.0)
+                                .speed(0.01),
+                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemGpuRatio, lang));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemCpuGb, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_cpu_gb)
+                                .range(0.0..=1024.0)
+                                .speed(1.0),
+                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemCpuGb, lang));
+                    });
+                });
+
+                ui.indent("kvmem_retrieval_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemRecentTokens, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_recent_tokens)
+                                .range(0..=1048576)
+                                .speed(128),
+                        );
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemRecentTokens, lang),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemQueryLast, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_query_last)
+                                .range(0..=4096)
+                                .speed(8),
+                        );
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemQueryLast, lang),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemQueryMaxTokens, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_query_max_tokens)
+                                .range(0..=65536)
+                                .speed(16),
+                        );
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemQueryMaxTokens, lang),
+                        );
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemMethod, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemMethod, lang));
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        for method in ["retrieval", "recency"] {
+                            let selected = settings.kvmem_method == method;
+                            if ui.selectable_label(selected, method).clicked() {
+                                settings.kvmem_method = method.to_string();
+                            }
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemQueryReplay, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemQueryReplay, lang),
+                        );
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        for replay in ["auto", "legacy"] {
+                            let selected = settings.kvmem_query_replay == replay;
+                            if ui.selectable_label(selected, replay).clicked() {
+                                settings.kvmem_query_replay = replay.to_string();
+                            }
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemQueryPolicy, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemQueryPolicy, lang),
+                        );
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        for policy in ["user", "legacy"] {
+                            let selected = settings.kvmem_query_policy == policy;
+                            if ui.selectable_label(selected, policy).clicked() {
+                                settings.kvmem_query_policy = policy.to_string();
+                            }
+                        }
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemMtpState, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemMtpState, lang));
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        for mtp in ["replay", "snapshots", "auto"] {
+                            let selected = settings.kvmem_mtp_state == mtp;
+                            if ui.selectable_label(selected, mtp).clicked() {
+                                settings.kvmem_mtp_state = mtp.to_string();
+                            }
+                        }
+                    });
+                });
+
+                ui.indent("kvmem_nvme_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemNvmeGb, lang));
+                        ui.add(
+                            egui::DragValue::new(&mut settings.kvmem_nvme_gb)
+                                .range(0.0..=4096.0)
+                                .speed(1.0),
+                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemNvmeGb, lang));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelKvmemNvmeDir, lang));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut settings.kvmem_nvme_dir)
+                                .desired_width(200.0),
+                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemNvmeDir, lang));
+                    });
+                    ui.horizontal(|ui| {
+                        widgets::toggle(ui, &mut settings.kvmem_harvest_v, "", accent);
+                        ui.label(i18n::t(i18n::Key::LabelKvmemHarvestV, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemHarvestV, lang));
+                    });
+                    // 服务端要求 raw-K 落盘必须先有 NVMe 容量，容量为 0 时禁用
+                    ui.horizontal(|ui| {
+                        ui.add_enabled(
+                            settings.kvmem_nvme_gb > 0.0,
+                            egui::Checkbox::new(
+                                &mut settings.kvmem_raw_k_nvme,
+                                i18n::t(i18n::Key::LabelKvmemRawKNvme, lang),
+                            ),
+                        );
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemRawKNvme, lang),
+                        );
+                    });
+                });
+            }
+        });
+    }
 
     // ── 推测解码 ──
     widgets::card(
@@ -1180,42 +1412,65 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         });
                     });
                 }
-                // 推测解码 KV 类型 K + 启用开关
-                ui.horizontal(|ui| {
-                    widgets::toggle(ui, &mut settings.enable_spec_draft_type_k, "", accent);
-                    ui.label(i18n::t(i18n::Key::LabelSpecDraftTypeK, lang));
-                    helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftTypeK, lang));
-                });
-                let spec_k_types = [
-                    "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
-                ];
-                ui.horizontal_wrapped(|ui| {
-                    ui.spacing_mut().item_spacing.x = 6.0;
-                    for k_type in &spec_k_types {
-                        let selected = settings.spec_draft_type_k == *k_type;
-                        if ui.selectable_label(selected, *k_type).clicked() {
-                            settings.spec_draft_type_k = k_type.to_string();
+                // 与 KV 卡片同理：KVMem 合并为 --spec-kv-dtype
+                if settings.llama_cpp_type_effective().is_kvmem() {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelSpecKvDtype, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecKvDtype, lang));
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        for kv_dtype in ["f16", "f32", "q8_0", "q5_0", "q4_0"] {
+                            let selected = settings.spec_kv_dtype == kv_dtype;
+                            if ui.selectable_label(selected, kv_dtype).clicked() {
+                                settings.spec_kv_dtype = kv_dtype.to_string();
+                            }
                         }
-                    }
-                });
-                // 推测解码 KV 类型 V + 启用开关
-                ui.horizontal(|ui| {
-                    widgets::toggle(ui, &mut settings.enable_spec_draft_type_v, "", accent);
-                    ui.label(i18n::t(i18n::Key::LabelSpecDraftTypeV, lang));
-                    helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftTypeV, lang));
-                });
-                let spec_v_types = [
-                    "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
-                ];
-                ui.horizontal_wrapped(|ui| {
-                    ui.spacing_mut().item_spacing.x = 6.0;
-                    for v_type in &spec_v_types {
-                        let selected = settings.spec_draft_type_v == *v_type;
-                        if ui.selectable_label(selected, *v_type).clicked() {
-                            settings.spec_draft_type_v = v_type.to_string();
+                    });
+                } else {
+                    // 推测解码 KV 类型 K + 启用开关
+                    ui.horizontal(|ui| {
+                        widgets::toggle(ui, &mut settings.enable_spec_draft_type_k, "", accent);
+                        ui.label(i18n::t(i18n::Key::LabelSpecDraftTypeK, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpSpecDraftTypeK, lang),
+                        );
+                    });
+                    let spec_k_types = [
+                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
+                    ];
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        for k_type in &spec_k_types {
+                            let selected = settings.spec_draft_type_k == *k_type;
+                            if ui.selectable_label(selected, *k_type).clicked() {
+                                settings.spec_draft_type_k = k_type.to_string();
+                            }
                         }
-                    }
-                });
+                    });
+                    // 推测解码 KV 类型 V + 启用开关
+                    ui.horizontal(|ui| {
+                        widgets::toggle(ui, &mut settings.enable_spec_draft_type_v, "", accent);
+                        ui.label(i18n::t(i18n::Key::LabelSpecDraftTypeV, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpSpecDraftTypeV, lang),
+                        );
+                    });
+                    let spec_v_types = [
+                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
+                    ];
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        for v_type in &spec_v_types {
+                            let selected = settings.spec_draft_type_v == *v_type;
+                            if ui.selectable_label(selected, *v_type).clicked() {
+                                settings.spec_draft_type_v = v_type.to_string();
+                            }
+                        }
+                    });
+                }
             }
             // ngram 各类型独立参数：选中的类型各自显示一组 size-n / size-m / min-hits（可叠加）
             for (ngram_ty, labels, values) in [

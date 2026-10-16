@@ -1,4 +1,4 @@
-use crate::config::settings::{AppSettings, SettingsManager};
+use crate::config::settings::{AppSettings, LlamaCppType, SettingsManager};
 use crate::engine::server::ServerManager;
 use crate::i18n;
 use crate::ui::helper;
@@ -41,6 +41,37 @@ pub fn ui(
                 if response.changed() {
                     settings.server_path = std::path::PathBuf::from(&server_path_str);
                 }
+            });
+
+            ui.horizontal(|ui| {
+                ui.label(i18n::t(i18n::Key::LabelLlamaCppType, lang));
+                let auto_label = i18n::t(i18n::Key::LlamaCppTypeAuto, lang);
+                let std_label = i18n::t(i18n::Key::LlamaCppTypeStandard, lang);
+                let kvmem_label = i18n::t(i18n::Key::LlamaCppTypeKvmem, lang);
+                let selected = match settings.llama_cpp_type {
+                    None => auto_label,
+                    Some(LlamaCppType::Standard) => std_label,
+                    Some(LlamaCppType::Kvmem) => kvmem_label,
+                };
+                egui::ComboBox::from_id_salt("llama_cpp_type")
+                    .selected_text(selected)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut settings.llama_cpp_type,
+                            Option::<LlamaCppType>::None,
+                            auto_label,
+                        );
+                        ui.selectable_value(
+                            &mut settings.llama_cpp_type,
+                            Some(LlamaCppType::Standard),
+                            std_label,
+                        );
+                        ui.selectable_value(
+                            &mut settings.llama_cpp_type,
+                            Some(LlamaCppType::Kvmem),
+                            kvmem_label,
+                        );
+                    });
             });
 
             ui.horizontal(|ui| {
