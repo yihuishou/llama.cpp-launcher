@@ -512,12 +512,26 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     let labels = ["1:1", "1:2", "1:3", "1:4", "1:5", "1:6"];
                     for (ratio, label) in ratios.iter().zip(labels.iter()) {
                         if ui
-                            .add(widgets::rounded_button(label, Some(accent)))
+                            .add(widgets::rounded_button(label, None))
                             .on_hover_text(*ratio)
                             .clicked()
                         {
                             settings.tensor_split = ratio.to_string();
                         }
+                    }
+                    // 清空拆分比例按钮（逻辑与「清空特定张量设置」一致）
+                    let split_empty = settings.tensor_split.is_empty();
+                    if ui
+                        .add_enabled(
+                            !split_empty,
+                            widgets::rounded_button(
+                                i18n::t(i18n::Key::BtnClearTensorSplit, lang),
+                                None,
+                            ),
+                        )
+                        .clicked()
+                    {
+                        settings.tensor_split.clear();
                     }
                 });
             });
@@ -554,7 +568,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !ffn_set,
-                        egui::Button::new(i18n::t(i18n::Key::BtnFfnOffloadToCpu, lang)),
+                        widgets::rounded_button(
+                            i18n::t(i18n::Key::BtnFfnOffloadToCpu, lang),
+                            None,
+                        ),
                     )
                     .clicked()
                 {
@@ -566,7 +583,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !ngram_set,
-                        egui::Button::new(i18n::t(i18n::Key::BtnNGramOffloadToCpu, lang)),
+                        widgets::rounded_button(
+                            i18n::t(i18n::Key::BtnNGramOffloadToCpu, lang),
+                            None,
+                        ),
                     )
                     .clicked()
                 {
@@ -576,7 +596,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !tensor_empty,
-                        egui::Button::new(i18n::t(i18n::Key::BtnClearOverrideTensor, lang)),
+                        widgets::rounded_button(
+                            i18n::t(i18n::Key::BtnClearOverrideTensor, lang),
+                            None,
+                        ),
                     )
                     .clicked()
                 {
@@ -652,7 +675,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .unwrap_or(false);
             let btn = ui.add_enabled(
                 server_available,
-                egui::Button::new(i18n::t(i18n::Key::BtnViewServerDeviceList, lang)),
+                widgets::rounded_button(
+                    i18n::t(i18n::Key::BtnViewServerDeviceList, lang),
+                    None,
+                ),
             );
             if btn.clicked() {
                 if settings.show_server_device_list {
@@ -752,7 +778,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                         settings.device.split(',').any(|s| s.trim() == entry);
                                     let btn = ui.add_enabled(
                                         !already_added,
-                                        egui::Button::new(i18n::t(i18n::Key::BtnAddToDevice, lang)),
+                                        widgets::rounded_button(
+                                            i18n::t(i18n::Key::BtnAddToDevice, lang),
+                                            None,
+                                        ),
                                     );
                                     if btn.clicked() {
                                         if settings.device.is_empty() {
@@ -802,7 +831,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                         settings.device.split(',').any(|s| s.trim() == rpc_entry);
                                     let btn = ui.add_enabled(
                                         !already_added,
-                                        egui::Button::new(i18n::t(i18n::Key::BtnAddToDevice, lang)),
+                                        widgets::rounded_button(
+                                            i18n::t(i18n::Key::BtnAddToDevice, lang),
+                                            None,
+                                        ),
                                     );
                                     if btn.clicked() {
                                         if settings.device.is_empty() {
