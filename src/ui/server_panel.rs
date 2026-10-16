@@ -613,34 +613,36 @@ pub fn ui(
                 accent,
             );
 
-            // 日志级别启用开关
+            // 日志级别启用开关（开关位于行首）
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_log_verbosity, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxEnableLogVerbosity, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableLogVerbosity, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_log_verbosity, "", accent);
-                });
             });
 
-            // 日志级别（--log-verbosity）分段控件
-            ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelLogVerbosity, lang));
-                let lv_vals = [0usize, 1, 2, 3, 4, 5];
-                let lv_labels = [
-                    i18n::t(i18n::Key::LogVerbosity0, lang),
-                    i18n::t(i18n::Key::LogVerbosity1, lang),
-                    i18n::t(i18n::Key::LogVerbosity2, lang),
-                    i18n::t(i18n::Key::LogVerbosity3, lang),
-                    i18n::t(i18n::Key::LogVerbosity4, lang),
-                    i18n::t(i18n::Key::LogVerbosity5, lang),
-                ];
-                let mut lv_idx = lv_vals
-                    .iter()
-                    .position(|v| *v == settings.log_verbosity)
-                    .unwrap_or(3);
-                widgets::segmented(ui, &lv_labels, &mut lv_idx, accent);
-                settings.log_verbosity = lv_vals[lv_idx];
-            });
+            // 启用时才显示日志级别（--log-verbosity）分段控件（缩进样式与 N CPU MoE 一致）
+            if settings.enable_log_verbosity {
+                ui.indent("log_verbosity_options", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelLogVerbosity, lang));
+                        let lv_vals = [0usize, 1, 2, 3, 4, 5];
+                        let lv_labels = [
+                            i18n::t(i18n::Key::LogVerbosity0, lang),
+                            i18n::t(i18n::Key::LogVerbosity1, lang),
+                            i18n::t(i18n::Key::LogVerbosity2, lang),
+                            i18n::t(i18n::Key::LogVerbosity3, lang),
+                            i18n::t(i18n::Key::LogVerbosity4, lang),
+                            i18n::t(i18n::Key::LogVerbosity5, lang),
+                        ];
+                        let mut lv_idx = lv_vals
+                            .iter()
+                            .position(|v| *v == settings.log_verbosity)
+                            .unwrap_or(3);
+                        widgets::segmented(ui, &lv_labels, &mut lv_idx, accent);
+                        settings.log_verbosity = lv_vals[lv_idx];
+                    });
+                });
+            }
         },
     );
 
