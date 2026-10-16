@@ -74,6 +74,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             // 批次大小 (--batch-size) (k)
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_batch_size, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelBatchSize, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.batch_size)
@@ -84,12 +85,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.label("k");
                 ui.small(i18n::t(i18n::Key::HintKUnit, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpBatchSize, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_batch_size, "", accent);
-                });
             });
             // 物理批次大小 (--ubatch-size) (k)
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_ubatch_size, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelUBatchSize, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.ubatch_size)
@@ -100,12 +99,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.label("k");
                 ui.small(i18n::t(i18n::Key::HintKUnit, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpUBatchSize, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_ubatch_size, "", accent);
-                });
             });
 
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_session_timeout, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelSessionTimeout, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.session_timeout)
@@ -114,9 +111,6 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ); // 60~3600秒，步进10
                 ui.label(i18n::t(i18n::Key::HintSUnit, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSessionTimeout, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_session_timeout, "", accent);
-                });
             });
 
             ui.horizontal(|ui| {
@@ -207,6 +201,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             // ── 显存预留 --fit-target ──
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_fit_target, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelFitTarget, lang));
                 // 数字输入：解析首个值（多卡值为逗号分隔，其余段保留不动）
                 let (first, rest) = {
@@ -230,12 +225,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 }
                 ui.label("MiB");
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpFitTarget, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_fit_target, "", accent);
-                });
             });
             // ── 最小上下文 --fit-ctx ──
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_fit_ctx, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelFitCtx, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.fit_ctx)
@@ -245,9 +238,6 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.label("k");
                 ui.small(i18n::t(i18n::Key::HintKUnit, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpFitCtx, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_fit_ctx, "", accent);
-                });
             });
         },
     );
@@ -373,11 +363,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
             // Jinja 对话模板引擎开关：标签 + ❓提示框 + 开关
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.jinja_enabled, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxJinja, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpJinja, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.jinja_enabled, "", accent);
-                });
             });
 
             // 对话模板 (--chat-template)
@@ -534,13 +522,11 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             // CPU MoE（与 RPC 模式一致的缩进样式）
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.cpu_moe, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxCpuMoe, lang));
                 ui.small(i18n::t(i18n::Key::HintCpuMoe, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCpuMoe, lang));
                 // 开关不重复标签：行首已有说明文字
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.cpu_moe, "", accent);
-                });
             });
             // 关闭 cpu_moe 时才显示 n_cpu_moe 输入框
             if !settings.cpu_moe {
@@ -863,11 +849,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         });
         // 长上下文 / 提示缓存（标签 + ❓提示框 + 行右侧开关）
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.cache_prompt, "", accent);
             ui.label(i18n::t(i18n::Key::CheckboxCachePrompt, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCachePrompt, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.cache_prompt, "", accent);
-            });
         });
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelCacheReuse, lang));
@@ -880,20 +864,16 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheReuse, lang));
         });
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.context_shift, "", accent);
             ui.label(i18n::t(i18n::Key::CheckboxContextShift, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpContextShift, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.context_shift, "", accent);
-            });
         });
 
         // prompt 缓存上限（--cache-ram）：prompt cache 占用的内存上限
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.cache_ram_enabled, "", accent);
             ui.label(i18n::t(i18n::Key::AdvCacheRamEnable, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::AdvCacheRamHint, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.cache_ram_enabled, "", accent);
-            });
         });
         if settings.cache_ram_enabled {
             ui.indent("cache_ram_opt", |ui| {
@@ -911,28 +891,22 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         }
         // 绕过 host buffer（--no-host）
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.no_host, "", accent);
             ui.label(i18n::t(i18n::Key::AdvNoHost, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::AdvNoHostHint, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.no_host, "", accent);
-            });
         });
         // KV 缓存开关统一样式（与「手动指定 GPU 层数」一致）：标签 + ❓提示框 + 开关
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.kv_offload, "", accent);
             ui.label(i18n::t(i18n::Key::CheckboxKvOffload, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvOffload, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.kv_offload, "", accent);
-            });
         });
 
         // K 缓存类型启用开关
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.enable_cache_type_k, "", accent);
             ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeK, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeK, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.enable_cache_type_k, "", accent);
-            });
         });
 
         // K 缓存类型：标签 + ❓提示框同一行
@@ -958,11 +932,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
         // V 缓存类型启用开关
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.enable_cache_type_v, "", accent);
             ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeV, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeV, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.enable_cache_type_v, "", accent);
-            });
         });
 
         // V 缓存类型：标签 + ❓提示框同一行
@@ -986,20 +958,16 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         });
 
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.kv_unified, "", accent);
             ui.label(i18n::t(i18n::Key::CheckboxKvUnified, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvUnified, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.kv_unified, "", accent);
-            });
         });
 
         // 完整滑动窗口 (--swa-full)，与「手动指定 GPU 层数」一致：标签 + ❓提示框 + 开关
         ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.swa_full, "", accent);
             ui.label(i18n::t(i18n::Key::CheckboxSwaFull, lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSwaFull, lang));
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                widgets::toggle(ui, &mut settings.swa_full, "", accent);
-            });
         });
         // 上下文检查点
         ui.horizontal(|ui| {
@@ -1115,24 +1083,21 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             if is_draft {
                 // 最大推测数量 --spec-draft-n-max（DragValue + 启用开关）
                 ui.horizontal(|ui| {
+                    widgets::toggle(ui, &mut settings.enable_spec_draft_n_max, "", accent);
                     ui.label(i18n::t(i18n::Key::SpecDraftNMaxLabel, lang));
                     ui.add(egui::DragValue::new(&mut settings.spec_draft_n_max).range(0..=64));
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftNMax, lang));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        widgets::toggle(ui, &mut settings.enable_spec_draft_n_max, "", accent);
-                    });
                 });
                 // 最小推测数量 --spec-draft-n-min（DragValue + 启用开关）
                 ui.horizontal(|ui| {
+                    widgets::toggle(ui, &mut settings.enable_spec_draft_n_min, "", accent);
                     ui.label(i18n::t(i18n::Key::SpecDraftNMinLabel, lang));
                     ui.add(egui::DragValue::new(&mut settings.spec_draft_n_min).range(0..=32));
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftNMin, lang));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        widgets::toggle(ui, &mut settings.enable_spec_draft_n_min, "", accent);
-                    });
                 });
                 // 信任度 --spec-draft-p-min（Slider + 启用开关）
                 ui.horizontal(|ui| {
+                    widgets::toggle(ui, &mut settings.enable_spec_draft_p_min, "", accent);
                     ui.label(i18n::t(i18n::Key::SpecDraftPMinLabel, lang));
                     ui.add(
                         winui::FluentSlider::new(&mut settings.spec_draft_p_min, 0.0..=1.0)
@@ -1140,12 +1105,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             .show_value(true),
                     );
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftPMin, lang));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        widgets::toggle(ui, &mut settings.enable_spec_draft_p_min, "", accent);
-                    });
                 });
                 // 分裂概率 --spec-draft-p-split（Slider + 启用开关）
                 ui.horizontal(|ui| {
+                    widgets::toggle(ui, &mut settings.enable_spec_draft_p_split, "", accent);
                     ui.label(i18n::t(i18n::Key::SpecDraftPSplitLabel, lang));
                     ui.add(
                         winui::FluentSlider::new(&mut settings.spec_draft_p_split, 0.0..=1.0)
@@ -1153,17 +1116,12 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             .show_value(true),
                     );
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftPSplit, lang));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        widgets::toggle(ui, &mut settings.enable_spec_draft_p_split, "", accent);
-                    });
                 });
                 // 推测解码 KV 类型 K + 启用开关
                 ui.horizontal(|ui| {
+                    widgets::toggle(ui, &mut settings.enable_spec_draft_type_k, "", accent);
                     ui.label(i18n::t(i18n::Key::LabelSpecDraftTypeK, lang));
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftTypeK, lang));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        widgets::toggle(ui, &mut settings.enable_spec_draft_type_k, "", accent);
-                    });
                 });
                 let spec_k_types = [
                     "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
@@ -1179,11 +1137,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 });
                 // 推测解码 KV 类型 V + 启用开关
                 ui.horizontal(|ui| {
+                    widgets::toggle(ui, &mut settings.enable_spec_draft_type_v, "", accent);
                     ui.label(i18n::t(i18n::Key::LabelSpecDraftTypeV, lang));
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecDraftTypeV, lang));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        widgets::toggle(ui, &mut settings.enable_spec_draft_type_v, "", accent);
-                    });
                 });
                 let spec_v_types = [
                     "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
@@ -1540,6 +1496,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvLogitBiasHint, lang));
             });
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_temperature, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelTemperature, lang));
                 ui.add(
                     winui::FluentSlider::new(&mut settings.temperature, 0.0..=2.0)
@@ -1547,13 +1504,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .show_value(true),
                 );
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTemperature, lang));
-                // 开关推到行最右侧（与顶栏 right_to_left 右对齐模式一致）
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_temperature, "", accent);
-                });
             });
             // top_p
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_top_p, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelTopP, lang));
                 ui.add(
                     winui::FluentSlider::new(&mut settings.top_p, 0.0..=1.0)
@@ -1561,21 +1515,17 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .show_value(true),
                 );
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTopP, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_top_p, "", accent);
-                });
             });
             // top_k
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_top_k, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelTopK, lang));
                 ui.add(egui::DragValue::new(&mut settings.top_k).range(0..=1000));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTopK, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_top_k, "", accent);
-                });
             });
             // 重复惩罚
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_repeat_penalty, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelRepeatPenalty, lang));
                 ui.add(
                     winui::FluentSlider::new(&mut settings.repeat_penalty, 0.0..=2.0)
@@ -1583,12 +1533,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .show_value(true),
                 );
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpRepeatPenalty, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_repeat_penalty, "", accent);
-                });
             });
             // 存在惩罚
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_presence_penalty, "", accent);
                 ui.label(i18n::t(i18n::Key::LabelPresencePenalty, lang));
                 ui.add(
                     winui::FluentSlider::new(&mut settings.presence_penalty, -2.0..=2.0)
@@ -1596,9 +1544,6 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .show_value(true),
                 );
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpPresencePenalty, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_presence_penalty, "", accent);
-                });
             });
         },
     );
@@ -1611,11 +1556,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         |ui| {
             // Min-P
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_min_p, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxMinP, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMinP, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_min_p, "", accent);
-                });
             });
             if settings.enable_min_p {
                 ui.indent("min_p_opt", |ui| {
@@ -1631,11 +1574,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             }
             // Top-N-Sigma
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_top_n_sigma, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxTopNSigma, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTopNSigma, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_top_n_sigma, "", accent);
-                });
             });
             if settings.enable_top_n_sigma {
                 ui.indent("top_n_sigma_opt", |ui| {
@@ -1651,11 +1592,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             }
             // XTC
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_xtc, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxXtc, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpXtc, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_xtc, "", accent);
-                });
             });
             if settings.enable_xtc {
                 ui.indent("xtc_opt", |ui| {
@@ -1679,11 +1618,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             }
             // Typical-P
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_typical_p, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxTypicalP, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTypicalP, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_typical_p, "", accent);
-                });
             });
             if settings.enable_typical_p {
                 ui.indent("typical_p_opt", |ui| {
@@ -1699,11 +1636,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             }
             // Mirostat
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_mirostat, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxMirostat, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMirostat, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_mirostat, "", accent);
-                });
             });
             if settings.enable_mirostat {
                 ui.indent("mirostat_opt", |ui| {
@@ -1740,11 +1675,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             }
             // 动态温度
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.enable_dynatemp, "", accent);
                 ui.label(i18n::t(i18n::Key::CheckboxDynatemp, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpDynatemp, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.enable_dynatemp, "", accent);
-                });
             });
             if settings.enable_dynatemp {
                 ui.indent("dynatemp_opt", |ui| {
@@ -1962,11 +1895,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 );
             });
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.metrics_enabled, "", accent);
                 ui.label(i18n::t(i18n::Key::AdvMetrics, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvMetricsHint, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.metrics_enabled, "", accent);
-                });
             });
         },
     );
@@ -1978,25 +1909,19 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         accent,
         |ui| {
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.check_tensors, "", accent);
                 ui.label(i18n::t(i18n::Key::AdvCheckTensors, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvCheckTensorsHint, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.check_tensors, "", accent);
-                });
             });
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.warmup_enabled, "", accent);
                 ui.label(i18n::t(i18n::Key::AdvWarmup, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvWarmupHint, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.warmup_enabled, "", accent);
-                });
             });
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.cont_batching, "", accent);
                 ui.label(i18n::t(i18n::Key::AdvContBatching, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvContBatchingHint, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.cont_batching, "", accent);
-                });
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvOverrideKv, lang));
@@ -2022,11 +1947,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         accent,
         |ui| {
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.embeddings_enabled, "", accent);
                 ui.label(i18n::t(i18n::Key::AdvEmbeddings, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvEmbeddingsHint, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.embeddings_enabled, "", accent);
-                });
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvPooling, lang));
@@ -2048,11 +1971,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvPoolingHint, lang));
             });
             ui.horizontal(|ui| {
+                widgets::toggle(ui, &mut settings.rerank_enabled, "", accent);
                 ui.label(i18n::t(i18n::Key::AdvRerank, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRerankHint, lang));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    widgets::toggle(ui, &mut settings.rerank_enabled, "", accent);
-                });
             });
         },
     );
