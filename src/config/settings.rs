@@ -545,7 +545,7 @@ fn default_spec_draft_type_v() -> String {
     "f16".to_string()
 }
 
-// ngram 参数默认值（ngram-simple / ngram-map-k / ngram-map-k4v 共用）
+// ngram 参数默认值（各 ngram 类型的 size-n / size-m / min-hits 共用）
 fn default_spec_ngram_size_n() -> usize {
     12
 }
@@ -901,13 +901,25 @@ pub struct Preset {
     pub enable_spec_draft_type_k: bool,
     #[serde(default)]
     pub enable_spec_draft_type_v: bool,
-    // ngram 参数（ngram-simple / ngram-map-k / ngram-map-k4v 共用）
+    // ngram 各类型独立参数（size-n / size-m / min-hits）
     #[serde(default = "default_spec_ngram_size_n")]
-    pub spec_ngram_size_n: usize, // --spec-ngram-*-size-n
+    pub spec_ngram_simple_size_n: usize, // --spec-ngram-simple-size-n
     #[serde(default = "default_spec_ngram_size_m")]
-    pub spec_ngram_size_m: usize, // --spec-ngram-*-size-m
+    pub spec_ngram_simple_size_m: usize, // --spec-ngram-simple-size-m
     #[serde(default = "default_spec_ngram_min_hits")]
-    pub spec_ngram_min_hits: usize, // --spec-ngram-*-min-hits
+    pub spec_ngram_simple_min_hits: usize, // --spec-ngram-simple-min-hits
+    #[serde(default = "default_spec_ngram_size_n")]
+    pub spec_ngram_map_k_size_n: usize, // --spec-ngram-map-k-size-n
+    #[serde(default = "default_spec_ngram_size_m")]
+    pub spec_ngram_map_k_size_m: usize, // --spec-ngram-map-k-size-m
+    #[serde(default = "default_spec_ngram_min_hits")]
+    pub spec_ngram_map_k_min_hits: usize, // --spec-ngram-map-k-min-hits
+    #[serde(default = "default_spec_ngram_size_n")]
+    pub spec_ngram_map_k4v_size_n: usize, // --spec-ngram-map-k4v-size-n
+    #[serde(default = "default_spec_ngram_size_m")]
+    pub spec_ngram_map_k4v_size_m: usize, // --spec-ngram-map-k4v-size-m
+    #[serde(default = "default_spec_ngram_min_hits")]
+    pub spec_ngram_map_k4v_min_hits: usize, // --spec-ngram-map-k4v-min-hits
     // ngram-mod 专用参数
     #[serde(default = "default_spec_ngram_mod_n_min")]
     pub spec_ngram_mod_n_min: usize, // --spec-ngram-mod-n-min
@@ -1154,9 +1166,15 @@ impl Default for Preset {
             enable_spec_draft_p_split: false,
             enable_spec_draft_type_k: false,
             enable_spec_draft_type_v: false,
-            spec_ngram_size_n: default_spec_ngram_size_n(),
-            spec_ngram_size_m: default_spec_ngram_size_m(),
-            spec_ngram_min_hits: default_spec_ngram_min_hits(),
+            spec_ngram_simple_size_n: default_spec_ngram_size_n(),
+            spec_ngram_simple_size_m: default_spec_ngram_size_m(),
+            spec_ngram_simple_min_hits: default_spec_ngram_min_hits(),
+            spec_ngram_map_k_size_n: default_spec_ngram_size_n(),
+            spec_ngram_map_k_size_m: default_spec_ngram_size_m(),
+            spec_ngram_map_k_min_hits: default_spec_ngram_min_hits(),
+            spec_ngram_map_k4v_size_n: default_spec_ngram_size_n(),
+            spec_ngram_map_k4v_size_m: default_spec_ngram_size_m(),
+            spec_ngram_map_k4v_min_hits: default_spec_ngram_min_hits(),
             spec_ngram_mod_n_min: default_spec_ngram_mod_n_min(),
             spec_ngram_mod_n_max: default_spec_ngram_mod_n_max(),
             spec_ngram_mod_n_match: default_spec_ngram_mod_n_match(),
@@ -1336,9 +1354,15 @@ impl Preset {
             enable_spec_draft_p_split: settings.enable_spec_draft_p_split,
             enable_spec_draft_type_k: settings.enable_spec_draft_type_k,
             enable_spec_draft_type_v: settings.enable_spec_draft_type_v,
-            spec_ngram_size_n: settings.spec_ngram_size_n,
-            spec_ngram_size_m: settings.spec_ngram_size_m,
-            spec_ngram_min_hits: settings.spec_ngram_min_hits,
+            spec_ngram_simple_size_n: settings.spec_ngram_simple_size_n,
+            spec_ngram_simple_size_m: settings.spec_ngram_simple_size_m,
+            spec_ngram_simple_min_hits: settings.spec_ngram_simple_min_hits,
+            spec_ngram_map_k_size_n: settings.spec_ngram_map_k_size_n,
+            spec_ngram_map_k_size_m: settings.spec_ngram_map_k_size_m,
+            spec_ngram_map_k_min_hits: settings.spec_ngram_map_k_min_hits,
+            spec_ngram_map_k4v_size_n: settings.spec_ngram_map_k4v_size_n,
+            spec_ngram_map_k4v_size_m: settings.spec_ngram_map_k4v_size_m,
+            spec_ngram_map_k4v_min_hits: settings.spec_ngram_map_k4v_min_hits,
             spec_ngram_mod_n_min: settings.spec_ngram_mod_n_min,
             spec_ngram_mod_n_max: settings.spec_ngram_mod_n_max,
             spec_ngram_mod_n_match: settings.spec_ngram_mod_n_match,
@@ -1520,9 +1544,15 @@ impl Preset {
         settings.enable_spec_draft_p_split = self.enable_spec_draft_p_split;
         settings.enable_spec_draft_type_k = self.enable_spec_draft_type_k;
         settings.enable_spec_draft_type_v = self.enable_spec_draft_type_v;
-        settings.spec_ngram_size_n = self.spec_ngram_size_n;
-        settings.spec_ngram_size_m = self.spec_ngram_size_m;
-        settings.spec_ngram_min_hits = self.spec_ngram_min_hits;
+        settings.spec_ngram_simple_size_n = self.spec_ngram_simple_size_n;
+        settings.spec_ngram_simple_size_m = self.spec_ngram_simple_size_m;
+        settings.spec_ngram_simple_min_hits = self.spec_ngram_simple_min_hits;
+        settings.spec_ngram_map_k_size_n = self.spec_ngram_map_k_size_n;
+        settings.spec_ngram_map_k_size_m = self.spec_ngram_map_k_size_m;
+        settings.spec_ngram_map_k_min_hits = self.spec_ngram_map_k_min_hits;
+        settings.spec_ngram_map_k4v_size_n = self.spec_ngram_map_k4v_size_n;
+        settings.spec_ngram_map_k4v_size_m = self.spec_ngram_map_k4v_size_m;
+        settings.spec_ngram_map_k4v_min_hits = self.spec_ngram_map_k4v_min_hits;
         settings.spec_ngram_mod_n_min = self.spec_ngram_mod_n_min;
         settings.spec_ngram_mod_n_max = self.spec_ngram_mod_n_max;
         settings.spec_ngram_mod_n_match = self.spec_ngram_mod_n_match;
@@ -1904,13 +1934,25 @@ pub struct AppSettings {
     pub enable_spec_draft_type_k: bool,
     #[serde(default)]
     pub enable_spec_draft_type_v: bool,
-    // ngram 参数（ngram-simple / ngram-map-k / ngram-map-k4v 共用）
+    // ngram 各类型独立参数（size-n / size-m / min-hits）
     #[serde(default = "default_spec_ngram_size_n")]
-    pub spec_ngram_size_n: usize,
+    pub spec_ngram_simple_size_n: usize,
     #[serde(default = "default_spec_ngram_size_m")]
-    pub spec_ngram_size_m: usize,
+    pub spec_ngram_simple_size_m: usize,
     #[serde(default = "default_spec_ngram_min_hits")]
-    pub spec_ngram_min_hits: usize,
+    pub spec_ngram_simple_min_hits: usize,
+    #[serde(default = "default_spec_ngram_size_n")]
+    pub spec_ngram_map_k_size_n: usize,
+    #[serde(default = "default_spec_ngram_size_m")]
+    pub spec_ngram_map_k_size_m: usize,
+    #[serde(default = "default_spec_ngram_min_hits")]
+    pub spec_ngram_map_k_min_hits: usize,
+    #[serde(default = "default_spec_ngram_size_n")]
+    pub spec_ngram_map_k4v_size_n: usize,
+    #[serde(default = "default_spec_ngram_size_m")]
+    pub spec_ngram_map_k4v_size_m: usize,
+    #[serde(default = "default_spec_ngram_min_hits")]
+    pub spec_ngram_map_k4v_min_hits: usize,
     // ngram-mod 专用参数
     #[serde(default = "default_spec_ngram_mod_n_min")]
     pub spec_ngram_mod_n_min: usize,
@@ -2318,9 +2360,15 @@ impl Default for AppSettings {
             enable_spec_draft_p_split: false,
             enable_spec_draft_type_k: false,
             enable_spec_draft_type_v: false,
-            spec_ngram_size_n: default_spec_ngram_size_n(),
-            spec_ngram_size_m: default_spec_ngram_size_m(),
-            spec_ngram_min_hits: default_spec_ngram_min_hits(),
+            spec_ngram_simple_size_n: default_spec_ngram_size_n(),
+            spec_ngram_simple_size_m: default_spec_ngram_size_m(),
+            spec_ngram_simple_min_hits: default_spec_ngram_min_hits(),
+            spec_ngram_map_k_size_n: default_spec_ngram_size_n(),
+            spec_ngram_map_k_size_m: default_spec_ngram_size_m(),
+            spec_ngram_map_k_min_hits: default_spec_ngram_min_hits(),
+            spec_ngram_map_k4v_size_n: default_spec_ngram_size_n(),
+            spec_ngram_map_k4v_size_m: default_spec_ngram_size_m(),
+            spec_ngram_map_k4v_min_hits: default_spec_ngram_min_hits(),
             spec_ngram_mod_n_min: default_spec_ngram_mod_n_min(),
             spec_ngram_mod_n_max: default_spec_ngram_mod_n_max(),
             spec_ngram_mod_n_match: default_spec_ngram_mod_n_match(),

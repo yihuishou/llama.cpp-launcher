@@ -1148,27 +1148,67 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     }
                 });
             }
-            // ngram-simple / ngram-map-k / ngram-map-k4v 共用参数（size-n / size-m / min-hits）
-            let is_ngram_shared = settings
-                .spec_type
-                .split(',')
-                .any(|s| matches!(s, "ngram-simple" | "ngram-map-k" | "ngram-map-k4v"));
-            if is_ngram_shared {
-                ui.horizontal(|ui| {
-                    ui.label(i18n::t(i18n::Key::SpecNgramSizeNLabel, lang));
-                    ui.add(egui::DragValue::new(&mut settings.spec_ngram_size_n).range(1..=256));
-                    helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramSizeN, lang));
-                });
-                ui.horizontal(|ui| {
-                    ui.label(i18n::t(i18n::Key::SpecNgramSizeMLabel, lang));
-                    ui.add(egui::DragValue::new(&mut settings.spec_ngram_size_m).range(1..=256));
-                    helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramSizeM, lang));
-                });
-                ui.horizontal(|ui| {
-                    ui.label(i18n::t(i18n::Key::SpecNgramMinHitsLabel, lang));
-                    ui.add(egui::DragValue::new(&mut settings.spec_ngram_min_hits).range(1..=128));
-                    helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramMinHits, lang));
-                });
+            // ngram 各类型独立参数：选中的类型各自显示一组 size-n / size-m / min-hits（可叠加）
+            for (ngram_ty, labels, values) in [
+                (
+                    "ngram-simple",
+                    (
+                        i18n::Key::SpecNgramSimpleSizeNLabel,
+                        i18n::Key::SpecNgramSimpleSizeMLabel,
+                        i18n::Key::SpecNgramSimpleMinHitsLabel,
+                    ),
+                    (
+                        &mut settings.spec_ngram_simple_size_n,
+                        &mut settings.spec_ngram_simple_size_m,
+                        &mut settings.spec_ngram_simple_min_hits,
+                    ),
+                ),
+                (
+                    "ngram-map-k",
+                    (
+                        i18n::Key::SpecNgramMapKSizeNLabel,
+                        i18n::Key::SpecNgramMapKSizeMLabel,
+                        i18n::Key::SpecNgramMapKMinHitsLabel,
+                    ),
+                    (
+                        &mut settings.spec_ngram_map_k_size_n,
+                        &mut settings.spec_ngram_map_k_size_m,
+                        &mut settings.spec_ngram_map_k_min_hits,
+                    ),
+                ),
+                (
+                    "ngram-map-k4v",
+                    (
+                        i18n::Key::SpecNgramMapK4VSizeNLabel,
+                        i18n::Key::SpecNgramMapK4VSizeMLabel,
+                        i18n::Key::SpecNgramMapK4VMinHitsLabel,
+                    ),
+                    (
+                        &mut settings.spec_ngram_map_k4v_size_n,
+                        &mut settings.spec_ngram_map_k4v_size_m,
+                        &mut settings.spec_ngram_map_k4v_min_hits,
+                    ),
+                ),
+            ] {
+                if settings.spec_type.split(',').any(|s| s.trim() == ngram_ty) {
+                    let (k_n, k_m, k_h) = labels;
+                    let (v_n, v_m, v_h) = values;
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(k_n, lang));
+                        ui.add(egui::DragValue::new(v_n).range(1..=256));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramSizeN, lang));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(k_m, lang));
+                        ui.add(egui::DragValue::new(v_m).range(1..=256));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramSizeM, lang));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(k_h, lang));
+                        ui.add(egui::DragValue::new(v_h).range(1..=128));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSpecNgramMinHits, lang));
+                    });
+                }
             }
             // ngram-mod 专用参数（n-min / n-max / n-match）
             if settings.spec_type.split(',').any(|s| s == "ngram-mod") {

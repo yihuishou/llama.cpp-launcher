@@ -471,28 +471,44 @@ impl ServerManager {
             }
         }
 
-        // ngram 参数
-        // 多选：从逗号分隔列表中找出当前启用的 ngram 类型
-        let ngram_shared = settings
-            .spec_type
-            .split(',')
-            .find(|s| matches!(*s, "ngram-simple" | "ngram-map-k" | "ngram-map-k4v"));
-        if let Some(ngram_ty) = ngram_shared {
-            let prefix = format!("--spec-{}", ngram_ty);
-            args.push(format!("{}-size-n", prefix));
-            args.push(settings.spec_ngram_size_n.to_string());
-            args.push(format!("{}-size-m", prefix));
-            args.push(settings.spec_ngram_size_m.to_string());
-            args.push(format!("{}-min-hits", prefix));
-            args.push(settings.spec_ngram_min_hits.to_string());
+        // ngram 各类型独立参数：每个选中的类型输出自己的 size-n / size-m / min-hits
+        for (ngram_ty, size_n, size_m, min_hits) in [
+            (
+                "ngram-simple",
+                settings.spec_ngram_simple_size_n,
+                settings.spec_ngram_simple_size_m,
+                settings.spec_ngram_simple_min_hits,
+            ),
+            (
+                "ngram-map-k",
+                settings.spec_ngram_map_k_size_n,
+                settings.spec_ngram_map_k_size_m,
+                settings.spec_ngram_map_k_min_hits,
+            ),
+            (
+                "ngram-map-k4v",
+                settings.spec_ngram_map_k4v_size_n,
+                settings.spec_ngram_map_k4v_size_m,
+                settings.spec_ngram_map_k4v_min_hits,
+            ),
+        ] {
+            if settings.spec_type.split(',').any(|s| s.trim() == ngram_ty) {
+                let prefix = format!("--spec-{}", ngram_ty);
+                args.push(format!("{}-size-n", prefix));
+                args.push(size_n.to_string());
+                args.push(format!("{}-size-m", prefix));
+                args.push(size_m.to_string());
+                args.push(format!("{}-min-hits", prefix));
+                args.push(min_hits.to_string());
+            }
         }
-        if settings.spec_type == "ngram-map-k" || settings.spec_type == "ngram-map-k4v" {
-            let prefix = format!("--spec-{}", settings.spec_type);
-            args.push(format!("{}-mod-n-min", prefix));
+        // ngram-mod 专用参数（与 start() 一致：列表含 ngram-mod 时拼接）
+        if settings.spec_type.split(',').any(|s| s.trim() == "ngram-mod") {
+            args.push("--spec-ngram-mod-n-min".to_string());
             args.push(settings.spec_ngram_mod_n_min.to_string());
-            args.push(format!("{}-mod-n-max", prefix));
+            args.push("--spec-ngram-mod-n-max".to_string());
             args.push(settings.spec_ngram_mod_n_max.to_string());
-            args.push(format!("{}-mod-n-match", prefix));
+            args.push("--spec-ngram-mod-n-match".to_string());
             args.push(settings.spec_ngram_mod_n_match.to_string());
         }
 
@@ -1129,20 +1145,36 @@ impl ServerManager {
             }
         }
 
-        // 4) --spec-ngram-*: ngram-simple / ngram-map-k / ngram-map-k4v 共用参数
-        // 多选：从逗号分隔列表中找出当前启用的 ngram 类型
-        let ngram_shared = settings
-            .spec_type
-            .split(',')
-            .find(|s| matches!(*s, "ngram-simple" | "ngram-map-k" | "ngram-map-k4v"));
-        if let Some(ngram_ty) = ngram_shared {
-            let prefix = format!("--spec-{}", ngram_ty);
-            cmd.arg(format!("{}-size-n", prefix))
-                .arg(settings.spec_ngram_size_n.to_string());
-            cmd.arg(format!("{}-size-m", prefix))
-                .arg(settings.spec_ngram_size_m.to_string());
-            cmd.arg(format!("{}-min-hits", prefix))
-                .arg(settings.spec_ngram_min_hits.to_string());
+        // 4) --spec-ngram-{type}-*: 各类型独立参数，每个选中的类型输出自己的 size-n / size-m / min-hits
+        for (ngram_ty, size_n, size_m, min_hits) in [
+            (
+                "ngram-simple",
+                settings.spec_ngram_simple_size_n,
+                settings.spec_ngram_simple_size_m,
+                settings.spec_ngram_simple_min_hits,
+            ),
+            (
+                "ngram-map-k",
+                settings.spec_ngram_map_k_size_n,
+                settings.spec_ngram_map_k_size_m,
+                settings.spec_ngram_map_k_min_hits,
+            ),
+            (
+                "ngram-map-k4v",
+                settings.spec_ngram_map_k4v_size_n,
+                settings.spec_ngram_map_k4v_size_m,
+                settings.spec_ngram_map_k4v_min_hits,
+            ),
+        ] {
+            if settings.spec_type.split(',').any(|s| s.trim() == ngram_ty) {
+                let prefix = format!("--spec-{}", ngram_ty);
+                cmd.arg(format!("{}-size-n", prefix))
+                    .arg(size_n.to_string());
+                cmd.arg(format!("{}-size-m", prefix))
+                    .arg(size_m.to_string());
+                cmd.arg(format!("{}-min-hits", prefix))
+                    .arg(min_hits.to_string());
+            }
         }
 
         // 5) --spec-ngram-mod-*: ngram-mod 专用参数
