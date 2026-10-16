@@ -38,10 +38,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             ui.horizontal(|ui| {
                 if ui
-                    .add(widgets::rounded_button(
-                        i18n::t(i18n::Key::BtnSetMaxContextVram, lang),
-                        None,
-                    ))
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnSetMaxContextVram,
+                        lang,
+                    )))
                     .clicked()
                     && can_start
                     && settings.max_context_promise.0.is_none()
@@ -132,10 +132,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
             ui.horizontal(|ui| {
                 if ui
-                    .add(widgets::rounded_button(
-                        i18n::t(i18n::Key::BtnCalcKvCache, lang),
-                        None,
-                    ))
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnCalcKvCache,
+                        lang,
+                    )))
                     .clicked()
                     && can_start
                     && settings.kv_cache_promise.0.is_none()
@@ -512,7 +512,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     let labels = ["1:1", "1:2", "1:3", "1:4", "1:5", "1:6"];
                     for (ratio, label) in ratios.iter().zip(labels.iter()) {
                         if ui
-                            .add(widgets::rounded_button(label, None))
+                            .add(winui::FluentButton::new(*label))
                             .on_hover_text(*ratio)
                             .clicked()
                         {
@@ -524,10 +524,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     if ui
                         .add_enabled(
                             !split_empty,
-                            widgets::rounded_button(
-                                i18n::t(i18n::Key::BtnClearTensorSplit, lang),
-                                None,
-                            ),
+                            winui::FluentButton::new(i18n::t(
+                                i18n::Key::BtnClearTensorSplit,
+                                lang,
+                            )),
                         )
                         .clicked()
                     {
@@ -568,7 +568,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !ffn_set,
-                        widgets::rounded_button(i18n::t(i18n::Key::BtnFfnOffloadToCpu, lang), None),
+                        winui::FluentButton::new(i18n::t(i18n::Key::BtnFfnOffloadToCpu, lang)),
                     )
                     .clicked()
                 {
@@ -580,10 +580,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !ngram_set,
-                        widgets::rounded_button(
-                            i18n::t(i18n::Key::BtnNGramOffloadToCpu, lang),
-                            None,
-                        ),
+                        winui::FluentButton::new(i18n::t(
+                            i18n::Key::BtnNGramOffloadToCpu,
+                            lang,
+                        )),
                     )
                     .clicked()
                 {
@@ -593,10 +593,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 if ui
                     .add_enabled(
                         !tensor_empty,
-                        widgets::rounded_button(
-                            i18n::t(i18n::Key::BtnClearOverrideTensor, lang),
-                            None,
-                        ),
+                        winui::FluentButton::new(i18n::t(
+                            i18n::Key::BtnClearOverrideTensor,
+                            lang,
+                        )),
                     )
                     .clicked()
                 {
@@ -672,7 +672,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .unwrap_or(false);
             let btn = ui.add_enabled(
                 server_available,
-                widgets::rounded_button(i18n::t(i18n::Key::BtnViewServerDeviceList, lang), None),
+                winui::FluentButton::new(i18n::t(i18n::Key::BtnViewServerDeviceList, lang)),
             );
             if btn.clicked() {
                 if settings.show_server_device_list {
@@ -772,10 +772,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                         settings.device.split(',').any(|s| s.trim() == entry);
                                     let btn = ui.add_enabled(
                                         !already_added,
-                                        widgets::rounded_button(
-                                            i18n::t(i18n::Key::BtnAddToDevice, lang),
-                                            None,
-                                        ),
+                                        winui::FluentButton::new(i18n::t(
+                                            i18n::Key::BtnAddToDevice,
+                                            lang,
+                                        )),
                                     );
                                     if btn.clicked() {
                                         if settings.device.is_empty() {
@@ -825,10 +825,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                         settings.device.split(',').any(|s| s.trim() == rpc_entry);
                                     let btn = ui.add_enabled(
                                         !already_added,
-                                        widgets::rounded_button(
-                                            i18n::t(i18n::Key::BtnAddToDevice, lang),
-                                            None,
-                                        ),
+                                        winui::FluentButton::new(i18n::t(
+                                            i18n::Key::BtnAddToDevice,
+                                            lang,
+                                        )),
                                     );
                                     if btn.clicked() {
                                         if settings.device.is_empty() {
