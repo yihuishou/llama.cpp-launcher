@@ -380,11 +380,12 @@ pub fn ui(
 
             // 更新清空目录警告
             ui.add_space(4.0);
-            ui.label(
-                egui::RichText::new(i18n::t(i18n::Key::WarningLlamaCppUpdate, lang))
-                    .color(egui::Color32::from_rgb(220, 50, 50))
-                    .size(11.0),
-            );
+            winui::InfoBar::new(
+                i18n::t(i18n::Key::WarningLlamaCppUpdateTitle, lang),
+                i18n::t(i18n::Key::WarningLlamaCppUpdateMessage, lang),
+            )
+            .kind(winui::InfoBarKind::Warning)
+            .show(ui);
         },
     );
 
