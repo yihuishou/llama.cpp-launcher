@@ -976,27 +976,30 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeK, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeK, lang));
             });
+            if settings.enable_cache_type_k {
+                ui.indent("cache_type_k_opt", |ui| {
+                    // K 缓存类型：标签 + ❓提示框同一行
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelCacheTypeK, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeK, lang));
+                    });
+                    let k_types = [
+                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
+                        "turbo3", "turbo4",
+                    ];
 
-            // K 缓存类型：标签 + ❓提示框同一行
-            ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelCacheTypeK, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeK, lang));
-            });
-            let k_types = [
-                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
-                "turbo3", "turbo4",
-            ];
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
 
-            ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = 6.0;
-
-                for k_type in &k_types {
-                    let selected = settings.cache_type_k == *k_type;
-                    if ui.selectable_label(selected, *k_type).clicked() {
-                        settings.cache_type_k = k_type.to_string();
-                    }
-                }
-            });
+                        for k_type in &k_types {
+                            let selected = settings.cache_type_k == *k_type;
+                            if ui.selectable_label(selected, *k_type).clicked() {
+                                settings.cache_type_k = k_type.to_string();
+                            }
+                        }
+                    });
+                });
+            }
 
             // V 缓存类型启用开关
             ui.horizontal(|ui| {
@@ -1004,26 +1007,29 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.label(i18n::t(i18n::Key::CheckboxEnableCacheTypeV, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpEnableCacheTypeV, lang));
             });
+            if settings.enable_cache_type_v {
+                ui.indent("cache_type_v_opt", |ui| {
+                    // V 缓存类型：标签 + ❓提示框同一行
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelCacheTypeV, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeV, lang));
+                    });
+                    let v_types = [
+                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
+                        "turbo3", "turbo4",
+                    ];
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
 
-            // V 缓存类型：标签 + ❓提示框同一行
-            ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelCacheTypeV, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeV, lang));
-            });
-            let v_types = [
-                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
-                "turbo3", "turbo4",
-            ];
-            ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = 6.0;
-
-                for v_type in &v_types {
-                    let selected = settings.cache_type_v == *v_type;
-                    if ui.selectable_label(selected, *v_type).clicked() {
-                        settings.cache_type_v = v_type.to_string();
-                    }
-                }
-            });
+                        for v_type in &v_types {
+                            let selected = settings.cache_type_v == *v_type;
+                            if ui.selectable_label(selected, *v_type).clicked() {
+                                settings.cache_type_v = v_type.to_string();
+                            }
+                        }
+                    });
+                });
+            }
         }
 
         ui.horizontal(|ui| {
@@ -1453,18 +1459,22 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             i18n::t(i18n::Key::HelpSpecDraftTypeK, lang),
                         );
                     });
-                    let spec_k_types = [
-                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
-                    ];
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
-                        for k_type in &spec_k_types {
-                            let selected = settings.spec_draft_type_k == *k_type;
-                            if ui.selectable_label(selected, *k_type).clicked() {
-                                settings.spec_draft_type_k = k_type.to_string();
-                            }
-                        }
-                    });
+                    if settings.enable_spec_draft_type_k {
+                        ui.indent("spec_draft_type_k_opt", |ui| {
+                            let spec_k_types = [
+                                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
+                            ];
+                            ui.horizontal_wrapped(|ui| {
+                                ui.spacing_mut().item_spacing.x = 6.0;
+                                for k_type in &spec_k_types {
+                                    let selected = settings.spec_draft_type_k == *k_type;
+                                    if ui.selectable_label(selected, *k_type).clicked() {
+                                        settings.spec_draft_type_k = k_type.to_string();
+                                    }
+                                }
+                            });
+                        });
+                    }
                     // 推测解码 KV 类型 V + 启用开关
                     ui.horizontal(|ui| {
                         widgets::toggle(ui, &mut settings.enable_spec_draft_type_v, "", accent);
@@ -1474,18 +1484,22 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             i18n::t(i18n::Key::HelpSpecDraftTypeV, lang),
                         );
                     });
-                    let spec_v_types = [
-                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
-                    ];
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
-                        for v_type in &spec_v_types {
-                            let selected = settings.spec_draft_type_v == *v_type;
-                            if ui.selectable_label(selected, *v_type).clicked() {
-                                settings.spec_draft_type_v = v_type.to_string();
-                            }
-                        }
-                    });
+                    if settings.enable_spec_draft_type_v {
+                        ui.indent("spec_draft_type_v_opt", |ui| {
+                            let spec_v_types = [
+                                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
+                            ];
+                            ui.horizontal_wrapped(|ui| {
+                                ui.spacing_mut().item_spacing.x = 6.0;
+                                for v_type in &spec_v_types {
+                                    let selected = settings.spec_draft_type_v == *v_type;
+                                    if ui.selectable_label(selected, *v_type).clicked() {
+                                        settings.spec_draft_type_v = v_type.to_string();
+                                    }
+                                }
+                            });
+                        });
+                    }
                 }
             }
             // ngram 各类型独立参数：选中的类型各自显示一组 size-n / size-m / min-hits（可叠加）
