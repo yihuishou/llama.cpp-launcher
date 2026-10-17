@@ -2171,32 +2171,32 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             // 频率惩罚（--frequency-penalty）
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvFrequencyPenalty, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvFrequencyPenaltyHint, lang));
                 ui.add(
                     winui::FluentSlider::new(&mut settings.frequency_penalty, -2.0..=2.0)
                         .step_by(0.01)
                         .show_value(true),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvFrequencyPenaltyHint, lang));
             });
             // 重复惩罚窗口（--repeat-last-n）
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvRepeatLastN, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRepeatLastNHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.repeat_last_n)
                         .range(-1..=65536)
                         .speed(16),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRepeatLastNHint, lang));
             });
             // DRY 采样（--dry-*，multiplier > 0 时整组生效）
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvDryMultiplier, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvDryHint, lang));
                 ui.add(
                     winui::FluentSlider::new(&mut settings.dry_multiplier, 0.0..=5.0)
                         .step_by(0.01)
                         .show_value(true),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvDryHint, lang));
             });
             if settings.dry_multiplier > 0.0 {
                 ui.indent("dry_opt", |ui| {
@@ -2565,76 +2565,75 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             }
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvRopeScale, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeScaleHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.rope_scale)
                         .range(0.0..=1000.0)
                         .speed(0.01),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeScaleHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvRopeFreqBase, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeFreqBaseHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.rope_freq_base)
                         .range(0.0..=1.0e9)
                         .speed(1000.0),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeFreqBaseHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvRopeFreqScale, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeFreqScaleHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.rope_freq_scale)
                         .range(0.0..=1000.0)
                         .speed(0.01),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeFreqScaleHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvYarnOrigCtx, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnOrigCtxHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.yarn_orig_ctx)
                         .range(0..=10_000_000)
                         .speed(1024),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnOrigCtxHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvYarnExtFactor, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnExtFactorHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.yarn_ext_factor)
                         .range(-1.0..=100.0)
                         .speed(0.01),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnExtFactorHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvYarnAttnFactor, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnAttnFactorHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.yarn_attn_factor)
                         .range(-1.0..=100.0)
                         .speed(0.01),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnAttnFactorHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvYarnBetaSlow, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnBetaSlowHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.yarn_beta_slow)
                         .range(-1.0..=1000.0)
                         .speed(0.01),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnBetaSlowHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvYarnBetaFast, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnBetaFastHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.yarn_beta_fast)
                         .range(-1.0..=1000.0)
                         .speed(0.01),
                 );
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnHint, lang));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnBetaFastHint, lang));
             });
         },
     );
@@ -2657,8 +2656,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvControlVector, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvControlVectorHint, lang));
                 ui.add(winui::FluentTextEdit::new(&mut settings.control_vector));
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvControlVectorHint, lang));
             });
         },
     );
@@ -2676,21 +2675,21 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvSleepIdle, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvSleepIdleHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.sleep_idle_seconds)
                         .range(-1..=604800)
                         .speed(30),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvSleepIdleHint, lang));
             });
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvThreadsHttp, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvThreadsHttpHint, lang));
                 ui.add(
                     egui::DragValue::new(&mut settings.threads_http)
                         .range(-1..=256)
                         .speed(1),
                 );
+                helper::help_button_inline(ui, i18n::t(i18n::Key::AdvThreadsHttpHint, lang));
             });
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.metrics_enabled, "", accent);
