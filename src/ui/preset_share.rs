@@ -1062,7 +1062,7 @@ pub fn share_window(
             let sep_resp = ui.separator();
             // 标签行+分隔线+间隙实测高度：引入页据此把粘贴框撑满剩余空间，不出现外层滚动条
             let used_h =
-                tab_resp.rect.height() + sep_resp.rect.height() + ui.spacing().item_spacing.y * 2.0;
+                tab_resp.rect.height() + sep_resp.rect.height() + ui.spacing().item_spacing.y * 2.0 + 12.0;
 
             if share.tab == 0 {
                 render_share_tab(ui, settings, share, lang);
@@ -1210,7 +1210,7 @@ fn render_import_tab(
         - result_reserve
         - item_sp * 3.0
         - 22.0)
-        .max(80.0);
+        .max(100.0);
     // 粘贴框：add_sized 强制分配（宽夹到可用宽、高为实测剩余），撑满纵向空间而不撑爆弹窗
     ui.add_sized(
         egui::vec2(ui.available_width(), paste_h),
