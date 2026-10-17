@@ -58,8 +58,8 @@ fn get_arch() -> &'static str {
 }
 
 /// 官方 + 镜像依次尝试；返回 Response body 字符串。
-/// 网络层（连接/读超时 + 系统代理 + UA）统一走 net::build_agent，
-/// 无总超时——大文件下载不会被 `.timeout()` 总超时掐断。
+/// 网络层（连接超时 + 系统代理 + UA）统一走 net::build_agent，
+/// 无总超时——大文件下载不会被 `.timeout()` / recv_body 总超时掐断。
 fn fetch_with_fallback(
     official_url: &str,
     mirror_url: &str,

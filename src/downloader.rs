@@ -34,8 +34,8 @@ const API_MIRROR_BASE: &str = "https://gh-proxy.com";
 const DOWNLOAD_MIRROR_BASE: &str = "https://gh-proxy.com/https://github.com";
 
 /// 官方 + 镜像依次尝试；返回 Response body 字符串。
-/// 网络层（连接/读超时 + 系统代理 + UA）统一走 net::build_agent，
-/// 无总超时——大文件下载不会被 `.timeout()` 总超时掐断。
+/// 网络层（连接超时 + 系统代理 + UA）统一走 net::build_agent，
+/// 无总超时——大文件下载不会被 `.timeout()` / recv_body 总超时掐断。
 fn fetch_with_fallback(
     official_url: &str,
     mirror_url: &str,
@@ -953,7 +953,7 @@ enum DlError {
 }
 
 /// 流式下载到文件（net::CHUNK_SIZE 字节/chunk；每 chunk 更新进度 + 检查取消）
-/// 使用 net::build_agent（连接/读超时防卡死，无总超时，大文件不被掐断）。
+/// 使用 net::build_agent（连接超时防卡死，无总超时，大文件不被掐断）。
 fn download_to_file(
     url: &str,
     out: &Path,

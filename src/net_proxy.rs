@@ -11,12 +11,13 @@
 //! 本模块读取该注册表项，把系统代理应用到 ureq Agent。
 //!
 //! ## 超时策略（关键）
-//! 必须用 timeout_connect / timeout_read 而非 `.timeout()`：
-//! ureq 的 `.timeout()` 是"整个请求的总超时"（含下载体积），
-//! 大文件下载（数 MB~GB）必然被掐断并触发镜像源重新下载（进度条读两次）。
-//! 连接与单次读超时则只防卡死，不限制总时长。
+//! 只设 `timeout_connect`（连接建立上限），不设 `timeout_recv_body` / `.timeout()`。
+//! 原因：ureq 的 `.timeout()` 与 `timeout_recv_body` 都是"总预算"型超时
+//! （`timeout_recv_body` 的起点是收到响应头那一刻，且读取期间不逐次重置），
+//! 大文件下载（数 MB~GB）必然中途被掐断并触发镜像源重新下载（进度条读两次）。
+//! 连接超时只防卡死，不限制下载总时长。
 
-/// 单次网络操作（连接/单次读）超时
+/// 连接建立超时（不限制下载总时长）
 pub const NETWORK_TIMEOUT_SECS: u64 = 30;
 /// 请求 User-Agent（GitHub API 必需）
 pub const USER_AGENT: &str = "llama-cpp-launcher";
@@ -29,8 +30,7 @@ pub const ERR_NETWORK: &str = "network-error";
 /// updater/downloader 统一调用，避免重复实现。
 pub fn build_agent() -> ureq::Agent {
     let mut builder = ureq::Agent::config_builder()
-        .timeout_connect(Some(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS)))
-        .timeout_recv_body(Some(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS)));
+        .timeout_connect(Some(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS)));
     if let Some(proxy) = system_proxy() {
         builder = builder.proxy(Some(proxy));
     }
