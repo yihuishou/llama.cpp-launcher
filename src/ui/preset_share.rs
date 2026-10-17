@@ -1109,7 +1109,13 @@ fn render_share_tab(
     lang: &i18n::Language,
 ) {
     if settings.presets.is_empty() {
-        ui.small(i18n::t(i18n::Key::HintNoPresets, lang));
+        // 空态提示水平+垂直居中：弹窗内容区固定高度，内容不足时下方留白，
+        // 手动补半空白实现垂直居中，水平交给 horizontal_centered
+        let area_h = ui.available_height();
+        ui.add_space((area_h - 24.0).max(0.0) / 2.0);
+        ui.horizontal_centered(|ui| {
+            ui.small(i18n::t(i18n::Key::HintNoPresets, lang));
+        });
         return;
     }
     // 全选 / 全不选
