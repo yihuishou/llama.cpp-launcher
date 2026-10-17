@@ -2436,7 +2436,11 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelMirostat, lang));
                         let m_vals = [0, 1, 2];
-                        let m_labels = ["0 = 关", "1", "2"];
+                        let m_labels = [
+                            i18n::t(i18n::Key::MirostatOff, lang),
+                            i18n::t(i18n::Key::MirostatV1, lang),
+                            i18n::t(i18n::Key::MirostatV2, lang),
+                        ];
                         let mut m_idx = m_vals
                             .iter()
                             .position(|v| *v == settings.mirostat)
