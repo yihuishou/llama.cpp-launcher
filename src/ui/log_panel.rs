@@ -112,36 +112,26 @@ fn render(
                         logs.drain(..start_index);
                     }
 
-                    if logs.is_empty() {
-                        ui.add_space(8.0);
-                        ui.horizontal_centered(|ui| {
-                            ui.colored_label(
-                                ui.visuals().weak_text_color(),
-                                i18n::t(i18n::Key::HintNoLogs, lang),
-                            );
-                        });
-                    } else {
-                        // ★ 整块日志合并为单一 LayoutJob 文本（Label 选择器）：
-                        // egui 的文本选择只在单个 widget 内有效，逐行 label 无法跨行选择；
-                        // 合并后按级别着色保持不变，且拖选可跨任意行延伸。
-                        let mut job = egui::text::LayoutJob::default();
-                        let text_color = ui.visuals().text_color();
-                        let palette = winui::palette(widgets::current_theme(ui));
-                        for entry in &logs {
-                            let (prefix, color) = match entry.level {
-                                LogLevel::Info => ("", text_color),
-                                LogLevel::Warn => ("⚠ ", palette.warning),
-                                LogLevel::Error => ("✖ ", palette.danger),
-                            };
-                            let line = format!("{}{}\n", prefix, entry.text);
-                            job.append(
-                                &line,
-                                0.0,
-                                egui::TextFormat::simple(egui::FontId::default(), color),
-                            );
-                        }
-                        ui.add(egui::Label::new(job).selectable(true));
+                    // ★ 整块日志合并为单一 LayoutJob 文本（Label 选择器）：
+                    // egui 的文本选择只在单个 widget 内有效，逐行 label 无法跨行选择；
+                    // 合并后按级别着色保持不变，且拖选可跨任意行延伸。
+                    let mut job = egui::text::LayoutJob::default();
+                    let text_color = ui.visuals().text_color();
+                    let palette = winui::palette(widgets::current_theme(ui));
+                    for entry in &logs {
+                        let (prefix, color) = match entry.level {
+                            LogLevel::Info => ("", text_color),
+                            LogLevel::Warn => ("⚠ ", palette.warning),
+                            LogLevel::Error => ("✖ ", palette.danger),
+                        };
+                        let line = format!("{}{}\n", prefix, entry.text);
+                        job.append(
+                            &line,
+                            0.0,
+                            egui::TextFormat::simple(egui::FontId::default(), color),
+                        );
                     }
+                    ui.add(egui::Label::new(job).selectable(true));
                     viewport_rect = ui.clip_rect();
                 });
 
