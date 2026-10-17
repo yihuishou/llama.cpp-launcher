@@ -498,21 +498,6 @@ pub fn ui(
         ui.separator();
         ui.add_space(4.0);
 
-        // 编译优化级别
-        ui.label(i18n::t(i18n::Key::BuildOptLevel, lang));
-        let opt_opts = ["Release", "RelWithDebInfo", "Debug"];
-        let mut opt_idx = match settings.build_opt_level.as_str() {
-            "RelWithDebInfo" => 1,
-            "Debug" => 2,
-            _ => 0,
-        };
-        widgets::segmented(ui, &opt_opts, &mut opt_idx, accent);
-        settings.build_opt_level = opt_opts[opt_idx].to_string();
-
-        ui.add_space(8.0);
-        ui.separator();
-        ui.add_space(4.0);
-
         // 后端选择
         ui.label(i18n::t(i18n::Key::BuildBackend, lang));
         let mut cuda = settings.build_cuda_enabled;

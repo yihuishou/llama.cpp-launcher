@@ -501,10 +501,6 @@ fn default_build_branch() -> String {
     "main".to_string()
 }
 
-fn default_build_opt_level() -> String {
-    "Release".to_string()
-}
-
 // context / batch_size / ubatch_size 以 k 为单位存储 (1k = 1024)
 // 反序列化时兼容旧版原始值（如 4096 → 自动转为 4）
 
@@ -2812,9 +2808,6 @@ pub struct AppSettings {
     /// 编译产物输出目录（空字符串表示默认路径）
     #[serde(default)]
     pub build_output_dir: String,
-    /// 编译优化级别：Release / RelWithDebInfo / Debug
-    #[serde(default = "default_build_opt_level")]
-    pub build_opt_level: String,
     /// CUDA 后端开关
     #[serde(default)]
     pub build_cuda_enabled: bool,
@@ -3119,7 +3112,6 @@ impl Default for AppSettings {
             build_branch: default_build_branch(),
             build_tag: String::new(),
             build_output_dir: String::new(),
-            build_opt_level: default_build_opt_level(),
             build_cuda_enabled: false,
             build_rocm_enabled: false,
             build_vulkan_enabled: false,
