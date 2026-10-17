@@ -1434,7 +1434,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelKvmemMtpState, lang));
-                        let vals = ["replay", "snapshots", "auto"];
+                        let vals = ["auto", "replay", "snapshots"];
                         let mut idx = vals
                             .iter()
                             .position(|v| *v == settings.kvmem_mtp_state)
@@ -2215,35 +2215,35 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.indent("dry_opt", |ui| {
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::AdvDryBase, lang));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::AdvDryBaseHint, lang));
                         ui.add(
                             egui::DragValue::new(&mut settings.dry_base)
                                 .range(0.0..=10.0)
                                 .speed(0.05),
                         );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::AdvDryBaseHint, lang));
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::AdvDryAllowedLength, lang));
-                        helper::help_button_inline(
-                            ui,
-                            i18n::t(i18n::Key::AdvDryAllowedLengthHint, lang),
-                        );
                         ui.add(
                             egui::DragValue::new(&mut settings.dry_allowed_length)
                                 .range(0..=64)
                                 .speed(1),
                         );
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::AdvDryAllowedLengthHint, lang),
+                        );
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::AdvDryPenaltyLastN, lang));
-                        helper::help_button_inline(
-                            ui,
-                            i18n::t(i18n::Key::AdvDryPenaltyLastNHint, lang),
-                        );
                         ui.add(
                             egui::DragValue::new(&mut settings.dry_penalty_last_n)
                                 .range(0..=65536)
                                 .speed(16),
+                        );
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::AdvDryPenaltyLastNHint, lang),
                         );
                     });
                     ui.horizontal(|ui| {
