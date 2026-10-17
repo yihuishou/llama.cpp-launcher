@@ -46,7 +46,7 @@ impl LlamaCppType {
 /// GPU 层数卸载模式
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GpuLayersMode {
-    Auto,          // 自动
+    Cpu,           // 不卸载到 GPU（全部层留在 CPU）
     All,           // 全部卸载到 GPU
     Manual(usize), // 手动指定层数
 }
@@ -57,7 +57,7 @@ impl serde::Serialize for GpuLayersMode {
         S: serde::Serializer,
     {
         match self {
-            GpuLayersMode::Auto => serializer.serialize_str("auto"),
+            GpuLayersMode::Cpu => serializer.serialize_str("cpu"),
             GpuLayersMode::All => serializer.serialize_str("all"),
             GpuLayersMode::Manual(n) => n.serialize(serializer),
         }
@@ -77,7 +77,7 @@ impl<'de> serde::Deserialize<'de> for GpuLayersMode {
             type Value = GpuLayersMode;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("auto, all, or a number")
+                formatter.write_str("cpu, all, or a number")
             }
 
             fn visit_str<E>(self, value: &str) -> Result<GpuLayersMode, E>
@@ -85,8 +85,8 @@ impl<'de> serde::Deserialize<'de> for GpuLayersMode {
                 E: de::Error,
             {
                 let v = value.trim();
-                if v == "auto" || v == "-1" {
-                    Ok(GpuLayersMode::Auto)
+                if v == "cpu" {
+                    Ok(GpuLayersMode::Cpu)
                 } else if v == "all" || v == "999" {
                     Ok(GpuLayersMode::All)
                 } else if let Ok(n) = v.parse::<usize>() {
@@ -107,8 +107,9 @@ impl<'de> serde::Deserialize<'de> for GpuLayersMode {
             where
                 E: de::Error,
             {
-                if v == -1 {
-                    Ok(GpuLayersMode::Auto)
+                // 负数直接转 usize 会溢出成天文数字（如 -1 → 18446744073709551615），按不卸载处理
+                if v < 0 {
+                    Ok(GpuLayersMode::Cpu)
                 } else if v == 999 {
                     Ok(GpuLayersMode::All)
                 } else {
@@ -125,7 +126,7 @@ impl GpuLayersMode {
     /// 生成 --gpu-layers 参数值
     pub fn to_arg(&self) -> String {
         match self {
-            GpuLayersMode::Auto => "-1".to_string(),
+            GpuLayersMode::Cpu => "0".to_string(),
             GpuLayersMode::All => "256".to_string(),
             GpuLayersMode::Manual(n) => n.to_string(),
         }
@@ -863,13 +864,9 @@ pub struct Preset {
     #[serde(default = "default_true")]
     pub enable_context_shift: bool,
     #[serde(default = "default_true")]
-    pub enable_no_host: bool,
-    #[serde(default = "default_true")]
     pub enable_kv_offload: bool,
     #[serde(default = "default_true")]
     pub enable_kv_unified: bool,
-    #[serde(default = "default_true")]
-    pub enable_swa_full: bool,
     #[serde(default = "default_true")]
     pub enable_ctx_checkpoints: bool,
     #[serde(default = "default_true")]
@@ -1193,6 +1190,9 @@ pub struct Preset {
 
     // GPU 与设备分配
     pub gpu_layers_mode: GpuLayersMode,
+    // 独立启用开关（默认开启，关闭时不拼接 --gpu-layers）
+    #[serde(default = "default_true")]
+    pub enable_gpu_layers: bool,
     pub split_mode: String,
     pub tensor_split: String,
     pub cpu_moe: bool,
@@ -1350,26 +1350,24 @@ impl Default for Preset {
             enable_fit_target: false,
             enable_fit_ctx: false,
             enable_load_mode: true,
-        enable_cache_prompt: true,
-        enable_cache_reuse: true,
-        enable_context_shift: true,
-        enable_no_host: true,
-        enable_kv_offload: true,
-        enable_kv_unified: true,
-        enable_swa_full: true,
-        enable_ctx_checkpoints: true,
-        enable_checkpoint_min_step: true,
-        load_mode: default_load_mode(),
+            enable_cache_prompt: true,
+            enable_cache_reuse: true,
+            enable_context_shift: true,
+            enable_kv_offload: true,
+            enable_kv_unified: true,
+            enable_ctx_checkpoints: true,
+            enable_checkpoint_min_step: true,
+            load_mode: default_load_mode(),
             enable_tensor_read_lazy: true,
-        enable_split_mode: true,
-        enable_override_tensor: true,
-        enable_numa: true,
-        enable_cpu_mask: true,
-        enable_cpu_range: true,
-        enable_cpu_mask_batch: true,
-        enable_cpu_range_batch: true,
-        enable_main_gpu: true,
-        tensor_read_lazy: default_tensor_read_lazy(),
+            enable_split_mode: true,
+            enable_override_tensor: true,
+            enable_numa: true,
+            enable_cpu_mask: true,
+            enable_cpu_range: true,
+            enable_cpu_mask_batch: true,
+            enable_cpu_range_batch: true,
+            enable_main_gpu: true,
+            tensor_read_lazy: default_tensor_read_lazy(),
             threads: default_threads(),
             threads_batch: default_threads_batch(),
             n_predict: default_n_predict(),
@@ -1442,15 +1440,15 @@ impl Default for Preset {
             check_tensors: default_check_tensors(),
             override_kv: default_override_kv(),
             prio: default_prio(),
-enable_warmup: true,
-        warmup_enabled: default_warmup_enabled(),
-        enable_cont_batching: true,
-        cont_batching: default_cont_batching(),
+            enable_warmup: true,
+            warmup_enabled: default_warmup_enabled(),
+            enable_cont_batching: true,
+            cont_batching: default_cont_batching(),
             grammar_file: default_grammar_file(),
             json_schema_file: default_json_schema_file(),
             embeddings_enabled: default_embeddings_enabled(),
             enable_pooling: true,
-        pooling: default_pooling(),
+            pooling: default_pooling(),
             rerank_enabled: default_rerank_enabled(),
             spec_type: default_spec_type(),
             spec_draft_n_max: default_spec_draft_n_max(),
@@ -1509,6 +1507,7 @@ enable_warmup: true,
             kv_dtype: default_kv_dtype(),
             spec_kv_dtype: default_spec_kv_dtype(),
             gpu_layers_mode: GpuLayersMode::All,
+            enable_gpu_layers: true,
             split_mode: "none".to_string(),
             tensor_split: "".to_string(),
             cpu_moe: false,
@@ -1521,10 +1520,10 @@ enable_warmup: true,
             model_path: PathBuf::new(),
             mmproj_path: PathBuf::new(),
             // 多模态
-enable_mmproj_auto: true,
-        mmproj_auto: default_mmproj_auto(),
-        enable_mmproj_offload: true,
-        mmproj_offload: default_mmproj_offload(),
+            enable_mmproj_auto: true,
+            mmproj_auto: default_mmproj_auto(),
+            enable_mmproj_offload: true,
+            mmproj_offload: default_mmproj_offload(),
             mmproj_device: default_mmproj_device(),
             image_min_tokens: default_image_min_tokens(),
             image_max_tokens: default_image_max_tokens(),
@@ -1599,26 +1598,24 @@ impl Preset {
             enable_fit_target: settings.enable_fit_target,
             enable_fit_ctx: settings.enable_fit_ctx,
             enable_load_mode: settings.enable_load_mode,
-        enable_cache_prompt: settings.enable_cache_prompt,
-        enable_cache_reuse: settings.enable_cache_reuse,
-        enable_context_shift: settings.enable_context_shift,
-        enable_no_host: settings.enable_no_host,
-        enable_kv_offload: settings.enable_kv_offload,
-        enable_kv_unified: settings.enable_kv_unified,
-        enable_swa_full: settings.enable_swa_full,
-        enable_ctx_checkpoints: settings.enable_ctx_checkpoints,
-        enable_checkpoint_min_step: settings.enable_checkpoint_min_step,
-        load_mode: settings.load_mode.clone(),
+            enable_cache_prompt: settings.enable_cache_prompt,
+            enable_cache_reuse: settings.enable_cache_reuse,
+            enable_context_shift: settings.enable_context_shift,
+            enable_kv_offload: settings.enable_kv_offload,
+            enable_kv_unified: settings.enable_kv_unified,
+            enable_ctx_checkpoints: settings.enable_ctx_checkpoints,
+            enable_checkpoint_min_step: settings.enable_checkpoint_min_step,
+            load_mode: settings.load_mode.clone(),
             enable_tensor_read_lazy: settings.enable_tensor_read_lazy,
-        enable_split_mode: settings.enable_split_mode,
-        enable_override_tensor: settings.enable_override_tensor,
-        enable_numa: settings.enable_numa,
-        enable_cpu_mask: settings.enable_cpu_mask,
-        enable_cpu_range: settings.enable_cpu_range,
-        enable_cpu_mask_batch: settings.enable_cpu_mask_batch,
-        enable_cpu_range_batch: settings.enable_cpu_range_batch,
-        enable_main_gpu: settings.enable_main_gpu,
-        tensor_read_lazy: settings.tensor_read_lazy.clone(),
+            enable_split_mode: settings.enable_split_mode,
+            enable_override_tensor: settings.enable_override_tensor,
+            enable_numa: settings.enable_numa,
+            enable_cpu_mask: settings.enable_cpu_mask,
+            enable_cpu_range: settings.enable_cpu_range,
+            enable_cpu_mask_batch: settings.enable_cpu_mask_batch,
+            enable_cpu_range_batch: settings.enable_cpu_range_batch,
+            enable_main_gpu: settings.enable_main_gpu,
+            tensor_read_lazy: settings.tensor_read_lazy.clone(),
             threads: settings.threads,
             threads_batch: settings.threads_batch,
             n_predict: settings.n_predict,
@@ -1699,7 +1696,7 @@ impl Preset {
             json_schema_file: settings.json_schema_file.clone(),
             embeddings_enabled: settings.embeddings_enabled,
             enable_pooling: settings.enable_pooling,
-        pooling: settings.pooling.clone(),
+            pooling: settings.pooling.clone(),
             rerank_enabled: settings.rerank_enabled,
             spec_type: settings.spec_type.clone(),
             spec_draft_n_max: settings.spec_draft_n_max,
@@ -1758,6 +1755,7 @@ impl Preset {
             kv_dtype: settings.kv_dtype.clone(),
             spec_kv_dtype: settings.spec_kv_dtype.clone(),
             gpu_layers_mode: settings.gpu_layers_mode,
+            enable_gpu_layers: settings.enable_gpu_layers,
             split_mode: settings.split_mode.clone(),
             tensor_split: settings.tensor_split.clone(),
             cpu_moe: settings.cpu_moe,
@@ -1847,10 +1845,8 @@ impl Preset {
         settings.enable_cache_prompt = self.enable_cache_prompt;
         settings.enable_cache_reuse = self.enable_cache_reuse;
         settings.enable_context_shift = self.enable_context_shift;
-        settings.enable_no_host = self.enable_no_host;
         settings.enable_kv_offload = self.enable_kv_offload;
         settings.enable_kv_unified = self.enable_kv_unified;
-        settings.enable_swa_full = self.enable_swa_full;
         settings.enable_ctx_checkpoints = self.enable_ctx_checkpoints;
         settings.enable_checkpoint_min_step = self.enable_checkpoint_min_step;
         settings.load_mode = self.load_mode;
@@ -2008,6 +2004,7 @@ impl Preset {
         settings.kv_dtype = self.kv_dtype;
         settings.spec_kv_dtype = self.spec_kv_dtype;
         settings.gpu_layers_mode = self.gpu_layers_mode;
+        settings.enable_gpu_layers = self.enable_gpu_layers;
         settings.split_mode = self.split_mode;
         settings.tensor_split = self.tensor_split;
         settings.cpu_moe = self.cpu_moe;
@@ -2215,13 +2212,9 @@ pub struct AppSettings {
     #[serde(default = "default_true")]
     pub enable_context_shift: bool,
     #[serde(default = "default_true")]
-    pub enable_no_host: bool,
-    #[serde(default = "default_true")]
     pub enable_kv_offload: bool,
     #[serde(default = "default_true")]
     pub enable_kv_unified: bool,
-    #[serde(default = "default_true")]
-    pub enable_swa_full: bool,
     #[serde(default = "default_true")]
     pub enable_ctx_checkpoints: bool,
     #[serde(default = "default_true")]
@@ -2545,6 +2538,9 @@ pub struct AppSettings {
 
     // GPU 与设备分配
     pub gpu_layers_mode: GpuLayersMode,
+    // 独立启用开关（默认开启，关闭时不拼接 --gpu-layers）
+    #[serde(default = "default_true")]
+    pub enable_gpu_layers: bool,
     pub split_mode: String,
     pub tensor_split: String,
     pub cpu_moe: bool,
@@ -2823,10 +2819,10 @@ impl Default for AppSettings {
             model_path: PathBuf::new(),
             mmproj_path: PathBuf::new(),
             // 多模态
-enable_mmproj_auto: true,
-        mmproj_auto: default_mmproj_auto(),
-        enable_mmproj_offload: true,
-        mmproj_offload: default_mmproj_offload(),
+            enable_mmproj_auto: true,
+            mmproj_auto: default_mmproj_auto(),
+            enable_mmproj_offload: true,
+            mmproj_offload: default_mmproj_offload(),
             mmproj_device: default_mmproj_device(),
             image_min_tokens: default_image_min_tokens(),
             image_max_tokens: default_image_max_tokens(),
@@ -2862,26 +2858,24 @@ enable_mmproj_auto: true,
             enable_fit_target: false,
             enable_fit_ctx: false,
             enable_load_mode: true,
-        enable_cache_prompt: true,
-        enable_cache_reuse: true,
-        enable_context_shift: true,
-        enable_no_host: true,
-        enable_kv_offload: true,
-        enable_kv_unified: true,
-        enable_swa_full: true,
-        enable_ctx_checkpoints: true,
-        enable_checkpoint_min_step: true,
-        load_mode: default_load_mode(),
+            enable_cache_prompt: true,
+            enable_cache_reuse: true,
+            enable_context_shift: true,
+            enable_kv_offload: true,
+            enable_kv_unified: true,
+            enable_ctx_checkpoints: true,
+            enable_checkpoint_min_step: true,
+            load_mode: default_load_mode(),
             enable_tensor_read_lazy: true,
-        enable_split_mode: true,
-        enable_override_tensor: true,
-        enable_numa: true,
-        enable_cpu_mask: true,
-        enable_cpu_range: true,
-        enable_cpu_mask_batch: true,
-        enable_cpu_range_batch: true,
-        enable_main_gpu: true,
-        tensor_read_lazy: default_tensor_read_lazy(),
+            enable_split_mode: true,
+            enable_override_tensor: true,
+            enable_numa: true,
+            enable_cpu_mask: true,
+            enable_cpu_range: true,
+            enable_cpu_mask_batch: true,
+            enable_cpu_range_batch: true,
+            enable_main_gpu: true,
+            tensor_read_lazy: default_tensor_read_lazy(),
             threads: default_threads(),
             threads_batch: default_threads_batch(),
             n_predict: default_n_predict(),
@@ -2954,15 +2948,15 @@ enable_mmproj_auto: true,
             check_tensors: default_check_tensors(),
             override_kv: default_override_kv(),
             prio: default_prio(),
-enable_warmup: true,
-        warmup_enabled: default_warmup_enabled(),
-        enable_cont_batching: true,
-        cont_batching: default_cont_batching(),
+            enable_warmup: true,
+            warmup_enabled: default_warmup_enabled(),
+            enable_cont_batching: true,
+            cont_batching: default_cont_batching(),
             grammar_file: default_grammar_file(),
             json_schema_file: default_json_schema_file(),
             embeddings_enabled: default_embeddings_enabled(),
             enable_pooling: true,
-        pooling: default_pooling(),
+            pooling: default_pooling(),
             rerank_enabled: default_rerank_enabled(),
             spec_type: default_spec_type(),
             spec_draft_n_max: default_spec_draft_n_max(),
@@ -3021,6 +3015,7 @@ enable_warmup: true,
             kv_dtype: default_kv_dtype(),
             spec_kv_dtype: default_spec_kv_dtype(),
             gpu_layers_mode: GpuLayersMode::All,
+            enable_gpu_layers: true,
             split_mode: "none".to_string(),
             tensor_split: "".to_string(),
             cpu_moe: false,
@@ -3064,10 +3059,10 @@ enable_warmup: true,
             mcp_editor_error: String::new(),
             show_device_list: false,
             device_list_output: String::new(),
-show_server_device_list: false,
-        server_device_list_output: String::new(),
-        show_mmproj_device_list: false,
-        mmproj_device_list_output: String::new(),
+            show_server_device_list: false,
+            server_device_list_output: String::new(),
+            show_mmproj_device_list: false,
+            mmproj_device_list_output: String::new(),
             show_linux_service_file: false,
             linux_service_file_copied: false,
             rpc_endpoint_input: String::new(),
@@ -3479,7 +3474,7 @@ mod tests {
     #[test]
     fn app_settings_download_variant_default() {
         assert_eq!(default_download_variant(), "cpu");
-        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"auto","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
+        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"cpu","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
         let settings: AppSettings = serde_json::from_str(json).expect("旧格式配置应可反序列化");
         assert_eq!(settings.download_variant, "cpu");
     }
@@ -3493,9 +3488,7 @@ mod tests {
             LlamaCppType::Kvmem
         );
         assert_eq!(
-            LlamaCppType::from_server_path(Path::new(
-                r"C:\AI\llama\llama-kvmem-server.exe"
-            )),
+            LlamaCppType::from_server_path(Path::new(r"C:\AI\llama\llama-kvmem-server.exe")),
             LlamaCppType::Kvmem
         );
         assert_eq!(
@@ -3550,13 +3543,11 @@ mod tests {
 
     #[test]
     fn llama_cpp_type_old_json_defaults_to_auto() {
-        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"auto","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
-        let settings: AppSettings = serde_json::from_str(json).expect("无 llama_cpp_type 键的旧配置应可反序列化");
+        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"cpu","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
+        let settings: AppSettings =
+            serde_json::from_str(json).expect("无 llama_cpp_type 键的旧配置应可反序列化");
         assert_eq!(settings.llama_cpp_type, None);
-        assert_eq!(
-            settings.llama_cpp_type_effective(),
-            LlamaCppType::Standard
-        );
+        assert_eq!(settings.llama_cpp_type_effective(), LlamaCppType::Standard);
         assert_eq!(settings.kvmem_enabled, default_kvmem_enabled());
         assert_eq!(settings.kvmem_block_tokens, default_kvmem_block_tokens());
         assert_eq!(settings.kvmem_gen_reserve, default_kvmem_gen_reserve());
@@ -3566,7 +3557,7 @@ mod tests {
     /// 断言必须比对 default_* 而非硬编码字面量，否则改成字面量后测试仍绿、再也抓不到 serde 属性被改动。
     #[test]
     fn kvmem_fields_absent_from_old_json_fall_back_to_defaults() {
-        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"auto","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
+        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"cpu","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
         let s: AppSettings = serde_json::from_str(json).expect("无 kvmem 键的旧配置应可反序列化");
 
         assert_eq!(s.kvmem_enabled, default_kvmem_enabled());
@@ -3734,7 +3725,7 @@ mod tests {
     /// 旧配置兼容：缺少 MCP 字段的配置反序列化后为默认值
     #[test]
     fn mcp_settings_default_compat() {
-        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"auto","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
+        let json = r#"{"server_path":"","host":"127.0.0.1","port":9931,"parallel_slots":1,"model_path":"","mmproj_path":"","temperature":0.8,"top_p":0.95,"top_k":40,"repeat_penalty":1.1,"presence_penalty":0.0,"kv_offload":false,"cache_type_k":"f16","cache_type_v":"f16","kv_mlock":false,"kv_mmap":true,"kv_unified":false,"gpu_layers_mode":"cpu","split_mode":"none","tensor_split":"","cpu_moe":false,"n_cpu_moe":0,"rpc_server_path":"","rpc_host":"127.0.0.1","rpc_port":50052,"rpc_threads":8,"rpc_device":"","rpc_cache":false,"verbose":false}"#;
         let settings: AppSettings = serde_json::from_str(json).expect("旧格式配置应可反序列化");
         assert!(!settings.mcp_enabled);
         assert!(settings.mcp_config_json.is_empty());

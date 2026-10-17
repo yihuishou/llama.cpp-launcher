@@ -355,7 +355,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             .unwrap_or(0);
                         widgets::segmented(ui, &rf_labels, &mut rf_idx, accent);
                         settings.reasoning_format = rf_vals[rf_idx].to_string();
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpReasoningFormat, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpReasoningFormat, lang),
+                        );
                     });
                 });
             }
@@ -381,7 +384,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 ui.indent("reasoning_effort_opt", |ui| {
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelReasoningEffort, lang));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpReasoningEffort, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpReasoningEffort, lang),
+                        );
                     });
                     ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing.x = 6.0;
@@ -406,7 +412,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         widgets::toggle(ui, &mut settings.reasoning_preserve, "", accent);
                         ui.label(i18n::t(i18n::Key::LabelReasoningPreserve, lang));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpReasoningPreserve, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpReasoningPreserve, lang),
+                        );
                     });
                 });
             }
@@ -426,7 +435,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .speed(1),
                         );
                         ui.small(i18n::t(i18n::Key::HintReasoningBudget, lang));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpReasoningBudget, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpReasoningBudget, lang),
+                        );
                     });
                 });
             }
@@ -441,7 +453,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .strong(),
             );
 
-            // Jinja 对话模板引擎开关：外层启用开关 + 缩进内层开关
+            // Jinja 对话模板引擎开关：外层启用开关统管 --jinja / --chat-template / --chat-template-file
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_jinja, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableJinja, lang));
@@ -453,45 +465,48 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         ui.label(i18n::t(i18n::Key::CheckboxJinja, lang));
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpJinja, lang));
                     });
+
+                    // 对话模板 (--chat-template)
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelChatTemplate, lang));
+                        ui.add(winui::FluentTextEdit::new(&mut settings.chat_template));
+                        ui.small(i18n::t(i18n::Key::HintChatTemplate, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpChatTemplate, lang));
+                    });
+
+                    // 对话模板文件 (--chat-template-file)
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelChatTemplateFile, lang));
+                        let mut file_str = settings.chat_template_file.to_string_lossy().to_string();
+                        let response = ui.add(winui::FluentTextEdit::new(&mut file_str));
+                        if response.changed() {
+                            settings.chat_template_file = std::path::PathBuf::from(&file_str);
+                        }
+                        if ui
+                            .add(winui::FluentButton::new(i18n::t(
+                                i18n::Key::BtnBrowse,
+                                lang,
+                            )))
+                            .clicked()
+                        {
+                            if let Some(path) = rfd::FileDialog::new()
+                                .set_title(i18n::t(i18n::Key::DialogSelectChatTemplate, lang))
+                                .add_filter(
+                                    i18n::t(i18n::Key::FilterTextFiles, lang),
+                                    &["txt", "jinja", "j2"],
+                                )
+                                .pick_file()
+                            {
+                                settings.chat_template_file = path;
+                            }
+                        }
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpChatTemplateFile, lang),
+                        );
+                    });
                 });
             }
-
-            // 对话模板 (--chat-template)
-            ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelChatTemplate, lang));
-                ui.add(winui::FluentTextEdit::new(&mut settings.chat_template));
-                ui.small(i18n::t(i18n::Key::HintChatTemplate, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpChatTemplate, lang));
-            });
-
-            // 对话模板文件 (--chat-template-file)
-            ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelChatTemplateFile, lang));
-                let mut file_str = settings.chat_template_file.to_string_lossy().to_string();
-                let response = ui.add(winui::FluentTextEdit::new(&mut file_str));
-                if response.changed() {
-                    settings.chat_template_file = std::path::PathBuf::from(&file_str);
-                }
-                if ui
-                    .add(winui::FluentButton::new(i18n::t(
-                        i18n::Key::BtnBrowse,
-                        lang,
-                    )))
-                    .clicked()
-                {
-                    if let Some(path) = rfd::FileDialog::new()
-                        .set_title(i18n::t(i18n::Key::DialogSelectChatTemplate, lang))
-                        .add_filter(
-                            i18n::t(i18n::Key::FilterTextFiles, lang),
-                            &["txt", "jinja", "j2"],
-                        )
-                        .pick_file()
-                    {
-                        settings.chat_template_file = path;
-                    }
-                }
-                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpChatTemplateFile, lang));
-            });
         },
     );
 
@@ -501,43 +516,49 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         i18n::t(i18n::Key::SectionGpuDevice, lang),
         accent,
         |ui| {
-            let mut gpu_layers = match settings.gpu_layers_mode {
-                GpuLayersMode::Auto => 0usize,
-                GpuLayersMode::All => 256usize,
-                GpuLayersMode::Manual(n) => n,
-            };
-
             ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelGpuDevice, lang));
-                let gm_labels = [
-                    i18n::t(i18n::Key::GpuModeAuto, lang),
-                    i18n::t(i18n::Key::GpuModeAll, lang),
-                    i18n::t(i18n::Key::GpuModeManual, lang),
-                ];
-                let mut gm_idx = match settings.gpu_layers_mode {
-                    GpuLayersMode::Auto => 0,
-                    GpuLayersMode::All => 1,
-                    GpuLayersMode::Manual(_) => 2,
-                };
-                widgets::segmented(ui, &gm_labels, &mut gm_idx, accent);
-                match gm_idx {
-                    0 => settings.gpu_layers_mode = GpuLayersMode::Auto,
-                    1 => settings.gpu_layers_mode = GpuLayersMode::All,
-                    2 => settings.gpu_layers_mode = GpuLayersMode::Manual(gpu_layers),
-                    _ => {}
-                }
+                widgets::toggle(ui, &mut settings.enable_gpu_layers, "", accent);
+                ui.label(i18n::t(i18n::Key::EnableGpuLayers, lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::HelpGpuDevice, lang));
             });
-            // 手动模式下显示层数输入
-            if let GpuLayersMode::Manual(_) = settings.gpu_layers_mode {
-                ui.indent("manual_gpu_layers_options", |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label(i18n::t(i18n::Key::LabelGpuDevice, lang));
-                        ui.add(egui::DragValue::new(&mut gpu_layers).range(0..=256));
-                        ui.small(i18n::t(i18n::Key::HintGpuDevice, lang));
-                    });
+            if settings.enable_gpu_layers {
+                let mut gpu_layers = match settings.gpu_layers_mode {
+                    GpuLayersMode::Cpu => 0usize,
+                    GpuLayersMode::All => 256usize,
+                    GpuLayersMode::Manual(n) => n,
+                };
+
+                ui.horizontal(|ui| {
+                    ui.label(i18n::t(i18n::Key::LabelGpuDevice, lang));
+                    let gm_labels = [
+                        i18n::t(i18n::Key::GpuModeAuto, lang),
+                        i18n::t(i18n::Key::GpuModeAll, lang),
+                        i18n::t(i18n::Key::GpuModeManual, lang),
+                    ];
+                    let mut gm_idx = match settings.gpu_layers_mode {
+                        GpuLayersMode::Cpu => 0,
+                        GpuLayersMode::All => 1,
+                        GpuLayersMode::Manual(_) => 2,
+                    };
+                    widgets::segmented(ui, &gm_labels, &mut gm_idx, accent);
+                    match gm_idx {
+                        0 => settings.gpu_layers_mode = GpuLayersMode::Cpu,
+                        1 => settings.gpu_layers_mode = GpuLayersMode::All,
+                        2 => settings.gpu_layers_mode = GpuLayersMode::Manual(gpu_layers),
+                        _ => {}
+                    }
                 });
-                settings.gpu_layers_mode = GpuLayersMode::Manual(gpu_layers);
+                // 手动模式下显示层数输入
+                if let GpuLayersMode::Manual(_) = settings.gpu_layers_mode {
+                    ui.indent("manual_gpu_layers_options", |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(i18n::t(i18n::Key::LabelGpuDevice, lang));
+                            ui.add(egui::DragValue::new(&mut gpu_layers).range(0..=256));
+                            ui.small(i18n::t(i18n::Key::HintGpuDevice, lang));
+                        });
+                    });
+                    settings.gpu_layers_mode = GpuLayersMode::Manual(gpu_layers);
+                }
             }
             // 延迟加载大型张量
             ui.horizontal(|ui| {
@@ -560,7 +581,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             .unwrap_or(0);
                         widgets::segmented(ui, &trl_labels, &mut trl_idx, accent);
                         settings.tensor_read_lazy = trl_vals[trl_idx].to_string();
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTensorReadLazy, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpTensorReadLazy, lang),
+                        );
                     });
                 });
             }
@@ -588,42 +612,42 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         ui.small(i18n::t(i18n::Key::HintSplitMode, lang));
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSplitMode, lang));
                     });
+                    // 张量拆分比例
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelTensorSplit, lang));
+                        ui.add(winui::FluentTextEdit::new(&mut settings.tensor_split));
+                        ui.small(i18n::t(i18n::Key::HintTensorSplit, lang));
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTensorSplit, lang));
+                    });
+                    // 张量拆分快捷参数按钮
+                    ui.indent("tensor_split_shortcuts", |ui| {
+                        ui.horizontal(|ui| {
+                            let ratios = ["1,1", "1,2", "1,3", "1,4", "1,5", "1,6"];
+                            let labels = ["1:1", "1:2", "1:3", "1:4", "1:5", "1:6"];
+                            for (ratio, label) in ratios.iter().zip(labels.iter()) {
+                                if ui
+                                    .add(winui::FluentButton::new(*label))
+                                    .on_hover_text(*ratio)
+                                    .clicked()
+                                {
+                                    settings.tensor_split = ratio.to_string();
+                                }
+                            }
+                            // 清空拆分比例按钮（逻辑与「清空特定张量设置」一致）
+                            let split_empty = settings.tensor_split.is_empty();
+                            if ui
+                                .add_enabled(
+                                    !split_empty,
+                                    winui::FluentButton::new(i18n::t(i18n::Key::BtnClearTensorSplit, lang)),
+                                )
+                                .clicked()
+                            {
+                                settings.tensor_split.clear();
+                            }
+                        });
+                    });
                 });
             }
-            // 张量拆分比例
-            ui.horizontal(|ui| {
-                ui.label(i18n::t(i18n::Key::LabelTensorSplit, lang));
-                ui.add(winui::FluentTextEdit::new(&mut settings.tensor_split));
-                ui.small(i18n::t(i18n::Key::HintTensorSplit, lang));
-                helper::help_button_inline(ui, i18n::t(i18n::Key::HelpTensorSplit, lang));
-            });
-            // 张量拆分快捷参数按钮
-            ui.indent("tensor_split_shortcuts", |ui| {
-                ui.horizontal(|ui| {
-                    let ratios = ["1,1", "1,2", "1,3", "1,4", "1,5", "1,6"];
-                    let labels = ["1:1", "1:2", "1:3", "1:4", "1:5", "1:6"];
-                    for (ratio, label) in ratios.iter().zip(labels.iter()) {
-                        if ui
-                            .add(winui::FluentButton::new(*label))
-                            .on_hover_text(*ratio)
-                            .clicked()
-                        {
-                            settings.tensor_split = ratio.to_string();
-                        }
-                    }
-                    // 清空拆分比例按钮（逻辑与「清空特定张量设置」一致）
-                    let split_empty = settings.tensor_split.is_empty();
-                    if ui
-                        .add_enabled(
-                            !split_empty,
-                            winui::FluentButton::new(i18n::t(i18n::Key::BtnClearTensorSplit, lang)),
-                        )
-                        .clicked()
-                    {
-                        settings.tensor_split.clear();
-                    }
-                });
-            });
             // CPU MoE（与 RPC 模式一致的缩进样式）
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.cpu_moe, "", accent);
@@ -653,7 +677,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         ui.label(i18n::t(i18n::Key::LabelOverrideTensor, lang));
                         ui.add(winui::FluentTextEdit::new(&mut settings.override_tensor));
                         ui.small(i18n::t(i18n::Key::HintOverrideTensor, lang));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpOverrideTensor, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpOverrideTensor, lang),
+                        );
                     });
                     // FFN / N-gram 卸载到CPU按钮（同行显示）
                     ui.horizontal(|ui| {
@@ -661,7 +688,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         if ui
                             .add_enabled(
                                 !ffn_set,
-                                winui::FluentButton::new(i18n::t(i18n::Key::BtnFfnOffloadToCpu, lang)),
+                                winui::FluentButton::new(i18n::t(
+                                    i18n::Key::BtnFfnOffloadToCpu,
+                                    lang,
+                                )),
                             )
                             .clicked()
                         {
@@ -673,17 +703,24 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         if ui
                             .add_enabled(
                                 !ngram_set,
-                                winui::FluentButton::new(i18n::t(i18n::Key::BtnNGramOffloadToCpu, lang)),
+                                winui::FluentButton::new(i18n::t(
+                                    i18n::Key::BtnNGramOffloadToCpu,
+                                    lang,
+                                )),
                             )
                             .clicked()
                         {
-                            settings.override_tensor = "per_layer_token_embd.weight=CPU".to_string();
+                            settings.override_tensor =
+                                "per_layer_token_embd.weight=CPU".to_string();
                         }
                         let tensor_empty = settings.override_tensor.is_empty();
                         if ui
                             .add_enabled(
                                 !tensor_empty,
-                                winui::FluentButton::new(i18n::t(i18n::Key::BtnClearOverrideTensor, lang)),
+                                winui::FluentButton::new(i18n::t(
+                                    i18n::Key::BtnClearOverrideTensor,
+                                    lang,
+                                )),
                             )
                             .clicked()
                         {
@@ -1081,20 +1118,12 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 });
             });
         }
-        // 绕过 host buffer（--no-host）
+        // 绕过 Host Buffer (--no-host)，与「完整滑动窗口」一致：标签 + ❓提示框 + 开关
         ui.horizontal(|ui| {
-            widgets::toggle(ui, &mut settings.enable_no_host, "", accent);
-            ui.label(i18n::t(i18n::Key::EnableNoHost, lang));
+            widgets::toggle(ui, &mut settings.no_host, "", accent);
+            ui.label(i18n::t(i18n::Key::AdvNoHost, lang));
+            helper::help_button_inline(ui, i18n::t(i18n::Key::AdvNoHostHint, lang));
         });
-        if settings.enable_no_host {
-            ui.indent("no_host_opt", |ui| {
-                ui.horizontal(|ui| {
-                    widgets::toggle(ui, &mut settings.no_host, "", accent);
-                    ui.label(i18n::t(i18n::Key::AdvNoHost, lang));
-                    helper::help_button_inline(ui, i18n::t(i18n::Key::AdvNoHostHint, lang));
-                });
-            });
-        }
         // KV 缓存开关统一样式（与「手动指定 GPU 层数」一致）：标签 + ❓提示框 + 开关
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_kv_offload, "", accent);
@@ -1141,8 +1170,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeK, lang));
                     });
                     let k_types = [
-                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
-                        "turbo3", "turbo4",
+                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
+                        "turbo2", "turbo3", "turbo4",
                     ];
 
                     ui.horizontal_wrapped(|ui| {
@@ -1162,8 +1191,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCacheTypeV, lang));
                     });
                     let v_types = [
-                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1", "turbo2",
-                        "turbo3", "turbo4",
+                        "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
+                        "turbo2", "turbo3", "turbo4",
                     ];
                     ui.horizontal_wrapped(|ui| {
                         ui.spacing_mut().item_spacing.x = 6.0;
@@ -1193,20 +1222,12 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
         }
 
-        // 完整滑动窗口 (--swa-full)，与「手动指定 GPU 层数」一致：标签 + ❓提示框 + 开关
+        // 完整滑动窗口 (--swa-full)，与「绕过 Host Buffer」一致：标签 + ❓提示框 + 开关
         ui.horizontal(|ui| {
-            widgets::toggle(ui, &mut settings.enable_swa_full, "", accent);
-            ui.label(i18n::t(i18n::Key::EnableSwaFull, lang));
+            widgets::toggle(ui, &mut settings.swa_full, "", accent);
+            ui.label(i18n::t(i18n::Key::CheckboxSwaFull, lang));
+            helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSwaFull, lang));
         });
-        if settings.enable_swa_full {
-            ui.indent("swa_full_opt", |ui| {
-                ui.horizontal(|ui| {
-                    widgets::toggle(ui, &mut settings.swa_full, "", accent);
-                    ui.label(i18n::t(i18n::Key::CheckboxSwaFull, lang));
-                    helper::help_button_inline(ui, i18n::t(i18n::Key::HelpSwaFull, lang));
-                });
-            });
-        }
         // 上下文检查点
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_ctx_checkpoints, "", accent);
@@ -1277,7 +1298,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(16..=8192)
                                 .speed(16),
                         );
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemBlockTokens, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemBlockTokens, lang),
+                        );
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelKvmemSinkTokens, lang));
@@ -1286,7 +1310,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0..=1048576)
                                 .speed(128),
                         );
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemSinkTokens, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemSinkTokens, lang),
+                        );
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelKvmemGenReserve, lang));
@@ -1295,7 +1322,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0..=65536)
                                 .speed(16),
                         );
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemGenReserve, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::HelpKvmemGenReserve, lang),
+                        );
                     });
                 });
 
@@ -1449,10 +1479,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 i18n::t(i18n::Key::LabelKvmemRawKNvme, lang),
                             ),
                         );
-                        helper::help_button_inline(
-                            ui,
-                            i18n::t(i18n::Key::HelpKvmemRawKNvme, lang),
-                        );
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemRawKNvme, lang));
                     });
                 });
             }
@@ -1559,7 +1586,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.indent("spec_draft_n_max_opt", |ui| {
                         ui.horizontal(|ui| {
                             ui.label(i18n::t(i18n::Key::SpecDraftNMaxLabel, lang));
-                            ui.add(egui::DragValue::new(&mut settings.spec_draft_n_max).range(0..=64));
+                            ui.add(
+                                egui::DragValue::new(&mut settings.spec_draft_n_max).range(0..=64),
+                            );
                         });
                     });
                 }
@@ -1573,7 +1602,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.indent("spec_draft_n_min_opt", |ui| {
                         ui.horizontal(|ui| {
                             ui.label(i18n::t(i18n::Key::SpecDraftNMinLabel, lang));
-                            ui.add(egui::DragValue::new(&mut settings.spec_draft_n_min).range(0..=32));
+                            ui.add(
+                                egui::DragValue::new(&mut settings.spec_draft_n_min).range(0..=32),
+                            );
                         });
                     });
                 }
@@ -1606,9 +1637,12 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         ui.horizontal(|ui| {
                             ui.label(i18n::t(i18n::Key::SpecDraftPSplitLabel, lang));
                             ui.add(
-                                winui::FluentSlider::new(&mut settings.spec_draft_p_split, 0.0..=1.0)
-                                    .step_by(0.01)
-                                    .show_value(true),
+                                winui::FluentSlider::new(
+                                    &mut settings.spec_draft_p_split,
+                                    0.0..=1.0,
+                                )
+                                .step_by(0.01)
+                                .show_value(true),
                             );
                         });
                     });
@@ -1641,7 +1675,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     if settings.enable_spec_draft_type_k {
                         ui.indent("spec_draft_type_k_opt", |ui| {
                             let spec_k_types = [
-                                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
+                                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0",
+                                "q5_1",
                             ];
                             ui.horizontal_wrapped(|ui| {
                                 ui.spacing_mut().item_spacing.x = 6.0;
@@ -1666,7 +1701,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     if settings.enable_spec_draft_type_v {
                         ui.indent("spec_draft_type_v_opt", |ui| {
                             let spec_v_types = [
-                                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1",
+                                "f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0",
+                                "q5_1",
                             ];
                             ui.horizontal_wrapped(|ui| {
                                 ui.spacing_mut().item_spacing.x = 6.0;
@@ -1781,51 +1817,51 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
     // ── 多模态 ──
     widgets::card(ui, i18n::t(i18n::Key::Multimodal, lang), accent, |ui| {
         // 多模态投影文件 --mmproj-auto / --no-mmproj
-ui.horizontal(|ui| {
-                widgets::toggle(ui, &mut settings.enable_mmproj_auto, "", accent);
-                ui.label(i18n::t(i18n::Key::EnableMmprojAuto, lang));
-            });
-            if settings.enable_mmproj_auto {
-                ui.indent("mmproj_auto_opt", |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label(i18n::t(i18n::Key::LabelMmprojAuto, lang));
-                        let mm_vals = ["auto", "no-mmproj", "no-mmproj-auto"];
-                        let mm_labels = [
-                            i18n::t(i18n::Key::MmprojAuto, lang),
-                            i18n::t(i18n::Key::MmprojOff, lang),
-                            i18n::t(i18n::Key::MmprojNoAuto, lang),
-                        ];
-                        let mut mm_idx = mm_vals
-                            .iter()
-                            .position(|v| *v == settings.mmproj_auto)
-                            .unwrap_or(0);
-                        widgets::segmented(ui, &mm_labels, &mut mm_idx, accent);
-                        settings.mmproj_auto = mm_vals[mm_idx].to_string();
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojAuto, lang));
-                    });
+        ui.horizontal(|ui| {
+            widgets::toggle(ui, &mut settings.enable_mmproj_auto, "", accent);
+            ui.label(i18n::t(i18n::Key::EnableMmprojAuto, lang));
+        });
+        if settings.enable_mmproj_auto {
+            ui.indent("mmproj_auto_opt", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(i18n::t(i18n::Key::LabelMmprojAuto, lang));
+                    let mm_vals = ["auto", "no-mmproj", "no-mmproj-auto"];
+                    let mm_labels = [
+                        i18n::t(i18n::Key::MmprojAuto, lang),
+                        i18n::t(i18n::Key::MmprojOff, lang),
+                        i18n::t(i18n::Key::MmprojNoAuto, lang),
+                    ];
+                    let mut mm_idx = mm_vals
+                        .iter()
+                        .position(|v| *v == settings.mmproj_auto)
+                        .unwrap_or(0);
+                    widgets::segmented(ui, &mm_labels, &mut mm_idx, accent);
+                    settings.mmproj_auto = mm_vals[mm_idx].to_string();
+                    helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojAuto, lang));
                 });
-            }
+            });
+        }
         // 投影 GPU 卸载 --mmproj-offload / --no-mmproj-offload
         ui.horizontal(|ui| {
-                widgets::toggle(ui, &mut settings.enable_mmproj_offload, "", accent);
-                ui.label(i18n::t(i18n::Key::EnableMmprojOffload, lang));
-            });
-            if settings.enable_mmproj_offload {
-                ui.indent("mmproj_offload_opt", |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label(i18n::t(i18n::Key::LabelMmprojOffload, lang));
-                        let offload_vals = [true, false];
-                        let offload_labels = [
-                            i18n::t(i18n::Key::MmprojOffloadOn, lang),
-                            i18n::t(i18n::Key::MmprojOffloadOff, lang),
-                        ];
-                        let mut offload_idx = if settings.mmproj_offload { 0 } else { 1 };
-                        widgets::segmented(ui, &offload_labels, &mut offload_idx, accent);
-                        settings.mmproj_offload = offload_vals[offload_idx];
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojOffload, lang));
-                    });
+            widgets::toggle(ui, &mut settings.enable_mmproj_offload, "", accent);
+            ui.label(i18n::t(i18n::Key::EnableMmprojOffload, lang));
+        });
+        if settings.enable_mmproj_offload {
+            ui.indent("mmproj_offload_opt", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(i18n::t(i18n::Key::LabelMmprojOffload, lang));
+                    let offload_vals = [true, false];
+                    let offload_labels = [
+                        i18n::t(i18n::Key::MmprojOffloadOn, lang),
+                        i18n::t(i18n::Key::MmprojOffloadOff, lang),
+                    ];
+                    let mut offload_idx = if settings.mmproj_offload { 0 } else { 1 };
+                    widgets::segmented(ui, &offload_labels, &mut offload_idx, accent);
+                    settings.mmproj_offload = offload_vals[offload_idx];
+                    helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMmprojOffload, lang));
                 });
-            }
+            });
+        }
         // 投影设备 --mmproj-device
         ui.horizontal(|ui| {
             ui.label(i18n::t(i18n::Key::LabelMmprojDevice, lang));
@@ -1927,14 +1963,11 @@ ui.horizontal(|ui| {
                                     .size(13.0),
                             );
 
-                            let device_entry =
-                                line.split(':').next().map(|s| s.trim().to_string());
+                            let device_entry = line.split(':').next().map(|s| s.trim().to_string());
 
                             if let Some(ref entry) = device_entry {
-                                let already_added = settings
-                                    .mmproj_device
-                                    .split(',')
-                                    .any(|s| s.trim() == entry);
+                                let already_added =
+                                    settings.mmproj_device.split(',').any(|s| s.trim() == entry);
                                 let add_btn = ui.add_enabled(
                                     !already_added,
                                     winui::FluentButton::new(i18n::t(
@@ -2519,7 +2552,10 @@ ui.horizontal(|ui| {
                             .unwrap_or(0);
                         widgets::segmented(ui, &vals, &mut idx, accent);
                         settings.rope_scaling = vals[idx].to_string();
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeScalingHint, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::AdvRopeScalingHint, lang),
+                        );
                     });
                 });
             }
@@ -2693,7 +2729,10 @@ ui.horizontal(|ui| {
                     ui.horizontal(|ui| {
                         widgets::toggle(ui, &mut settings.cont_batching, "", accent);
                         ui.label(i18n::t(i18n::Key::AdvContBatching, lang));
-                        helper::help_button_inline(ui, i18n::t(i18n::Key::AdvContBatchingHint, lang));
+                        helper::help_button_inline(
+                            ui,
+                            i18n::t(i18n::Key::AdvContBatchingHint, lang),
+                        );
                     });
                 });
             }

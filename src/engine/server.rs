@@ -347,8 +347,10 @@ impl ServerManager {
             args.push("--timeout".to_string());
             args.push(settings.session_timeout.to_string());
         }
-        args.push("--gpu-layers".to_string());
-        args.push(settings.gpu_layers_mode.to_arg());
+        if settings.enable_gpu_layers {
+            args.push("--gpu-layers".to_string());
+            args.push(settings.gpu_layers_mode.to_arg());
+        }
 
         // 采样参数
         if settings.enable_temperature {
@@ -373,15 +375,24 @@ impl ServerManager {
         }
 
         // 思考参数
-        if settings.enable_reasoning && !settings.reasoning.is_empty() && settings.reasoning != "auto" {
+        if settings.enable_reasoning
+            && !settings.reasoning.is_empty()
+            && settings.reasoning != "auto"
+        {
             args.push("--reasoning".to_string());
             args.push(settings.reasoning.clone());
         }
-        if settings.enable_reasoning_format && !settings.reasoning_format.is_empty() && settings.reasoning_format != "auto" {
+        if settings.enable_reasoning_format
+            && !settings.reasoning_format.is_empty()
+            && settings.reasoning_format != "auto"
+        {
             args.push("--reasoning-format".to_string());
             args.push(settings.reasoning_format.clone());
         }
-        if settings.enable_reasoning_effort && !settings.reasoning_effort.is_empty() && settings.reasoning_effort != "default" {
+        if settings.enable_reasoning_effort
+            && !settings.reasoning_effort.is_empty()
+            && settings.reasoning_effort != "default"
+        {
             args.push("--reasoning-effort".to_string());
             args.push(settings.reasoning_effort.clone());
         }
@@ -398,11 +409,11 @@ impl ServerManager {
         }
 
         // 会话模板参数
-        if !settings.chat_template.is_empty() {
+        if settings.enable_jinja && !settings.chat_template.is_empty() {
             args.push("--chat-template".to_string());
             args.push(settings.chat_template.clone());
         }
-        if !settings.chat_template_file.as_os_str().is_empty() {
+        if settings.enable_jinja && !settings.chat_template_file.as_os_str().is_empty() {
             args.push("--chat-template-file".to_string());
             args.push(settings.chat_template_file.display().to_string());
         }
@@ -654,7 +665,7 @@ impl ServerManager {
                 args.push("--no-kv-unified".to_string());
             }
         }
-        if settings.enable_swa_full && settings.swa_full {
+        if settings.swa_full {
             args.push("--swa-full".to_string());
         }
 
@@ -669,11 +680,14 @@ impl ServerManager {
         }
 
         // GPU 与设备分配
-        if settings.enable_split_mode && !settings.split_mode.is_empty() && settings.split_mode != "layer" {
+        if settings.enable_split_mode
+            && !settings.split_mode.is_empty()
+            && settings.split_mode != "layer"
+        {
             args.push("--split-mode".to_string());
             args.push(settings.split_mode.clone());
         }
-        if !settings.tensor_split.is_empty() {
+        if settings.enable_split_mode && !settings.tensor_split.is_empty() {
             args.push("--tensor-split".to_string());
             args.push(settings.tensor_split.clone());
         }
@@ -763,11 +777,17 @@ impl ServerManager {
         }
 
         // 加载模式
-        if settings.enable_load_mode && !settings.load_mode.is_empty() && settings.load_mode != "auto" {
+        if settings.enable_load_mode
+            && !settings.load_mode.is_empty()
+            && settings.load_mode != "auto"
+        {
             args.push("--load-mode".to_string());
             args.push(settings.load_mode.clone());
         }
-        if settings.enable_tensor_read_lazy && !settings.tensor_read_lazy.is_empty() && settings.tensor_read_lazy != "auto" {
+        if settings.enable_tensor_read_lazy
+            && !settings.tensor_read_lazy.is_empty()
+            && settings.tensor_read_lazy != "auto"
+        {
             args.push("--lazy-mode".to_string());
             args.push(settings.tensor_read_lazy.clone());
         }
@@ -822,7 +842,7 @@ impl ServerManager {
             args.push("--cache-ram".to_string());
             args.push(settings.cache_ram.to_string());
         }
-        if settings.enable_no_host && settings.no_host {
+        if settings.no_host {
             args.push("--no-host".to_string());
         }
         if settings.enable_rope_scaling && !settings.rope_scaling.is_empty() {
@@ -1086,8 +1106,10 @@ impl ServerManager {
                 .arg(settings.session_timeout.to_string());
         }
 
-        cmd.arg("--gpu-layers")
-            .arg(settings.gpu_layers_mode.to_arg());
+        if settings.enable_gpu_layers {
+            cmd.arg("--gpu-layers")
+                .arg(settings.gpu_layers_mode.to_arg());
+        }
 
         // 采样参数（根据启用标志决定是否拼接；ignore_* 系列为反向语义）
         if settings.enable_temperature {
@@ -1110,14 +1132,23 @@ impl ServerManager {
         }
 
         // 思考参数（--reasoning 系列，非默认值才拼接）
-        if settings.enable_reasoning && !settings.reasoning.is_empty() && settings.reasoning != "auto" {
+        if settings.enable_reasoning
+            && !settings.reasoning.is_empty()
+            && settings.reasoning != "auto"
+        {
             cmd.arg("--reasoning").arg(&settings.reasoning);
         }
-        if settings.enable_reasoning_format && !settings.reasoning_format.is_empty() && settings.reasoning_format != "auto" {
+        if settings.enable_reasoning_format
+            && !settings.reasoning_format.is_empty()
+            && settings.reasoning_format != "auto"
+        {
             cmd.arg("--reasoning-format")
                 .arg(&settings.reasoning_format);
         }
-        if settings.enable_reasoning_effort && !settings.reasoning_effort.is_empty() && settings.reasoning_effort != "default" {
+        if settings.enable_reasoning_effort
+            && !settings.reasoning_effort.is_empty()
+            && settings.reasoning_effort != "default"
+        {
             cmd.arg("--reasoning-effort")
                 .arg(&settings.reasoning_effort);
         }
@@ -1135,10 +1166,10 @@ impl ServerManager {
         }
 
         // 会话模板参数
-        if !settings.chat_template.is_empty() {
+        if settings.enable_jinja && !settings.chat_template.is_empty() {
             cmd.arg("--chat-template").arg(&settings.chat_template);
         }
-        if !settings.chat_template_file.as_os_str().is_empty() {
+        if settings.enable_jinja && !settings.chat_template_file.as_os_str().is_empty() {
             cmd.arg("--chat-template-file")
                 .arg(&settings.chat_template_file);
         }
@@ -1378,10 +1409,16 @@ impl ServerManager {
         }
         // 模型加载模式（--load-mode 替代已废弃的 --mmap/--mlock）
         // 仅非 auto 时拼接；auto 不拼接任何参数，由 llama-server 使用默认行为
-        if settings.enable_load_mode && !settings.load_mode.is_empty() && settings.load_mode != "auto" {
+        if settings.enable_load_mode
+            && !settings.load_mode.is_empty()
+            && settings.load_mode != "auto"
+        {
             cmd.arg("--load-mode").arg(&settings.load_mode);
         }
-        if settings.enable_tensor_read_lazy && !settings.tensor_read_lazy.is_empty() && settings.tensor_read_lazy != "auto" {
+        if settings.enable_tensor_read_lazy
+            && !settings.tensor_read_lazy.is_empty()
+            && settings.tensor_read_lazy != "auto"
+        {
             cmd.arg("--lazy-mode").arg(&settings.tensor_read_lazy);
         }
         // KV 统一缓存开关：外层 enable 关闭时完全不发该参数，否则按内层值发正/负
@@ -1392,7 +1429,7 @@ impl ServerManager {
                 cmd.arg("--no-kv-unified");
             }
         }
-        if settings.enable_swa_full && settings.swa_full {
+        if settings.swa_full {
             cmd.arg("--swa-full");
         }
 
@@ -1409,10 +1446,13 @@ impl ServerManager {
         }
 
         // GPU 与设备分配
-        if settings.enable_split_mode && !settings.split_mode.is_empty() && settings.split_mode != "layer" {
+        if settings.enable_split_mode
+            && !settings.split_mode.is_empty()
+            && settings.split_mode != "layer"
+        {
             cmd.arg("--split-mode").arg(&settings.split_mode);
         }
-        if !settings.tensor_split.is_empty() {
+        if settings.enable_split_mode && !settings.tensor_split.is_empty() {
             cmd.arg("--tensor-split").arg(&settings.tensor_split);
         }
         if settings.cpu_moe {
@@ -1511,7 +1551,7 @@ impl ServerManager {
         if settings.cache_ram_enabled {
             cmd.arg("--cache-ram").arg(settings.cache_ram.to_string());
         }
-        if settings.enable_no_host && settings.no_host {
+        if settings.no_host {
             cmd.arg("--no-host");
         }
         if settings.enable_rope_scaling && !settings.rope_scaling.is_empty() {
@@ -1998,7 +2038,12 @@ mod adv_params_tests {
         s.enable_cont_batching = false;
         let cmd = mgr.build_launch_command(&s);
         let tokens: Vec<&str> = cmd.split_whitespace().collect();
-        for p in ["--warmup", "--no-warmup", "--cont-batching", "--no-cont-batching"] {
+        for p in [
+            "--warmup",
+            "--no-warmup",
+            "--cont-batching",
+            "--no-cont-batching",
+        ] {
             assert!(
                 !tokens.contains(&p),
                 "启用开关关闭时不应包含参数 {}，实际命令：\n{}",
@@ -2182,6 +2227,111 @@ mod adv_params_tests {
             .position(|t| *t == "--rope-scaling")
             .expect("开关开启且取值非空时应拼接 --rope-scaling");
         assert_eq!(tokens[pos + 1], "yarn", "应拼接所选缩放方式");
+    }
+
+    /// enable_jinja 统管三个参数：开启时 --jinja / --chat-template / --chat-template-file
+    /// 全部照常拼接，关闭时三个都不下发（连 --no-jinja 也不发）
+    #[test]
+    fn test_enable_jinja_gates_chat_template_args() {
+        let mgr = ServerManager::new();
+        let mut s = AppSettings::default();
+        s.jinja_enabled = true;
+        s.chat_template = "{{messages}}".to_string();
+        s.chat_template_file = std::path::PathBuf::from("template.jinja");
+        let params = ["--jinja", "--chat-template", "--chat-template-file"];
+
+        s.enable_jinja = true;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in params {
+            assert!(
+                tokens.contains(&p),
+                "开关开启时应包含 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+
+        s.enable_jinja = false;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        for p in params {
+            assert!(
+                !tokens.contains(&p),
+                "开关关闭时不应包含 {}，实际命令：\n{}",
+                p,
+                cmd
+            );
+        }
+    }
+
+    /// GPU 层数的启用开关：关闭时完全不拼接；开启时三种选项分别下发 0 / 256 / 指定层数
+    #[test]
+    fn test_gpu_layers_enable_switch() {
+        use crate::config::settings::{GpuLayersMode, LlamaCppType};
+
+        let mgr = ServerManager::new();
+        let mut s = AppSettings::default();
+        s.llama_cpp_type = Some(LlamaCppType::Standard);
+
+        assert!(s.enable_gpu_layers, "默认应开启，保持原先的恒定下发行为");
+
+        s.gpu_layers_mode = GpuLayersMode::Cpu;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        let pos = tokens
+            .iter()
+            .position(|t| *t == "--gpu-layers")
+            .unwrap_or_else(|| panic!("应拼接 --gpu-layers，实际命令：\n{}", cmd));
+        assert_eq!(tokens[pos + 1], "0", "CPU 选项应下发 0，实际命令：\n{}", cmd);
+
+        s.gpu_layers_mode = GpuLayersMode::All;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        let pos = tokens.iter().position(|t| *t == "--gpu-layers").unwrap();
+        assert_eq!(tokens[pos + 1], "256");
+
+        s.gpu_layers_mode = GpuLayersMode::Manual(12);
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        let pos = tokens.iter().position(|t| *t == "--gpu-layers").unwrap();
+        assert_eq!(tokens[pos + 1], "12");
+
+        s.enable_gpu_layers = false;
+        let cmd = mgr.build_launch_command(&s);
+        assert!(
+            !cmd.split_whitespace().any(|t| t == "--gpu-layers"),
+            "关闭时不应拼接 --gpu-layers，实际命令：\n{}",
+            cmd
+        );
+    }
+
+    /// 拆分模式启用开关统管 --split-mode 与 --tensor-split
+    #[test]
+    fn test_enable_split_mode_gates_tensor_split() {
+        use crate::config::settings::LlamaCppType;
+
+        let mgr = ServerManager::new();
+        let mut s = AppSettings::default();
+        s.llama_cpp_type = Some(LlamaCppType::Standard);
+        s.tensor_split = "3,1".to_string();
+
+        s.enable_split_mode = true;
+        let cmd = mgr.build_launch_command(&s);
+        let tokens: Vec<&str> = cmd.split_whitespace().collect();
+        assert!(
+            tokens.contains(&"--tensor-split") && tokens.contains(&"3,1"),
+            "开启时应拼接 --tensor-split 及其取值，实际命令：\n{}",
+            cmd
+        );
+
+        s.enable_split_mode = false;
+        let cmd = mgr.build_launch_command(&s);
+        assert!(
+            !cmd.split_whitespace().any(|t| t == "--tensor-split"),
+            "关闭时不应拼接 --tensor-split，实际命令：\n{}",
+            cmd
+        );
     }
 
     /// KVMem 参数只在 llama_cpp_type 判定为 Kvmem 时出现，且等于默认值的字段不拼接

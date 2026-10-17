@@ -167,8 +167,6 @@ pub struct ParamsExport {
     pub enable_kv_offload: bool,
     #[serde(default = "default_true")]
     pub enable_kv_unified: bool,
-    #[serde(default = "default_true")]
-    pub enable_swa_full: bool,
     pub kv_offload: bool,
     pub cache_type_k: String,
     pub cache_type_v: String,
@@ -227,6 +225,9 @@ pub struct ParamsExport {
     pub spec_kv_dtype: String,
 
     pub gpu_layers_mode: GpuLayersMode,
+    // 独立启用开关（默认开启，关闭时不拼接 --gpu-layers）
+    #[serde(default = "default_true")]
+    pub enable_gpu_layers: bool,
     #[serde(default = "default_true")]
     pub enable_split_mode: bool,
     pub split_mode: String,
@@ -329,7 +330,6 @@ impl ParamsExport {
             enable_spec_draft_type_v: s.enable_spec_draft_type_v,
             enable_kv_offload: s.enable_kv_offload,
             enable_kv_unified: s.enable_kv_unified,
-            enable_swa_full: s.enable_swa_full,
             kv_offload: s.kv_offload,
             cache_type_k: s.cache_type_k.clone(),
             cache_type_v: s.cache_type_v.clone(),
@@ -360,6 +360,7 @@ impl ParamsExport {
             kv_dtype: s.kv_dtype.clone(),
             spec_kv_dtype: s.spec_kv_dtype.clone(),
             gpu_layers_mode: s.gpu_layers_mode,
+            enable_gpu_layers: s.enable_gpu_layers,
             enable_split_mode: s.enable_split_mode,
             split_mode: s.split_mode.clone(),
             tensor_split: s.tensor_split.clone(),
@@ -431,9 +432,8 @@ impl ParamsExport {
         s.enable_spec_draft_type_k = self.enable_spec_draft_type_k;
         s.enable_spec_draft_type_v = self.enable_spec_draft_type_v;
         s.enable_kv_offload = self.enable_kv_offload;
-            s.enable_kv_unified = self.enable_kv_unified;
-            s.enable_swa_full = self.enable_swa_full;
-            s.kv_offload = self.kv_offload;
+        s.enable_kv_unified = self.enable_kv_unified;
+        s.kv_offload = self.kv_offload;
         s.cache_type_k = self.cache_type_k;
         s.cache_type_v = self.cache_type_v;
         s.enable_cache_type_kv = self.enable_cache_type_kv;
@@ -461,8 +461,9 @@ impl ParamsExport {
         s.kv_dtype = self.kv_dtype;
         s.spec_kv_dtype = self.spec_kv_dtype;
         s.gpu_layers_mode = self.gpu_layers_mode;
+        s.enable_gpu_layers = self.enable_gpu_layers;
         s.enable_split_mode = self.enable_split_mode;
-            s.split_mode = self.split_mode;
+        s.split_mode = self.split_mode;
         s.tensor_split = self.tensor_split;
         s.cpu_moe = self.cpu_moe;
         s.n_cpu_moe = self.n_cpu_moe;
@@ -480,10 +481,10 @@ impl ParamsExport {
         s.jinja_enabled = self.jinja_enabled;
         s.chat_template = self.chat_template;
         s.chat_template_file = self.chat_template_file;
-s.enable_mmproj_auto = self.enable_mmproj_auto;
-            s.mmproj_auto = self.mmproj_auto.clone();
-            s.enable_mmproj_offload = self.enable_mmproj_offload;
-            s.mmproj_offload = self.mmproj_offload;
+        s.enable_mmproj_auto = self.enable_mmproj_auto;
+        s.mmproj_auto = self.mmproj_auto.clone();
+        s.enable_mmproj_offload = self.enable_mmproj_offload;
+        s.mmproj_offload = self.mmproj_offload;
         s.mmproj_device = self.mmproj_device;
         s.image_min_tokens = self.image_min_tokens;
         s.image_max_tokens = self.image_max_tokens;
@@ -535,7 +536,6 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
             enable_spec_draft_type_v: p.enable_spec_draft_type_v,
             enable_kv_offload: p.enable_kv_offload,
             enable_kv_unified: p.enable_kv_unified,
-            enable_swa_full: p.enable_swa_full,
             kv_offload: p.kv_offload,
             cache_type_k: p.cache_type_k.clone(),
             cache_type_v: p.cache_type_v.clone(),
@@ -566,6 +566,7 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
             kv_dtype: p.kv_dtype.clone(),
             spec_kv_dtype: p.spec_kv_dtype.clone(),
             gpu_layers_mode: p.gpu_layers_mode,
+            enable_gpu_layers: p.enable_gpu_layers,
             enable_split_mode: p.enable_split_mode,
             split_mode: p.split_mode.clone(),
             tensor_split: p.tensor_split.clone(),
@@ -640,9 +641,8 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
         p.enable_spec_draft_type_k = self.enable_spec_draft_type_k;
         p.enable_spec_draft_type_v = self.enable_spec_draft_type_v;
         p.enable_kv_offload = self.enable_kv_offload;
-            p.enable_kv_unified = self.enable_kv_unified;
-            p.enable_swa_full = self.enable_swa_full;
-            p.kv_offload = self.kv_offload;
+        p.enable_kv_unified = self.enable_kv_unified;
+        p.kv_offload = self.kv_offload;
         p.cache_type_k = self.cache_type_k;
         p.cache_type_v = self.cache_type_v;
         p.enable_cache_type_kv = self.enable_cache_type_kv;
@@ -670,8 +670,9 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
         p.kv_dtype = self.kv_dtype;
         p.spec_kv_dtype = self.spec_kv_dtype;
         p.gpu_layers_mode = self.gpu_layers_mode;
+        p.enable_gpu_layers = self.enable_gpu_layers;
         p.enable_split_mode = self.enable_split_mode;
-            p.split_mode = self.split_mode;
+        p.split_mode = self.split_mode;
         p.tensor_split = self.tensor_split;
         p.cpu_moe = self.cpu_moe;
         p.n_cpu_moe = self.n_cpu_moe;
@@ -689,10 +690,10 @@ s.enable_mmproj_auto = self.enable_mmproj_auto;
         p.jinja_enabled = self.jinja_enabled;
         p.chat_template = self.chat_template;
         p.chat_template_file = self.chat_template_file;
-p.enable_mmproj_auto = self.enable_mmproj_auto;
-            p.mmproj_auto = self.mmproj_auto.clone();
-            p.enable_mmproj_offload = self.enable_mmproj_offload;
-            p.mmproj_offload = self.mmproj_offload;
+        p.enable_mmproj_auto = self.enable_mmproj_auto;
+        p.mmproj_auto = self.mmproj_auto.clone();
+        p.enable_mmproj_offload = self.enable_mmproj_offload;
+        p.mmproj_offload = self.mmproj_offload;
         p.mmproj_device = self.mmproj_device;
         p.image_min_tokens = self.image_min_tokens;
         p.image_max_tokens = self.image_max_tokens;
@@ -847,7 +848,7 @@ fn build_decl(settings: &AppSettings) -> ShareDecl {
     };
     ShareDecl {
         mcp,
-        has_template: !settings.chat_template.trim().is_empty(),
+        has_template: settings.enable_jinja && !settings.chat_template.trim().is_empty(),
         has_grammar: !settings.grammar.trim().is_empty(),
         has_schema: !settings.json_schema.trim().is_empty(),
         model_required: true,
