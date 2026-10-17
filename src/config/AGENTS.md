@@ -6,7 +6,7 @@ AppSettings/Preset/GpuLayersMode 定义、序列化策略、默认值以及配�
 
 ## STRUCTURE
 
-- settings.rs: AppSettings, Preset, GpuLayersMode, SettingsManager + Defaults/序列化辅助。
+- settings.rs: AppSettings, Preset, GpuLayersMode, LlamaCppType, McpServerSummary, SettingsManager + Defaults/序列化辅助。
 - mod.rs: pub use 导出配置模块对外接口。
 
 ## WHERE TO LOOK
@@ -20,6 +20,8 @@ AppSettings/Preset/GpuLayersMode 定义、序列化策略、默认值以及配�
 | 自动检测 server/RPC 路径  | settings.rs (auto_detect_server_path/rpc)     | find_exe_in_dir/find_exe_recursive          |
 | 默认值定义              | settings.rs (default_* 函数)                  | 每个 AppSettings 字段对应一个 default_* 函数       |
 | MCP 配置解析           | settings.rs (parse_mcp_servers)               | 解析 mcp_config_json 为服务器列表                  |
+| KVMem 变体识别           | settings.rs (LlamaCppType)                    | from_server_path() 按 exe 名推断；engine 据此决定是否拼 --kvmem* 参数 |
+| 内联测试群              | settings.rs:3413-                             | exe 搜索深度边界、旧 JSON 兼容、Preset kvmem 往返、MCP 解析（项目最大测试群） |
 
 ## CONVENTIONS
 
