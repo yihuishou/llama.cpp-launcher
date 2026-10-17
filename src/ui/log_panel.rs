@@ -52,6 +52,16 @@ fn render(
             {
                 source.clear_logs();
             }
+            ui.label(i18n::t(i18n::Key::LabelMaxLogLines, lang));
+            let mut max_lines = settings.max_log_lines as f64;
+            ui.add(
+                winui::NumberBox::new(&mut max_lines)
+                    .range(-1.0..=10000.0)
+                    .width(88.0)
+                    .spin_button_placement(winui::NumberBoxSpinButtonPlacement::Compact),
+            );
+            settings.max_log_lines = max_lines as i32;
+            ui.small(i18n::t(i18n::Key::HintLogSession, lang));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 widgets::toggle_trailing(
                     ui,
@@ -61,31 +71,18 @@ fn render(
                 );
             });
         });
-        ui.horizontal(|ui| {
-            ui.label(i18n::t(i18n::Key::LabelMaxLogLines, lang));
-            let mut max_lines = settings.max_log_lines as f64;
-            ui.add(
-                winui::NumberBox::new(&mut max_lines)
-                    .range(-1.0..=10000.0)
-                    .width(132.0)
-                    .spin_button_placement(winui::NumberBoxSpinButtonPlacement::Compact),
-            );
-            settings.max_log_lines = max_lines as i32;
-            ui.small(i18n::t(i18n::Key::HintLogSession, lang));
-        });
 
         let should_scroll_to_bottom = !auto_scroll_before && settings.auto_scroll_logs;
 
         ui.add_space(4.0);
 
         if progress > 0.0 {
-            let pct = (progress * 100.0).round() as u32;
-            ui.small(format!(
-                "{}: {}/100%",
-                i18n::t(i18n::Key::LabelPreFillProgress, lang),
-                pct
-            ));
-            ui.add(winui::FluentProgressBar::new(progress));
+            ui.horizontal(|ui| {
+                ui.small(i18n::t(i18n::Key::LabelPreFillProgress, lang));
+                ui.add(
+                    winui::FluentProgressBar::new(progress).show_percentage(true),
+                );
+            });
             ui.add_space(4.0);
         }
 
