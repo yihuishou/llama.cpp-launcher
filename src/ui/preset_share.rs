@@ -165,7 +165,7 @@ pub struct ParamsExport {
 
     #[serde(default = "default_true")]
     pub enable_kv_offload: bool,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub enable_kv_unified: bool,
     pub kv_offload: bool,
     pub cache_type_k: String,
@@ -228,7 +228,7 @@ pub struct ParamsExport {
     // 独立启用开关（默认开启，关闭时不拼接 --gpu-layers）
     #[serde(default = "default_true")]
     pub enable_gpu_layers: bool,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub enable_split_mode: bool,
     pub split_mode: String,
     pub tensor_split: String,
@@ -245,7 +245,7 @@ pub struct ParamsExport {
     pub enable_reasoning_format: bool,
     #[serde(default = "default_true")]
     pub enable_reasoning_effort: bool,
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub enable_reasoning_budget: bool,
     #[serde(default = "default_true")]
     pub enable_reasoning_preserve: bool,
