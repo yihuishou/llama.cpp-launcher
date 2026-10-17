@@ -1127,13 +1127,11 @@ fn render_share_tab(
 
     ui.add_space(6.0);
     ui.horizontal(|ui| {
-        if ui
-            .add_enabled(
-                !share.share_selected.is_empty(),
-                winui::AccentButton::new(i18n::t(i18n::Key::ShareGenBtn, lang)),
-            )
-            .clicked()
-        {
+        if widgets::accent_button(
+            ui,
+            i18n::t(i18n::Key::ShareGenBtn, lang),
+            !share.share_selected.is_empty(),
+        ) {
             let items: Vec<(&str, &Preset)> = settings
                 .presets
                 .iter()
@@ -1205,13 +1203,11 @@ fn render_import_tab(
         });
     ui.add_space(4.0);
     ui.horizontal(|ui| {
-        if ui
-            .add_enabled(
-                !share.import_text.trim().is_empty(),
-                winui::AccentButton::new(i18n::t(i18n::Key::ShareExtractBtn, lang)),
-            )
-            .clicked()
-        {
+        if widgets::accent_button(
+            ui,
+            i18n::t(i18n::Key::ShareExtractBtn, lang),
+            !share.import_text.trim().is_empty(),
+        ) {
             match decode_share_code(&share.import_text) {
                 Ok((gen, items, decl)) => {
                     if items.is_empty() {
@@ -1292,10 +1288,11 @@ fn render_import_tab(
     ui.horizontal(|ui| {
         if let Some(items) = share.import_items.clone() {
             let any_selected = share.import_selected.iter().any(|s| *s);
-            if ui
-                .add_enabled(any_selected, winui::AccentButton::new(i18n::t(i18n::Key::ShareAddBtn, lang)))
-                .clicked()
-            {
+            if widgets::accent_button(
+                ui,
+                i18n::t(i18n::Key::ShareAddBtn, lang),
+                any_selected,
+            ) {
                 let mut added = 0usize;
                 for (i, (name, params)) in items.iter().enumerate() {
                     if share.import_selected.get(i).copied().unwrap_or(false) {

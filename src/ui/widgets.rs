@@ -25,6 +25,41 @@ pub(crate) fn current_theme(ui: &Ui) -> FluentTheme {
     }
 }
 
+/// Accent 按钮（禁用态自绘）。
+/// fluent-egui 0.1.1 的禁用 accent 按钮用中性填充 control_bg×0.6（明亮主题下近白）
+/// + 浅灰文字 text_disabled，在白色弹窗背景上整体不可见，且无覆盖入口；
+/// 禁用时改自绘半透明 accent 填充 + 1px 边框（WinUI 禁用 accent 语义），
+/// 启用态直接走库的 AccentButton。返回是否被点击（禁用恒 false）。
+pub fn accent_button(ui: &mut Ui, text: &str, enabled: bool) -> bool {
+    if enabled {
+        return ui.add(winui::AccentButton::new(text)).clicked();
+    }
+    let p = winui::palette(current_theme(ui));
+    let font_id = egui::TextStyle::Button.resolve(ui.style());
+    let galley = ui
+        .painter()
+        .layout_no_wrap(text.to_string(), font_id, p.text_disabled);
+    // 几何与 FluentButton 一致：min_width(0) 时宽 = 文字宽 + 24，高 32
+    let raw_w = galley.size().x + 24.0;
+    let avail_w = ui.available_width();
+    let width = if avail_w > 0.0 { raw_w.min(avail_w) } else { raw_w };
+    let (rect, _response) = ui.allocate_exact_size(egui::vec2(width, 32.0), Sense::hover());
+    // 51% 不透明 accent 填充：明亮/深色主题下均与背景形成可辨识的按钮体
+    let fill = Color32::from_rgba_unmultiplied(p.accent.r(), p.accent.g(), p.accent.b(), 130);
+    ui.painter()
+        .rect(rect, 4.0, fill, Stroke::new(1.0, p.control_border), StrokeKind::Inside);
+    // 文字位置与 FluentButton 一致（TEXT_Y_NUDGE = -0.5）
+    ui.painter().galley(
+        Pos2::new(
+            rect.min.x + (width - galley.size().x) * 0.5,
+            rect.center().y - galley.size().y * 0.5 - 0.5,
+        ),
+        galley,
+        p.text_disabled,
+    );
+    false
+}
+
 // ──── 自绘组件的尺寸常量 ────
 
 /// rounded_button 的圆角 = 6px（比 HTML --radius-ctl:8px 更方正，用户明确要求）。
