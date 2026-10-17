@@ -1476,7 +1476,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         ui.add_enabled(
                             settings.kvmem_nvme_gb > 0.0,
-                            egui::Checkbox::new(
+                            winui::FluentCheckBox::new(
                                 &mut settings.kvmem_raw_k_nvme,
                                 i18n::t(i18n::Key::LabelKvmemRawKNvme, lang),
                             ),

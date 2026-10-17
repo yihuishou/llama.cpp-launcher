@@ -1100,7 +1100,10 @@ fn render_share_tab(
         .show(ui, |ui| {
             for preset in &settings.presets {
                 let mut checked = share.share_selected.contains(&preset.name);
-                if ui.checkbox(&mut checked, &preset.name).changed() {
+                if ui
+                    .add(winui::FluentCheckBox::new(&mut checked, &preset.name))
+                    .changed()
+                {
                     if checked && !share.share_selected.contains(&preset.name) {
                         share.share_selected.push(preset.name.clone());
                     } else if !checked {
