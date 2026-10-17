@@ -698,6 +698,10 @@ impl ServerManager {
             args.push("--n-cpu-moe".to_string());
             args.push(settings.n_cpu_moe.to_string());
         }
+        if settings.n_cpu_ffn > 0 {
+            args.push("--n-cpu-ffn".to_string());
+            args.push(settings.n_cpu_ffn.to_string());
+        }
         if settings.enable_override_tensor && !settings.override_tensor.is_empty() {
             args.push("--override-tensor".to_string());
             args.push(settings.override_tensor.clone());
@@ -1461,6 +1465,10 @@ impl ServerManager {
         // 关闭 cpu_moe 时才拼接 --n-cpu-moe
         if !settings.cpu_moe && settings.n_cpu_moe > 0 {
             cmd.arg("--n-cpu-moe").arg(settings.n_cpu_moe.to_string());
+        }
+        // 前 N 层 dense FFN 权重保留在 CPU（dense 模型，N>0 才拼接）
+        if settings.n_cpu_ffn > 0 {
+            cmd.arg("--n-cpu-ffn").arg(settings.n_cpu_ffn.to_string());
         }
         // 指定特定张量到缓冲区（非空才拼接）
         if settings.enable_override_tensor && !settings.override_tensor.is_empty() {

@@ -664,6 +664,11 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         ui.add(egui::DragValue::new(&mut settings.n_cpu_moe).range(0..=256));
                         ui.small(i18n::t(i18n::Key::HintNCpuMoe, lang));
                     });
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelNCpuFfn, lang));
+                        ui.add(egui::DragValue::new(&mut settings.n_cpu_ffn).range(0..=256));
+                        ui.small(i18n::t(i18n::Key::HintNCpuFfn, lang));
+                    });
                 });
             }
             // 指定特定张量到缓冲区

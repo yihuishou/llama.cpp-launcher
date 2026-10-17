@@ -234,6 +234,8 @@ pub struct ParamsExport {
     pub tensor_split: String,
     pub cpu_moe: bool,
     pub n_cpu_moe: usize,
+    #[serde(default)]
+    pub n_cpu_ffn: usize,
 
     #[serde(default = "default_true")]
     pub enable_reasoning: bool,
@@ -366,6 +368,7 @@ impl ParamsExport {
             tensor_split: s.tensor_split.clone(),
             cpu_moe: s.cpu_moe,
             n_cpu_moe: s.n_cpu_moe,
+            n_cpu_ffn: s.n_cpu_ffn,
             enable_reasoning: s.enable_reasoning,
             enable_reasoning_format: s.enable_reasoning_format,
             enable_reasoning_effort: s.enable_reasoning_effort,
@@ -467,6 +470,7 @@ impl ParamsExport {
         s.tensor_split = self.tensor_split;
         s.cpu_moe = self.cpu_moe;
         s.n_cpu_moe = self.n_cpu_moe;
+        s.n_cpu_ffn = self.n_cpu_ffn;
         s.enable_reasoning = self.enable_reasoning;
         s.enable_reasoning_format = self.enable_reasoning_format;
         s.enable_reasoning_effort = self.enable_reasoning_effort;
@@ -572,6 +576,7 @@ impl ParamsExport {
             tensor_split: p.tensor_split.clone(),
             cpu_moe: p.cpu_moe,
             n_cpu_moe: p.n_cpu_moe,
+            n_cpu_ffn: p.n_cpu_ffn,
             enable_reasoning: p.enable_reasoning,
             enable_reasoning_format: p.enable_reasoning_format,
             enable_reasoning_effort: p.enable_reasoning_effort,
@@ -676,6 +681,7 @@ impl ParamsExport {
         p.tensor_split = self.tensor_split;
         p.cpu_moe = self.cpu_moe;
         p.n_cpu_moe = self.n_cpu_moe;
+        p.n_cpu_ffn = self.n_cpu_ffn;
         p.enable_reasoning = self.enable_reasoning;
         p.enable_reasoning_format = self.enable_reasoning_format;
         p.enable_reasoning_effort = self.enable_reasoning_effort;

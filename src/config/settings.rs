@@ -1197,6 +1197,9 @@ pub struct Preset {
     pub tensor_split: String,
     pub cpu_moe: bool,
     pub n_cpu_moe: usize,
+    // 前 N 层 dense FFN 权重保留在 CPU（dense 模型；MoE 专家权重用 n_cpu_moe）
+    #[serde(default)]
+    pub n_cpu_ffn: usize,
     #[serde(default)]
     pub override_tensor: String, // --override-tensor
     // 高级
@@ -1512,6 +1515,7 @@ impl Default for Preset {
             tensor_split: "".to_string(),
             cpu_moe: false,
             n_cpu_moe: 0,
+            n_cpu_ffn: 0,
             override_tensor: String::new(),
             verbose: false,
             offline_mode: false,
@@ -1760,6 +1764,7 @@ impl Preset {
             tensor_split: settings.tensor_split.clone(),
             cpu_moe: settings.cpu_moe,
             n_cpu_moe: settings.n_cpu_moe,
+            n_cpu_ffn: settings.n_cpu_ffn,
             override_tensor: settings.override_tensor.clone(),
             verbose: settings.verbose,
             offline_mode: settings.offline_mode,
@@ -2009,6 +2014,7 @@ impl Preset {
         settings.tensor_split = self.tensor_split;
         settings.cpu_moe = self.cpu_moe;
         settings.n_cpu_moe = self.n_cpu_moe;
+        settings.n_cpu_ffn = self.n_cpu_ffn;
         settings.override_tensor = self.override_tensor;
         settings.verbose = self.verbose;
         settings.offline_mode = self.offline_mode;
@@ -2545,6 +2551,9 @@ pub struct AppSettings {
     pub tensor_split: String,
     pub cpu_moe: bool,
     pub n_cpu_moe: usize,
+    // 前 N 层 dense FFN 权重保留在 CPU（dense 模型；MoE 专家权重用 n_cpu_moe）
+    #[serde(default)]
+    pub n_cpu_ffn: usize,
     #[serde(default)]
     pub override_tensor: String, // --override-tensor
 
@@ -3020,6 +3029,7 @@ impl Default for AppSettings {
             tensor_split: "".to_string(),
             cpu_moe: false,
             n_cpu_moe: 0,
+            n_cpu_ffn: 0,
             override_tensor: String::new(),
             rpc_server_path: PathBuf::new(),
             rpc_host: "127.0.0.1".to_string(),
