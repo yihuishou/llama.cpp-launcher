@@ -1465,6 +1465,20 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             egui::TextEdit::singleline(&mut settings.kvmem_nvme_dir)
                                 .desired_width(200.0),
                         );
+                        if ui
+                            .add(winui::FluentButton::new(i18n::t(
+                                i18n::Key::BtnBrowse,
+                                lang,
+                            )))
+                            .clicked()
+                        {
+                            if let Some(path) = rfd::FileDialog::new()
+                                .set_title("Select NVMe spill directory")
+                                .pick_folder()
+                            {
+                                settings.kvmem_nvme_dir = path.to_string_lossy().to_string();
+                            }
+                        }
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemNvmeDir, lang));
                     });
                     ui.horizontal(|ui| {
@@ -2247,7 +2261,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     });
                 });
             }
-            // logit 偏置（--logit-bias）
+            // Logit 偏置（--logit-bias）
             ui.horizontal(|ui| {
                 ui.label(i18n::t(i18n::Key::AdvLogitBias, lang));
                 ui.add(winui::FluentTextEdit::new(&mut settings.logit_bias));
