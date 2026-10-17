@@ -4,7 +4,7 @@ use crate::i18n;
 use crate::ui::widgets;
 use fluent_egui::winui;
 
-/// 启动命令后处理：exe 路径之后，每 3 个逻辑参数以 " /" 换行，末行不补 "/"。
+/// 启动命令后处理：exe 路径之后，每 6 个逻辑参数以 " /" 换行，末行不补 "/"。
 /// 逻辑参数 = 以 "--" 开头的 flag 及其后续值 token 整体（如 `--model a.gguf` 算 1 个参数）；
 /// 含空格的值 token 不触发新参数，始终归入当前参数，因此 flag/值成对不被拆散。
 fn wrap_launch_command(cmd: &str) -> String {
@@ -28,9 +28,9 @@ fn wrap_launch_command(cmd: &str) -> String {
     if let Some(c) = cur {
         args.push(c);
     }
-    let groups = args.chunks(3).count().max(1);
+    let groups = args.chunks(6).count().max(1);
     let mut out = String::from(exe);
-    for (i, chunk) in args.chunks(3).enumerate() {
+    for (i, chunk) in args.chunks(6).enumerate() {
         if i > 0 {
             out.push('\n');
         } else {
@@ -116,48 +116,48 @@ mod tests {
         assert_eq!(wrap_launch_command("llama-server.exe"), "llama-server.exe");
     }
 
-    /// 参数不足 3 个 → 不换行
+    /// 参数不足 6 个 → 不换行
     #[test]
-    fn wrap_fewer_than_three_args() {
+    fn wrap_fewer_than_six_args() {
         assert_eq!(
-            wrap_launch_command("exe --model a.gguf --ctx 4096"),
-            "exe --model a.gguf --ctx 4096"
+            wrap_launch_command("exe --a 1 --b 2 --c 3 --d 4 --e 5"),
+            "exe --a 1 --b 2 --c 3 --d 4 --e 5"
         );
     }
 
-    /// 恰好 3 个参数 → 单行不换行（末行不补 /）
+    /// 恰好 6 个参数 → 单行不换行（末行不补 /）
     #[test]
-    fn wrap_exactly_three_args_no_trailing_slash() {
-        assert_eq!(
-            wrap_launch_command("exe --a 1 --b 2 --c 3"),
-            "exe --a 1 --b 2 --c 3"
-        );
-    }
-
-    /// 4 个参数 → 前 3 个后换行
-    #[test]
-    fn wrap_four_args_breaks_after_three() {
-        assert_eq!(
-            wrap_launch_command("exe --a 1 --b 2 --c 3 --d 4"),
-            "exe --a 1 --b 2 --c 3 /\n--d 4"
-        );
-    }
-
-    /// 6 个参数 → 两组，末行无 /
-    #[test]
-    fn wrap_six_args_two_groups() {
+    fn wrap_exactly_six_args_no_trailing_slash() {
         assert_eq!(
             wrap_launch_command("exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6"),
-            "exe --a 1 --b 2 --c 3 /\n--d 4 --e 5 --f 6"
+            "exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6"
         );
     }
 
-    /// 7 个参数 → 三组，仅前两行带 /
+    /// 7 个参数 → 前 6 个后换行
     #[test]
-    fn wrap_seven_args_three_groups() {
+    fn wrap_seven_args_breaks_after_six() {
         assert_eq!(
             wrap_launch_command("exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 --g 7"),
-            "exe --a 1 --b 2 --c 3 /\n--d 4 --e 5 --f 6 /\n--g 7"
+            "exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 /\n--g 7"
+        );
+    }
+
+    /// 12 个参数 → 两组各 6 个，末行无 /
+    #[test]
+    fn wrap_twelve_args_two_groups() {
+        assert_eq!(
+            wrap_launch_command("exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 --g 7 --h 8 --i 9 --j 10 --k 11 --l 12"),
+            "exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 /\n--g 7 --h 8 --i 9 --j 10 --k 11 --l 12"
+        );
+    }
+
+    /// 13 个参数 → 三组，仅前两行带 /
+    #[test]
+    fn wrap_thirteen_args_three_groups() {
+        assert_eq!(
+            wrap_launch_command("exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 --g 7 --h 8 --i 9 --j 10 --k 11 --l 12 --m 13"),
+            "exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 /\n--g 7 --h 8 --i 9 --j 10 --k 11 --l 12 /\n--m 13"
         );
     }
 }
