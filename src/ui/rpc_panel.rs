@@ -419,4 +419,5 @@ pub fn ui(
             }
         }
     });
+    ui.add_space(2.0);
 }
