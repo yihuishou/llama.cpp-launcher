@@ -977,8 +977,8 @@ fn decode_share_code(
 #[derive(Default)]
 pub struct PresetShareUi {
     pub open: bool,
-    /// 0 = 分享预设页，1 = 引入预设页
-    pub tab: u8,
+    /// 0 = 分享预设页，1 = 引入预设页（usize 适配 winui::SegmentedControl）
+    pub tab: usize,
     /// 分享页：勾选的预设名
     pub share_selected: Vec<String>,
     /// 分享页：生成的分享码
@@ -1039,44 +1039,14 @@ pub fn share_window(
         520.0,
         420.0,
         |ui, _avail_h| {
-            let accent = crate::theme::accent_color(&settings.accent_color);
-            // 顶部标签页：两个按钮各占可用宽度一半（现代化分段样式，选中态主题色填充）
-            ui.horizontal(|ui| {
-                let gap = ui.spacing_mut().item_spacing.x;
-                let half_w = (ui.available_width() - gap) / 2.0;
-                let tab_share = share.tab == 0;
-                let tab_import = share.tab == 1;
-                let btn = |ui: &mut egui::Ui, selected: bool, label: &str, w: f32| {
-                    // 选中态用主题色填充 + 反色文字；未选中态用默认主文本色（随主题切换）
-                    let text = egui::RichText::new(label);
-                    let btn = if selected {
-                        egui::Button::new(text.color(widgets::contrast_text(accent))).fill(accent)
-                    } else {
-                        egui::Button::new(text).fill(ui.visuals().widgets.inactive.bg_fill)
-                    };
-                    ui.add_sized([w, 26.0], btn)
-                };
-                if btn(
-                    ui,
-                    tab_share,
+            // 顶部标签页：组件库 SegmentedControl（WinUI 分段样式，整宽占满）
+            ui.add(
+                winui::SegmentedControl::new(&mut share.tab, [
                     i18n::t(i18n::Key::ShareTabShare, lang),
-                    half_w,
-                )
-                .clicked()
-                {
-                    share.tab = 0;
-                }
-                if btn(
-                    ui,
-                    tab_import,
                     i18n::t(i18n::Key::ShareTabImport, lang),
-                    half_w,
-                )
-                .clicked()
-                {
-                    share.tab = 1;
-                }
-            });
+                ])
+                .width(ui.available_width()),
+            );
             ui.separator();
 
             if share.tab == 0 {
@@ -1108,26 +1078,16 @@ fn render_share_tab(
     share: &mut PresetShareUi,
     lang: &i18n::Language,
 ) {
-    if settings.presets.is_empty() {
-        // 空态提示水平+垂直居中：弹窗内容区固定高度，内容不足时下方留白，
-        // 手动补半空白实现垂直居中，水平交给 horizontal_centered
-        let area_h = ui.available_height();
-        ui.add_space((area_h - 24.0).max(0.0) / 2.0);
-        ui.horizontal_centered(|ui| {
-            ui.small(i18n::t(i18n::Key::HintNoPresets, lang));
-        });
-        return;
-    }
     // 全选 / 全不选
     ui.horizontal(|ui| {
         if ui
-            .small_button(i18n::t(i18n::Key::ShareSelectAll, lang))
+            .add(winui::FluentButton::new(i18n::t(i18n::Key::ShareSelectAll, lang)))
             .clicked()
         {
             share.share_selected = settings.presets.iter().map(|p| p.name.clone()).collect();
         }
         if ui
-            .small_button(i18n::t(i18n::Key::ShareSelectNone, lang))
+            .add(winui::FluentButton::new(i18n::t(i18n::Key::ShareSelectNone, lang)))
             .clicked()
         {
             share.share_selected.clear();
@@ -1155,7 +1115,7 @@ fn render_share_tab(
         if ui
             .add_enabled(
                 !share.share_selected.is_empty(),
-                widgets::rounded_button(i18n::t(i18n::Key::ShareGenBtn, lang), None),
+                winui::AccentButton::new(i18n::t(i18n::Key::ShareGenBtn, lang)),
             )
             .clicked()
         {
@@ -1191,7 +1151,10 @@ fn render_share_tab(
                 );
             });
         ui.horizontal(|ui| {
-            if ui.button(i18n::t(i18n::Key::ShareCopyBtn, lang)).clicked() {
+            if ui
+                .add(winui::FluentButton::new(i18n::t(i18n::Key::ShareCopyBtn, lang)))
+                .clicked()
+            {
                 ui.ctx().copy_text(share.share_code.clone());
                 share.copied = true;
             }
@@ -1230,7 +1193,7 @@ fn render_import_tab(
         if ui
             .add_enabled(
                 !share.import_text.trim().is_empty(),
-                widgets::rounded_button(i18n::t(i18n::Key::ShareExtractBtn, lang), None),
+                winui::AccentButton::new(i18n::t(i18n::Key::ShareExtractBtn, lang)),
             )
             .clicked()
         {
@@ -1263,7 +1226,7 @@ fn render_import_tab(
             }
         }
         if ui
-            .small_button(i18n::t(i18n::Key::BtnPasteShareCode, lang))
+            .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnPasteShareCode, lang)))
             .clicked()
         {
             if let Ok(text) =
@@ -1315,10 +1278,7 @@ fn render_import_tab(
         if let Some(items) = share.import_items.clone() {
             let any_selected = share.import_selected.iter().any(|s| *s);
             if ui
-                .add_enabled(
-                    any_selected,
-                    widgets::rounded_button(i18n::t(i18n::Key::ShareAddBtn, lang), None),
-                )
+                .add_enabled(any_selected, winui::AccentButton::new(i18n::t(i18n::Key::ShareAddBtn, lang)))
                 .clicked()
             {
                 let mut added = 0usize;
@@ -1346,7 +1306,7 @@ fn render_import_tab(
                 share.import_text.clear();
             }
             if ui
-                .button(i18n::t(i18n::Key::ShareCancelBtn, lang))
+                .add(winui::FluentButton::new(i18n::t(i18n::Key::ShareCancelBtn, lang)))
                 .clicked()
             {
                 share.import_items = None;
