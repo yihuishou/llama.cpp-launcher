@@ -2813,4 +2813,6 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
         },
     );
+    // 底部留 2px，与预设/日志面板的底部边距约定一致
+    ui.add_space(2.0);
 }

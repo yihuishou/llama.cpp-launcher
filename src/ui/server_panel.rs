@@ -844,6 +844,8 @@ pub fn ui(
             });
         },
     );
+    // 底部留 2px，与预设/日志面板的底部边距约定一致
+    ui.add_space(2.0);
 }
 
 /// 运行 llama-server --version，返回解析出的版本字符串

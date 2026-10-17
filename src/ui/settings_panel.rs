@@ -714,6 +714,8 @@ pub fn ui(
             ui.add(winui::FluentProgressBar::new(frac));
         }
     });
+    // 底部留 2px，与预设/日志面板的底部边距约定一致
+    ui.add_space(2.0);
 }
 
 /// 构建 systemd 服务文件内容
