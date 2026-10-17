@@ -1256,6 +1256,9 @@ pub struct Preset {
     // 网页客户端开关
     #[serde(default = "default_web_ui_enabled")]
     pub web_ui_enabled: bool,
+    // 网页客户端静态文件目录（--path；留空用 llama-server 内置 Web UI）
+    #[serde(default)]
+    pub static_path: String,
 
     // 日志时间戳外层启用开关（未勾选时不拼接 --log-timestamps / --no-log-timestamps）
     #[serde(default = "default_true")]
@@ -1542,6 +1545,7 @@ impl Default for Preset {
             rpc_device: String::new(),
             rpc_cache: false,
             web_ui_enabled: default_web_ui_enabled(),
+            static_path: String::new(),
             enable_log_timestamps: true,
             log_timestamps: default_log_timestamps(),
             log_verbosity: default_log_verbosity(),
@@ -1790,6 +1794,7 @@ impl Preset {
             rpc_device: settings.rpc_device.clone(),
             rpc_cache: settings.rpc_cache,
             web_ui_enabled: settings.web_ui_enabled,
+            static_path: settings.static_path.clone(),
             enable_log_timestamps: settings.enable_log_timestamps,
             log_timestamps: settings.log_timestamps,
             log_verbosity: settings.log_verbosity,
@@ -2040,6 +2045,7 @@ impl Preset {
         settings.rpc_device = self.rpc_device;
         settings.rpc_cache = self.rpc_cache;
         settings.web_ui_enabled = self.web_ui_enabled;
+        settings.static_path = self.static_path.clone();
         settings.enable_log_timestamps = self.enable_log_timestamps;
         settings.log_timestamps = self.log_timestamps;
         settings.log_verbosity = self.log_verbosity;
@@ -2581,6 +2587,9 @@ pub struct AppSettings {
     // 网页客户端开关（默认启用）
     #[serde(default = "default_web_ui_enabled")]
     pub web_ui_enabled: bool,
+    // 网页客户端静态文件目录（--path）
+    #[serde(default)]
+    pub static_path: String,
 
     // 日志时间戳外层启用开关（未勾选时不拼接 --log-timestamps / --no-log-timestamps）
     #[serde(default = "default_true")]
@@ -3042,6 +3051,7 @@ impl Default for AppSettings {
             rpc_mode: false,
             rpc_endpoints: "127.0.0.1:50052".to_string(),
             web_ui_enabled: default_web_ui_enabled(),
+            static_path: String::new(),
             enable_log_timestamps: true,
             log_timestamps: default_log_timestamps(),
             log_verbosity: default_log_verbosity(),

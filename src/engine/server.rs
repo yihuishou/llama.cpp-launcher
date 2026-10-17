@@ -780,6 +780,12 @@ impl ServerManager {
             args.push(settings.log_verbosity.to_string());
         }
 
+        // 网页客户端静态文件目录（留空用 llama-server 内置 Web UI）
+        if !settings.static_path.is_empty() {
+            args.push("--path".to_string());
+            args.push(settings.static_path.clone());
+        }
+
         // 加载模式
         if settings.enable_load_mode
             && !settings.load_mode.is_empty()
@@ -1553,6 +1559,11 @@ impl ServerManager {
             cmd.arg("--webui");
         } else {
             cmd.arg("--no-webui");
+        }
+
+        // 网页客户端静态文件目录（留空用 llama-server 内置 Web UI）
+        if !settings.static_path.is_empty() {
+            cmd.arg("--path").arg(&settings.static_path);
         }
 
         // ===== 高级参数（长上下文 / 采样 / 适配器 / 服务 / 加载性能）=====

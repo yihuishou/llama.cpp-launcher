@@ -236,6 +236,8 @@ pub struct ParamsExport {
     pub n_cpu_moe: usize,
     #[serde(default)]
     pub n_cpu_ffn: usize,
+    #[serde(default)]
+    pub static_path: String,
 
     #[serde(default = "default_true")]
     pub enable_reasoning: bool,
@@ -369,6 +371,7 @@ impl ParamsExport {
             cpu_moe: s.cpu_moe,
             n_cpu_moe: s.n_cpu_moe,
             n_cpu_ffn: s.n_cpu_ffn,
+            static_path: s.static_path.clone(),
             enable_reasoning: s.enable_reasoning,
             enable_reasoning_format: s.enable_reasoning_format,
             enable_reasoning_effort: s.enable_reasoning_effort,
@@ -471,6 +474,7 @@ impl ParamsExport {
         s.cpu_moe = self.cpu_moe;
         s.n_cpu_moe = self.n_cpu_moe;
         s.n_cpu_ffn = self.n_cpu_ffn;
+        s.static_path = self.static_path.clone();
         s.enable_reasoning = self.enable_reasoning;
         s.enable_reasoning_format = self.enable_reasoning_format;
         s.enable_reasoning_effort = self.enable_reasoning_effort;
@@ -577,6 +581,7 @@ impl ParamsExport {
             cpu_moe: p.cpu_moe,
             n_cpu_moe: p.n_cpu_moe,
             n_cpu_ffn: p.n_cpu_ffn,
+            static_path: p.static_path.clone(),
             enable_reasoning: p.enable_reasoning,
             enable_reasoning_format: p.enable_reasoning_format,
             enable_reasoning_effort: p.enable_reasoning_effort,
@@ -682,6 +687,7 @@ impl ParamsExport {
         p.cpu_moe = self.cpu_moe;
         p.n_cpu_moe = self.n_cpu_moe;
         p.n_cpu_ffn = self.n_cpu_ffn;
+        p.static_path = self.static_path.clone();
         p.enable_reasoning = self.enable_reasoning;
         p.enable_reasoning_format = self.enable_reasoning_format;
         p.enable_reasoning_effort = self.enable_reasoning_effort;

@@ -677,6 +677,34 @@ pub fn ui(
                 accent,
             );
 
+            // 网页客户端静态文件目录（--path）：启用时缩进显示，浏览按钮选择文件夹
+            if settings.web_ui_enabled {
+                ui.indent("webui_path_opt", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::LabelWebUiPath, lang));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut settings.static_path)
+                                .desired_width(200.0),
+                        );
+                        if ui
+                            .add(winui::FluentButton::new(i18n::t(
+                                i18n::Key::BtnBrowse,
+                                lang,
+                            )))
+                            .clicked()
+                        {
+                            if let Some(path) = rfd::FileDialog::new()
+                                .set_title("Select static files directory")
+                                .pick_folder()
+                            {
+                                settings.static_path = path.to_string_lossy().to_string();
+                            }
+                        }
+                        helper::help_button_inline(ui, i18n::t(i18n::Key::HelpWebUiPath, lang));
+                    });
+                });
+            }
+
             // 日志级别启用开关（开关位于行首）
             // 直接放开关+标签（不复用 widgets::toggle），与「网页客户端」行保持单一间距
             ui.horizontal(|ui| {
