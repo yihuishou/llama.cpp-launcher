@@ -42,12 +42,21 @@ pub fn accent_button(ui: &mut Ui, text: &str, enabled: bool) -> bool {
     // 几何与 FluentButton 一致：min_width(0) 时宽 = 文字宽 + 24，高 32
     let raw_w = galley.size().x + 24.0;
     let avail_w = ui.available_width();
-    let width = if avail_w > 0.0 { raw_w.min(avail_w) } else { raw_w };
+    let width = if avail_w > 0.0 {
+        raw_w.min(avail_w)
+    } else {
+        raw_w
+    };
     let (rect, _response) = ui.allocate_exact_size(egui::vec2(width, 32.0), Sense::hover());
     // 51% 不透明 accent 填充：明亮/深色主题下均与背景形成可辨识的按钮体
     let fill = Color32::from_rgba_unmultiplied(p.accent.r(), p.accent.g(), p.accent.b(), 130);
-    ui.painter()
-        .rect(rect, 4.0, fill, Stroke::new(1.0, p.control_border), StrokeKind::Inside);
+    ui.painter().rect(
+        rect,
+        4.0,
+        fill,
+        Stroke::new(1.0, p.control_border),
+        StrokeKind::Inside,
+    );
     // 文字位置与 FluentButton 一致（TEXT_Y_NUDGE = -0.5）
     ui.painter().galley(
         Pos2::new(

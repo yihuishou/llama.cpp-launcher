@@ -147,7 +147,9 @@ mod tests {
     #[test]
     fn wrap_twelve_args_two_groups() {
         assert_eq!(
-            wrap_launch_command("exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 --g 7 --h 8 --i 9 --j 10 --k 11 --l 12"),
+            wrap_launch_command(
+                "exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 --g 7 --h 8 --i 9 --j 10 --k 11 --l 12"
+            ),
             "exe --a 1 --b 2 --c 3 --d 4 --e 5 --f 6 /\n--g 7 --h 8 --i 9 --j 10 --k 11 --l 12"
         );
     }

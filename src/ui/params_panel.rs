@@ -477,7 +477,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     // 对话模板文件 (--chat-template-file)
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelChatTemplateFile, lang));
-                        let mut file_str = settings.chat_template_file.to_string_lossy().to_string();
+                        let mut file_str =
+                            settings.chat_template_file.to_string_lossy().to_string();
                         let response = ui.add(winui::FluentTextEdit::new(&mut file_str));
                         if response.changed() {
                             settings.chat_template_file = std::path::PathBuf::from(&file_str);
@@ -638,7 +639,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             if ui
                                 .add_enabled(
                                     !split_empty,
-                                    winui::FluentButton::new(i18n::t(i18n::Key::BtnClearTensorSplit, lang)),
+                                    winui::FluentButton::new(i18n::t(
+                                        i18n::Key::BtnClearTensorSplit,
+                                        lang,
+                                    )),
                                 )
                                 .clicked()
                             {

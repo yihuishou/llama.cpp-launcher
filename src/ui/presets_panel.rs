@@ -44,7 +44,10 @@ pub fn ui(
         |ui| {
             // 标题行最右：分享/引入预设入口（组件库 AccentButton，与"保存预设"一致）
             if ui
-                .add(winui::AccentButton::new(i18n::t(i18n::Key::BtnSharePresets, lang)))
+                .add(winui::AccentButton::new(i18n::t(
+                    i18n::Key::BtnSharePresets,
+                    lang,
+                )))
                 .clicked()
             {
                 header_share_open = true;

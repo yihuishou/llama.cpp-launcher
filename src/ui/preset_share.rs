@@ -1053,16 +1053,21 @@ pub fn share_window(
         |ui, avail_h| {
             // 顶部标签页：组件库 SegmentedControl（WinUI 分段样式，整宽占满）
             let tab_resp = ui.add(
-                winui::SegmentedControl::new(&mut share.tab, [
-                    i18n::t(i18n::Key::ShareTabShare, lang),
-                    i18n::t(i18n::Key::ShareTabImport, lang),
-                ])
+                winui::SegmentedControl::new(
+                    &mut share.tab,
+                    [
+                        i18n::t(i18n::Key::ShareTabShare, lang),
+                        i18n::t(i18n::Key::ShareTabImport, lang),
+                    ],
+                )
                 .width(ui.available_width()),
             );
             let sep_resp = ui.separator();
             // 标签行+分隔线+间隙实测高度：引入页据此把粘贴框撑满剩余空间，不出现外层滚动条
-            let used_h =
-                tab_resp.rect.height() + sep_resp.rect.height() + ui.spacing().item_spacing.y * 2.0 + 12.0;
+            let used_h = tab_resp.rect.height()
+                + sep_resp.rect.height()
+                + ui.spacing().item_spacing.y * 2.0
+                + 12.0;
 
             if share.tab == 0 {
                 render_share_tab(ui, settings, share, lang);
@@ -1096,13 +1101,19 @@ fn render_share_tab(
     // 全选 / 全不选
     ui.horizontal(|ui| {
         if ui
-            .add(winui::FluentButton::new(i18n::t(i18n::Key::ShareSelectAll, lang)))
+            .add(winui::FluentButton::new(i18n::t(
+                i18n::Key::ShareSelectAll,
+                lang,
+            )))
             .clicked()
         {
             share.share_selected = settings.presets.iter().map(|p| p.name.clone()).collect();
         }
         if ui
-            .add(winui::FluentButton::new(i18n::t(i18n::Key::ShareSelectNone, lang)))
+            .add(winui::FluentButton::new(i18n::t(
+                i18n::Key::ShareSelectNone,
+                lang,
+            )))
             .clicked()
         {
             share.share_selected.clear();
@@ -1168,7 +1179,10 @@ fn render_share_tab(
             });
         ui.horizontal(|ui| {
             if ui
-                .add(winui::FluentButton::new(i18n::t(i18n::Key::ShareCopyBtn, lang)))
+                .add(winui::FluentButton::new(i18n::t(
+                    i18n::Key::ShareCopyBtn,
+                    lang,
+                )))
                 .clicked()
             {
                 ui.ctx().copy_text(share.share_code.clone());
@@ -1204,13 +1218,9 @@ fn render_import_tab(
     };
     // 下方内容（按钮行 32 + 间隙 + 显式间距）实测约 64：少扣会出外层滚动条，多扣会在按钮行下方留空余；
     // 取 66 略多扣防滚动条。按钮行与底分隔线之间恒有 Frame 下边距 12px，属对话框内边距、无法消除
-    let paste_h = (avail_h
-        - label_resp.rect.height()
-        - 32.0
-        - result_reserve
-        - item_sp * 3.0
-        - 22.0)
-        .max(100.0);
+    let paste_h =
+        (avail_h - label_resp.rect.height() - 32.0 - result_reserve - item_sp * 3.0 - 22.0)
+            .max(100.0);
     // 粘贴框：add_sized 强制分配（宽夹到可用宽、高为实测剩余），撑满纵向空间而不撑爆弹窗
     ui.add_sized(
         egui::vec2(ui.available_width(), paste_h),
@@ -1254,7 +1264,10 @@ fn render_import_tab(
             }
         }
         if ui
-            .add(winui::FluentButton::new(i18n::t(i18n::Key::BtnPasteShareCode, lang)))
+            .add(winui::FluentButton::new(i18n::t(
+                i18n::Key::BtnPasteShareCode,
+                lang,
+            )))
             .clicked()
         {
             if let Ok(text) =
@@ -1305,11 +1318,7 @@ fn render_import_tab(
     ui.horizontal(|ui| {
         if let Some(items) = share.import_items.clone() {
             let any_selected = share.import_selected.iter().any(|s| *s);
-            if widgets::accent_button(
-                ui,
-                i18n::t(i18n::Key::ShareAddBtn, lang),
-                any_selected,
-            ) {
+            if widgets::accent_button(ui, i18n::t(i18n::Key::ShareAddBtn, lang), any_selected) {
                 let mut added = 0usize;
                 for (i, (name, params)) in items.iter().enumerate() {
                     if share.import_selected.get(i).copied().unwrap_or(false) {
@@ -1335,7 +1344,10 @@ fn render_import_tab(
                 share.import_text.clear();
             }
             if ui
-                .add(winui::FluentButton::new(i18n::t(i18n::Key::ShareCancelBtn, lang)))
+                .add(winui::FluentButton::new(i18n::t(
+                    i18n::Key::ShareCancelBtn,
+                    lang,
+                )))
                 .clicked()
             {
                 share.import_items = None;

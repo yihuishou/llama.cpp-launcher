@@ -2305,7 +2305,12 @@ mod adv_params_tests {
             .iter()
             .position(|t| *t == "--gpu-layers")
             .unwrap_or_else(|| panic!("应拼接 --gpu-layers，实际命令：\n{}", cmd));
-        assert_eq!(tokens[pos + 1], "0", "CPU 选项应下发 0，实际命令：\n{}", cmd);
+        assert_eq!(
+            tokens[pos + 1],
+            "0",
+            "CPU 选项应下发 0，实际命令：\n{}",
+            cmd
+        );
 
         s.gpu_layers_mode = GpuLayersMode::All;
         let cmd = mgr.build_launch_command(&s);
