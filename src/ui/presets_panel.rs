@@ -150,7 +150,7 @@ pub fn ui(
                 // 空态提示区高度与日志区/预设列表区一致（可用高度-18px，下限 64px）：
                 // 留 18px 余量避免 centered_and_justified 撑满 ScrollArea 内容区
                 //（content == inner 临界触发外层滚动条），同时保留提示文字垂直居中视觉。
-                let empty_h = (ui.available_height() - 18.0).max(64.0);
+                let empty_h = (ui.available_height() - 26.0).max(64.0);
                 ui.allocate_ui_with_layout(
                     egui::vec2(ui.available_width(), empty_h),
                     egui::Layout::centered_and_justified(egui::Direction::TopDown),
@@ -163,7 +163,7 @@ pub fn ui(
                 // 剩余空间-18px，避免 card 总高精确顶满外层 ScrollArea 的 inner
                 // 边界（临界触发外层滚动条，与内层滚动条叠加）；列表矮时
                 // auto_shrink 默认收缩，布局不受影响。
-                let max_h = (ui.available_height() - 18.0).max(64.0);
+                let max_h = (ui.available_height() - 26.0).max(64.0);
                 egui::ScrollArea::vertical()
                     .max_height(max_h)
                     .show(ui, |ui| {

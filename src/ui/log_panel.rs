@@ -91,7 +91,7 @@ fn render(
             // 否则 card 总高精确顶满外层 ScrollArea 的 inner 边界，
             // 任何微差都会触发外层垂直滚动条（同 presets 空态问题），
             // 且滚动条占宽后日志换行加高，锁存持续显示。
-            let max_h = (ui.available_height() - 18.0).max(64.0);
+            let max_h = (ui.available_height() - 26.0).max(64.0);
             let mut viewport_rect = egui::Rect::NOTHING;
             let scroll_output = egui::ScrollArea::vertical()
                 .auto_shrink(false)
