@@ -1346,6 +1346,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0.0..=1024.0)
                                 .speed(1.0),
                         );
+                        ui.label("GiB");
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemCpuGb, lang));
                     });
                 });
@@ -1455,6 +1456,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0.0..=4096.0)
                                 .speed(1.0),
                         );
+                        ui.label("GiB");
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemNvmeGb, lang));
                     });
                     ui.horizontal(|ui| {
