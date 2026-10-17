@@ -42,15 +42,9 @@ pub fn ui(
         accent,
         notice.as_ref().map(|(ok, msg, _)| (*ok, msg.as_str())),
         |ui| {
-            // 标题行最右：分享/引入预设入口
-            // 低饱和度主题色按钮（项目规范，同 app.rs web_accent：主题色 + alpha 175）
-            let share_fill =
-                egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), 175);
+            // 标题行最右：分享/引入预设入口（组件库 AccentButton，与"保存预设"一致）
             if ui
-                .add(widgets::rounded_button(
-                    i18n::t(i18n::Key::BtnSharePresets, lang),
-                    Some(share_fill),
-                ))
+                .add(winui::AccentButton::new(i18n::t(i18n::Key::BtnSharePresets, lang)))
                 .clicked()
             {
                 header_share_open = true;
