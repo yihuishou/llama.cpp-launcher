@@ -1395,61 +1395,53 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelKvmemMethod, lang));
+                        let vals = ["retrieval", "recency"];
+                        let mut idx = vals
+                            .iter()
+                            .position(|v| *v == settings.kvmem_method)
+                            .unwrap_or(0);
+                        widgets::segmented(ui, &vals, &mut idx, accent);
+                        settings.kvmem_method = vals[idx].to_string();
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemMethod, lang));
-                    });
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
-                        for method in ["retrieval", "recency"] {
-                            let selected = settings.kvmem_method == method;
-                            if ui.selectable_label(selected, method).clicked() {
-                                settings.kvmem_method = method.to_string();
-                            }
-                        }
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelKvmemQueryReplay, lang));
+                        let vals = ["auto", "legacy"];
+                        let mut idx = vals
+                            .iter()
+                            .position(|v| *v == settings.kvmem_query_replay)
+                            .unwrap_or(0);
+                        widgets::segmented(ui, &vals, &mut idx, accent);
+                        settings.kvmem_query_replay = vals[idx].to_string();
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::HelpKvmemQueryReplay, lang),
                         );
                     });
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
-                        for replay in ["auto", "legacy"] {
-                            let selected = settings.kvmem_query_replay == replay;
-                            if ui.selectable_label(selected, replay).clicked() {
-                                settings.kvmem_query_replay = replay.to_string();
-                            }
-                        }
-                    });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelKvmemQueryPolicy, lang));
+                        let vals = ["user", "legacy"];
+                        let mut idx = vals
+                            .iter()
+                            .position(|v| *v == settings.kvmem_query_policy)
+                            .unwrap_or(0);
+                        widgets::segmented(ui, &vals, &mut idx, accent);
+                        settings.kvmem_query_policy = vals[idx].to_string();
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::HelpKvmemQueryPolicy, lang),
                         );
                     });
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
-                        for policy in ["user", "legacy"] {
-                            let selected = settings.kvmem_query_policy == policy;
-                            if ui.selectable_label(selected, policy).clicked() {
-                                settings.kvmem_query_policy = policy.to_string();
-                            }
-                        }
-                    });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelKvmemMtpState, lang));
+                        let vals = ["replay", "snapshots", "auto"];
+                        let mut idx = vals
+                            .iter()
+                            .position(|v| *v == settings.kvmem_mtp_state)
+                            .unwrap_or(0);
+                        widgets::segmented(ui, &vals, &mut idx, accent);
+                        settings.kvmem_mtp_state = vals[idx].to_string();
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemMtpState, lang));
-                    });
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing.x = 6.0;
-                        for mtp in ["replay", "snapshots", "auto"] {
-                            let selected = settings.kvmem_mtp_state == mtp;
-                            if ui.selectable_label(selected, mtp).clicked() {
-                                settings.kvmem_mtp_state = mtp.to_string();
-                            }
-                        }
                     });
                 });
 
