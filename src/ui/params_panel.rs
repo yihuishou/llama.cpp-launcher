@@ -1257,7 +1257,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.label(i18n::t(i18n::Key::LabelCheckpointMinStep, lang));
                     ui.add(
                         egui::DragValue::new(&mut settings.checkpoint_min_step)
-                            .range(64..=4096)
+                            .range(0..=8192)
                             .speed(64),
                     );
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCheckpointMinStep, lang));
