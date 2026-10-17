@@ -543,6 +543,7 @@ impl eframe::App for LlamaLauncherApp {
         } else if !self.icon_fonts_loaded {
             let mut fonts = ctx.fonts(|f| f.definitions().clone());
             crate::load_icon_fonts(&mut fonts);
+            crate::load_cjk_font(&mut fonts);
             ctx.set_fonts(fonts);
             self.icon_fonts_loaded = true;
         } else if !self.icon_fonts_ready {

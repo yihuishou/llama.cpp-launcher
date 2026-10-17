@@ -210,3 +210,32 @@ pub fn load_icon_fonts(fonts: &mut FontDefinitions) {
 
     log::info!("iconflow 字体加载完成");
 }
+
+/// 内嵌简体中文字体，作为 Proportional / Monospace 的末位回退
+///
+/// fluent-egui 只在 Windows 注册 Microsoft YaHei（其 install_system_fonts 里
+/// Segoe UI / YaHei 只 push 进 Proportional），egui 自带的 Ubuntu-Light /
+/// Hack / NotoEmoji 无汉字字形；而 epaint 0.35 整条字体链都缺字形时会渲染成
+/// '◻'（PRIMARY_REPLACEMENT_CHAR），故非 Windows 平台满屏方块。
+pub fn load_cjk_font(fonts: &mut FontDefinitions) {
+    const CJK: &str = "Noto Sans SC";
+
+    fonts.font_data.insert(
+        CJK.to_owned(),
+        Arc::new(FontData::from_static(include_bytes!(
+            "../assets/NotoSansSC-Regular.ttf"
+        ))),
+    );
+
+    // 放族尾部而非头部：拉丁字形仍由 Ubuntu-Light / Segoe UI 渲染，Windows 上
+    // YaHei 排在其前则中文观感不变。Monospace 必须一并补——日志面板用
+    // TextStyle::Monospace，该族在任何平台都没有中文字体
+    for family in [FontFamily::Proportional, FontFamily::Monospace] {
+        let list = fonts.families.entry(family).or_default();
+        if !list.iter().any(|name| name == CJK) {
+            list.push(CJK.to_owned());
+        }
+    }
+
+    log::info!("中文字体回退已加载: Noto Sans SC (assets/NotoSansSC-Regular.ttf)");
+}
