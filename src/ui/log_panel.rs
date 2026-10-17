@@ -62,6 +62,10 @@ fn render(
             );
             settings.max_log_lines = max_lines as i32;
             ui.small(i18n::t(i18n::Key::HintLogSession, lang));
+            if progress > 0.0 {
+                ui.label(i18n::t(i18n::Key::LabelPreFillProgress, lang));
+                ui.add(winui::FluentProgressBar::new(progress).show_percentage(true));
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 widgets::toggle_trailing(
                     ui,
@@ -75,16 +79,6 @@ fn render(
         let should_scroll_to_bottom = !auto_scroll_before && settings.auto_scroll_logs;
 
         ui.add_space(4.0);
-
-        if progress > 0.0 {
-            ui.horizontal(|ui| {
-                ui.small(i18n::t(i18n::Key::LabelPreFillProgress, lang));
-                ui.add(
-                    winui::FluentProgressBar::new(progress).show_percentage(true),
-                );
-            });
-            ui.add_space(4.0);
-        }
 
         if settings.max_log_lines != 0 {
             // 日志区撑满剩余高度（auto_shrink(false)），但留 18px 余量：
