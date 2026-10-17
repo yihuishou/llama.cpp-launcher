@@ -7,16 +7,15 @@
 //!    （写入 exe 同目录 update/ 子目录，带进度 + 取消；Linux 资产为压缩包，
 //!    下载后解压出二进制）；
 //! 3. 下载完成 → 自等待者方案（见"自替换"段）：
-//!    - 旧版本 spawn 自身（--updater-switch <pid>）作为无窗口等待者；
-//!    - 旧 exe 改名为 exe.old 腾出正式名（运行中的 exe 允许改名），
-//!      新包改名为正式名；
+//!    - 旧版本 spawn 自身（--updater-switch <pid> <exe_path>）作为无 UI 等待者；
+//!    - Windows：旧 exe 改名为 exe.old 腾出正式名（运行中的 exe 允许改名），
+//!      新包改名为正式名；Linux/macOS：rename 直接覆盖运行中的可执行文件；
 //!    - 主进程随 Installing 状态关闭窗口退出；
 //!    - 等待者等旧进程完全退出后，启动已换入正式名的新版本；
-//!    - 新版本启动时清理 exe.old 与 update 目录残留。
-//!    全程进程 API + Rust fs（宽字符），中英文路径安全，不依赖 cmd/bat
-//!    （cmd /c 引号解析会损坏路径、bat 有代码页乱码问题），且不依赖新版本
-//!    exe 的任何配合——官方历史版本同样可直接更新。
-//!    Linux/macOS 仍走 sh 后台脚本替换。
+//!    - 新版本启动时清理残留（Windows exe.old + update 目录）。
+//!
+//!    全程 Rust fs + 进程 API，无 sh/cmd/bat（避免 shell 转义损坏路径、
+//!    静默失败），且不依赖新版本 exe 的任何配合——官方历史版本同样可直接更新。
 //! 4. 主进程随即退出窗口。
 //!
 //! 网络（超时/UA/代理/分块）统一由 net_proxy 工具模块提供。
@@ -362,15 +361,20 @@ fn worker_download(cancel: Arc<AtomicBool>, status: Arc<Mutex<UpdateStatus>>) {
     let result = run_download(&cancel, &status);
     match result {
         Ok(new_exe) => {
-            let mut st = status.lock().unwrap();
             if cancel.load(Ordering::SeqCst) {
-                st.state = UpdateState::Idle;
+                status.lock().unwrap().state = UpdateState::Idle;
             } else {
-                // 下载完成：启动自替换（拉起的命令行已捕获新 exe 路径）
-                st.state = UpdateState::Installing;
-                st.total = st.done;
-                drop(st);
-                replace_and_restart(&new_exe);
+                // 成功交接才进入 Installing（触发自动关窗）；失败置 Error 供重试，
+                // 避免"替换失败却仍关窗 → 应用静默消失"
+                let result = replace_and_restart(&new_exe);
+                let mut st = status.lock().unwrap();
+                match result {
+                    Ok(()) => {
+                        st.state = UpdateState::Installing;
+                        st.total = st.done;
+                    }
+                    Err(e) => st.state = UpdateState::Error(e),
+                }
             }
         }
         Err(message) => {
@@ -533,115 +537,133 @@ fn run_download(cancel: &AtomicBool, status: &Arc<Mutex<UpdateStatus>>) -> Resul
     Err(ERR_NETWORK.to_string()) // 官方 + 镜像均失败
 }
 
-/// 从 .tar.gz 解压出 launcher 二进制文件
+/// 从 .tar.gz 解压出 launcher 二进制文件（解压后删除压缩包）
 fn extract_linux_binary(archive: &Path, dest_dir: &Path) -> Result<PathBuf, String> {
     let file = File::open(archive).map_err(|e| format!("open archive failed: {}", e))?;
     let decoder = flate2::bufread::GzDecoder::new(BufReader::new(file));
     let mut tar = tar::Archive::new(decoder);
 
-    // 解压到目标目录
     tar.unpack(dest_dir)
         .map_err(|e| format!("extract tar.gz failed: {}", e))?;
+    // 解压完成即可删压缩包：rename 只搬走二进制，否则 tarball 一直残留在 update/
+    let _ = fs::remove_file(archive);
 
-    // 查找解压出的二进制文件（llama_cpp_launcher 或 llama_cpp_launcher.exe）
-    let entries = fs::read_dir(dest_dir).map_err(|e| format!("read dir failed: {}", e))?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_file() {
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            // 匹配 launcher 二进制（排除压缩包本身）
-            if (name.starts_with("llama_cpp_launcher") || name == "llama-cpp-launcher")
-                && !name.ends_with(".tar.gz")
-                && !name.ends_with(".partial")
-            {
-                // 确保文件可执行
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o755));
-                }
-                return Ok(path);
-            }
-        }
+    let entries: Vec<PathBuf> = fs::read_dir(dest_dir)
+        .map_err(|e| format!("read dir failed: {}", e))?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_file())
+        .collect();
+
+    // 两遍扫描：先精确名，再前缀回退（防 read_dir 任意顺序误取同前缀的 man 页/脚本）
+    let pick = entries
+        .iter()
+        .find(|p| {
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n == "llama_cpp_launcher" || n == "llama-cpp-launcher")
+        })
+        .or_else(|| {
+            entries.iter().find(|p| {
+                p.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
+                    (n.starts_with("llama_cpp_launcher") || n.starts_with("llama-cpp-launcher"))
+                        && !n.ends_with(".tar.gz")
+                        && !n.ends_with(".partial")
+                })
+            })
+        })
+        .cloned();
+
+    let path = pick.ok_or_else(|| "launcher binary not found in archive".to_string())?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o755));
     }
-
-    Err("launcher binary not found in archive".to_string())
+    Ok(path)
 }
 
 // ======================= 自替换（自等待者方案） =======================
 
 /// 旧版本：下载完成后交接替换。
-/// 1) spawn 自身（`--updater-switch <pid>`）作为无窗口等待者；
-/// 2) 旧 exe 改名为 exe.old 腾出正式名（运行中的 exe 允许改名，进程继续运行）；
-/// 3) 新包改名为正式名（失败则回滚旧包）；主进程随 Installing 状态自行退出；
+/// 1) spawn 自身（`--updater-switch <pid> <exe_path>`）作为无 UI 等待者；
+/// 2) Windows：旧 exe 改名为 exe.old 腾出正式名（运行中的 exe 允许改名），
+///    新包改名为正式名（失败则回滚旧包）；
+///    Linux/macOS：rename 直接原子覆盖运行中的可执行文件目录项，无需中间名；
+/// 3) 主进程随 Installing 状态自行退出；
 /// 4) 等待者等旧进程完全退出后，启动已换入正式名的新版本，自身退出。
 ///
-/// 全程进程 API + Rust fs（宽字符），中英文路径安全；无 cmd/bat
-/// （cmd /c 引号解析损坏路径、bat 代码页乱码）。不依赖新版本 exe 的任何配合，
-/// 官方历史版本同样可直接更新。
-fn replace_and_restart(new_binary: &Path) {
-    let Ok(exe_path) = std::env::current_exe() else {
-        return;
-    };
+/// 全程 Rust fs + 进程 API，无 sh/cmd/bat（避免 shell 转义损坏路径、静默失败）。
+/// 返回 Err 时自身路径仍是旧版本（未被破坏），调用方应提示错误而非关窗。
+fn replace_and_restart(new_binary: &Path) -> Result<(), String> {
+    let exe_path = std::env::current_exe().map_err(|e| format!("current_exe failed: {}", e))?;
 
+    // 1) 等待者 = 自身二进制（先于替换 spawn；无 UI，仅等待与启动新版本）。
+    //    显式传入目标路径：Linux 正式名被覆盖后 current_exe() 可能失效（显示 deleted）。
+    let mut cmd = std::process::Command::new(&exe_path);
+    cmd.arg("--updater-switch")
+        .arg(std::process::id().to_string())
+        .arg(&exe_path);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        // 脱离前台进程组：终端 Ctrl+C 只发给前台进程组，避免连带杀掉等待者
+        cmd.process_group(0);
+    }
+    cmd.spawn()
+        .map_err(|e| format!("spawn waiter failed: {}", e))?;
+
+    // 2) 新包顶替正式名
     #[cfg(target_os = "windows")]
     {
         let old_path = exe_path.with_extension("exe.old");
-        // 1) 等待者 = 自身二进制（先于改名 spawn；无 UI，仅等待与启动新版本）
-        let mut cmd = std::process::Command::new(&exe_path);
-        cmd.arg("--updater-switch")
-            .arg(std::process::id().to_string());
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-        }
-        if let Err(e) = cmd.spawn() {
-            log::warn!("[updater] 启动等待者失败，放弃自动替换: {}", e);
-            return;
-        }
-        // 2) 旧 exe 改名腾出正式名（自身映像允许改名，进程不受影响）
-        if let Err(e) = std::fs::rename(&exe_path, &old_path) {
-            log::warn!("[updater] 旧 exe 改名失败，放弃自动替换: {}", e);
-            return;
-        }
-        // 3) 新包顶替正式名；失败则回滚旧包，保持可用状态
+        // 旧 exe 改名腾出正式名（自身映像允许改名，进程不受影响）
+        std::fs::rename(&exe_path, &old_path)
+            .map_err(|e| format!("rename old exe failed: {}", e))?;
+        // 新包顶替正式名；失败则回滚旧包，保持可用状态
         if let Err(e) = std::fs::rename(new_binary, &exe_path) {
-            log::warn!("[updater] 新包改名失败，回滚: {}", e);
             let _ = std::fs::rename(&old_path, &exe_path);
-            return;
+            return Err(format!("rename new exe failed: {}", e));
         }
-        // 4) update/ 目录此时已空，best-effort 删除
-        if let Some(dir) = new_binary.parent() {
-            let _ = std::fs::remove_dir(dir);
-        }
-        log::info!("[updater] 交接完成，等待者已启动，主进程即将退出");
+    }
+    #[cfg(unix)]
+    {
+        // Linux/macOS：rename 可原子覆盖正在运行的可执行文件目录项（旧进程继续用
+        // 旧 inode 执行）；失败时正式名保持不变。
+        std::fs::rename(new_binary, &exe_path)
+            .map_err(|e| format!("rename new exe failed: {}", e))?;
     }
 
-    #[cfg(not(target_os = "windows"))]
-    {
-        // Linux/macOS：sh 后台执行，sleep 等主进程退出后替换并重启
-        let old_path = exe_path.with_extension("old");
-        let script = format!(
-            "(sleep 3; mv \"{}\" \"{}\"; mv \"{}\" \"{}\"; rm -f \"{}\"; \"{}\" &) >/dev/null 2>&1 &",
-            exe_path.display(),
-            old_path.display(),
-            new_binary.display(),
-            exe_path.display(),
-            old_path.display(),
-            exe_path.display(),
-        );
-        let _ = std::process::Command::new("sh")
-            .args(["-c", &script])
-            .spawn();
+    // 3) update/ 目录清空（含 tarball 等残留），best-effort
+    if let Some(dir) = new_binary.parent() {
+        let _ = std::fs::remove_dir_all(dir);
+    }
+    log::info!("[updater] 交接完成，等待者已启动，主进程即将退出");
+    Ok(())
+}
+
+/// 等待者进程入口（main 检测到 `--updater-switch <pid> <path>` 时调用，无 UI）。
+/// 等待旧进程完全退出（含 Drop 保存设置，最多 15s），然后启动已换入正式名的
+/// 新版本，自身退出。
+///
+/// `launch_path` 由旧进程显式传入：Linux 上正式名被覆盖后 `current_exe()`
+/// 可能失效，故不依赖它。
+pub fn run_updater_waiter(old_pid: u32, launch_path: PathBuf) {
+    wait_for_process_exit(old_pid);
+    if let Err(e) = std::process::Command::new(&launch_path).spawn() {
+        log::error!("[updater] 启动新版本失败: {}", e);
     }
 }
 
-/// 等待者进程入口（main 检测到 `--updater-switch <pid>` 时调用，无 UI）。
-/// 等待旧进程完全退出（含 Drop 保存设置，最多 15s），然后启动已换入正式名的
-/// 新版本，自身退出。自身映像 = exe.old（被自己映射，不可删除），
-/// 由新版本启动时清理。
+/// 等待指定进程退出，最多 15s。
 #[cfg(target_os = "windows")]
-pub fn run_updater_waiter(old_pid: u32) {
+fn wait_for_process_exit(pid: u32) {
     use windows_sys::Win32::Foundation::CloseHandle;
     use windows_sys::Win32::System::Threading::{
         OpenProcess, WaitForSingleObject, PROCESS_SYNCHRONIZE,
@@ -649,24 +671,43 @@ pub fn run_updater_waiter(old_pid: u32) {
     const WAIT_TIMEOUT_MS: u32 = 15_000;
 
     unsafe {
-        // OpenProcess 失败（旧进程已退出）视为已退出，直接继续；
-        // 超时（旧进程异常卡住）则放弃启动，避免双窗口共存
-        let handle = OpenProcess(PROCESS_SYNCHRONIZE, 0, old_pid);
+        // OpenProcess 失败（旧进程已退出）视为已退出，直接继续；超时后仍会启动
+        // （旧进程异常挂起时可能与新实例短暂共存）
+        let handle = OpenProcess(PROCESS_SYNCHRONIZE, 0, pid);
         if !handle.is_null() {
             WaitForSingleObject(handle, WAIT_TIMEOUT_MS);
             CloseHandle(handle);
         }
     }
-    // current_exe 返回创建时的路径（正式名）——此刻该路径已是新版本
-    let Ok(exe_path) = std::env::current_exe() else {
-        return;
-    };
-    let _ = std::process::Command::new(&exe_path).spawn();
 }
 
-/// 启动清理：删除上一次更新遗留的旧版备份（exe.old，等待者退出后即可删）
-/// 与已空的 update 目录（best-effort；失败留给下次启动再清）。
-#[cfg(target_os = "windows")]
+/// 等待指定进程退出：轮询 `/proc/<pid>`，最多 15s。
+#[cfg(unix)]
+fn wait_for_process_exit(pid: u32) {
+    use std::time::{Duration, Instant};
+    const WAIT_TIMEOUT: Duration = Duration::from_secs(15);
+    let deadline = Instant::now() + WAIT_TIMEOUT;
+    while !process_exited(pid) && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(200));
+    }
+}
+
+/// 判断进程是否已退出：`/proc/<pid>` 不存在或呈僵尸态（已退出、等待收割）都算退出。
+/// 僵尸不应继续等待——其 fd 已全关、Drop 已完成，此时启动新版安全。
+#[cfg(unix)]
+fn process_exited(pid: u32) -> bool {
+    match fs::read_to_string(format!("/proc/{}/stat", pid)) {
+        // stat 形如 "<pid> (comm) <state> ..."；comm 可能含空格/括号，故取最后一个 ')' 后一字符
+        Ok(s) => s
+            .rfind(')')
+            .and_then(|i| s.as_bytes().get(i + 2))
+            .is_none_or(|c| *c == b'Z'),
+        Err(_) => true,
+    }
+}
+
+/// 启动清理：删除上一次更新遗留的旧版备份（exe.old，仅 Windows）与 update 目录
+/// 残留（best-effort；失败留给下次启动再清）。
 pub fn cleanup_leftovers_on_startup() {
     let Ok(exe_path) = std::env::current_exe() else {
         return;
@@ -687,7 +728,7 @@ pub fn cleanup_leftovers_on_startup() {
     if let Some(dir) = exe_path.parent() {
         let update_dir = dir.join("update");
         if update_dir.is_dir() {
-            let _ = std::fs::remove_dir(&update_dir); // 仅空目录可删
+            let _ = std::fs::remove_dir_all(&update_dir);
         }
     }
 }
