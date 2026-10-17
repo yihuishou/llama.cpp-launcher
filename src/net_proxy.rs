@@ -17,7 +17,7 @@
 //! 连接与单次读超时则只防卡死，不限制总时长。
 
 /// 单次网络操作（连接/单次读）超时
-pub const NETWORK_TIMEOUT_SECS: u64 = 8;
+pub const NETWORK_TIMEOUT_SECS: u64 = 30;
 /// 请求 User-Agent（GitHub API 必需）
 pub const USER_AGENT: &str = "llama-cpp-launcher";
 /// 下载块大小（字节）
