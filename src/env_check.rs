@@ -4,7 +4,8 @@
 //! 直接调用工具并读取 `--version` 输出，能调起来即视为可用，调不起来（未在全局环境注册）
 //! 即不可用。覆盖 git、cmake、C++ 编译器、ninja、python，以及 CUDA（`nvcc --version`）
 //! 与 ROCm（`hipcc --version`）。Windows 下另用 `vswhere.exe` 定位 MSVC（编译器通常不在
-//! PATH 上）。
+//! PATH 上）。Python 可用时再追加 RCCL / NCCL：用 python 的 `ctypes` 加载 `librccl.so` /
+//! `libnccl.so` 并读 `ncclGetVersion`。
 //!
 //! 全部探测走后台线程（Handle 模式，对齐 `downloader::DownloadHandle` /
 //! `updater::UpdaterHandle`）：`Arc<AtomicBool>` 取消标志 + `Arc<Mutex<Status>>` 共享
@@ -55,16 +56,21 @@ impl CheckResult {
     }
 }
 
+/// git 检测项的稳定 id（供 UI 判定依赖 git 的功能是否可用）
+pub const ID_GIT: &str = "git";
+
 /// 组件稳定 id（配置序列化用，勿轻易改动）
 fn key_id(key: Key) -> Option<&'static str> {
     match key {
-        Key::EnvCheckGit => Some("git"),
+        Key::EnvCheckGit => Some(ID_GIT),
         Key::EnvCheckCmake => Some("cmake"),
         Key::EnvCheckCompiler => Some("compiler"),
         Key::EnvCheckNinja => Some("ninja"),
         Key::EnvCheckPython => Some("python"),
         Key::EnvCheckCuda => Some("cuda"),
         Key::EnvCheckRocm => Some("rocm"),
+        Key::EnvCheckRccl => Some("rccl"),
+        Key::EnvCheckNccl => Some("nccl"),
         _ => None,
     }
 }
@@ -79,6 +85,8 @@ pub fn id_to_key(id: &str) -> Option<Key> {
         "python" => Some(Key::EnvCheckPython),
         "cuda" => Some(Key::EnvCheckCuda),
         "rocm" => Some(Key::EnvCheckRocm),
+        "rccl" => Some(Key::EnvCheckRccl),
+        "nccl" => Some(Key::EnvCheckNccl),
         _ => None,
     }
 }
@@ -171,18 +179,7 @@ impl EnvCheckHandle {
         let cancel = Arc::clone(&self.cancel);
         let status = Arc::clone(&self.status);
         let handle = thread::spawn(move || {
-            let mut results = Vec::new();
-            for req in requirements() {
-                if cancel.load(Ordering::SeqCst) {
-                    break;
-                }
-                let probe = (req.probe)();
-                results.push(CheckResult {
-                    key: req.key,
-                    required: req.required,
-                    probe,
-                });
-            }
+            let results = run_checks(|| cancel.load(Ordering::SeqCst));
             let mut st = status.lock().unwrap();
             // 被取消则回到 Idle，而非展示半份结果
             st.state = if cancel.load(Ordering::SeqCst) {
@@ -212,14 +209,38 @@ impl EnvCheckHandle {
 
 /// 同步执行一次完整检测（不经过后台线程；供测试/命令行场景）
 pub fn check_now() -> Vec<CheckResult> {
-    requirements()
-        .into_iter()
-        .map(|req| CheckResult {
+    run_checks(|| false)
+}
+
+/// 依次执行全部探测；Python 可用时追加 RCCL / NCCL。`is_cancelled` 为真则提前中止。
+fn run_checks(is_cancelled: impl Fn() -> bool) -> Vec<CheckResult> {
+    let mut results = Vec::new();
+    let mut python_found = false;
+    for req in requirements() {
+        if is_cancelled() {
+            return results;
+        }
+        let probe = (req.probe)();
+        python_found |= req.key == Key::EnvCheckPython && probe.is_found();
+        results.push(CheckResult {
             key: req.key,
             required: req.required,
-            probe: (req.probe)(),
-        })
-        .collect()
+            probe,
+        });
+    }
+    if python_found {
+        for req in python_extra_requirements() {
+            if is_cancelled() {
+                return results;
+            }
+            results.push(CheckResult {
+                key: req.key,
+                required: req.required,
+                probe: (req.probe)(),
+            });
+        }
+    }
+    results
 }
 
 /// 所有必需项是否都已找到
@@ -262,7 +283,7 @@ fn requirements() -> Vec<Requirement> {
         },
         Requirement {
             key: Key::EnvCheckPython,
-            required: false,
+            required: true,
             probe: probe_python,
         },
     ];
@@ -279,6 +300,23 @@ fn requirements() -> Vec<Requirement> {
     reqs
 }
 
+/// Python 可用时才追加的检测项：用 python 加载共享库读 `ncclGetVersion`。
+/// RCCL / NCCL 均为可选项，缺失不算失败。
+fn python_extra_requirements() -> Vec<Requirement> {
+    vec![
+        Requirement {
+            key: Key::EnvCheckRccl,
+            required: false,
+            probe: probe_rccl,
+        },
+        Requirement {
+            key: Key::EnvCheckNccl,
+            required: false,
+            probe: probe_nccl,
+        },
+    ]
+}
+
 fn probe_git() -> Probe {
     probe_tool("git", &["--version"])
 }
@@ -292,13 +330,24 @@ fn probe_ninja() -> Probe {
 }
 
 fn probe_python() -> Probe {
+    match find_python() {
+        Some((name, version)) => Probe::Found {
+            version,
+            path: PathBuf::from(name),
+        },
+        None => Probe::Missing,
+    }
+}
+
+/// 探测可用的 python 解释器（优先 python3）：要求 `--version` 成功退出，
+/// 返回 (解释器名, 版本)；均不可用返回 None。
+fn find_python() -> Option<(&'static str, String)> {
     for name in ["python3", "python"] {
-        let probe = probe_tool(name, &["--version"]);
-        if probe.is_found() {
-            return probe;
+        if let Some(version) = probe_success(Path::new(name), &["--version"]) {
+            return Some((name, version));
         }
     }
-    Probe::Missing
+    None
 }
 
 fn probe_compiler() -> Probe {
@@ -369,6 +418,40 @@ fn probe_rocm() -> Probe {
     probe_tool("hipcc", &["--version"])
 }
 
+/// RCCL：python 加载 `librccl.so` 读 `ncclGetVersion`
+fn probe_rccl() -> Probe {
+    probe_shared_lib_version("librccl.so")
+}
+
+/// NCCL：python 加载 `libnccl.so` 读 `ncclGetVersion`
+fn probe_nccl() -> Probe {
+    probe_shared_lib_version("libnccl.so")
+}
+
+/// 用 python 加载共享库并读取版本；python 不可用、库缺失或加载失败均返回 Missing。
+fn probe_shared_lib_version(lib: &str) -> Probe {
+    let Some((python, _)) = find_python() else {
+        return Probe::Missing;
+    };
+    let script = nccl_version_script(lib);
+    match probe_success(Path::new(python), &["-c", &script]) {
+        Some(version) if !version.is_empty() => Probe::Found {
+            version,
+            path: PathBuf::from(lib),
+        },
+        _ => Probe::Missing,
+    }
+}
+
+/// 读取 `ncclGetVersion` 的 python 脚本；版本编码为 major*10000 + minor*100 + patch。
+fn nccl_version_script(lib: &str) -> String {
+    format!(
+        "import ctypes; lib = ctypes.CDLL('{lib}'); v = ctypes.c_int(); \
+         lib.ncclGetVersion(ctypes.byref(v)); \
+         print(f'{{v.value//10000}}.{{(v.value//100)%100}}.{{v.value%100}}')"
+    )
+}
+
 /// 直接调用 `name version_args`（依赖全局环境/PATH 的注册）：能调起来即视为可用，
 /// 调不起来即视为未安装。不再自行扫描 PATH 目录。
 fn probe_tool(name: &str, version_args: &[&str]) -> Probe {
@@ -384,16 +467,7 @@ fn probe_tool(name: &str, version_args: &[&str]) -> Probe {
 /// 运行 `exe args`：成功调起即 Some（版本为首个非空输出行，可能为空），
 /// 调不起来（如 NotFound）返回 None。
 fn probe_version(exe: &Path, args: &[&str]) -> Option<String> {
-    let mut cmd = Command::new(exe);
-    cmd.args(args);
-    // Windows：不弹控制台黑框
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        cmd.creation_flags(CREATE_NO_WINDOW);
-    }
-    let output = cmd.output().ok()?;
+    let output = build_command(exe, args).output().ok()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     Some(
@@ -401,6 +475,30 @@ fn probe_version(exe: &Path, args: &[&str]) -> Option<String> {
             .or_else(|| first_nonempty_line(&stderr))
             .unwrap_or_default(),
     )
+}
+
+/// `exe args` 成功退出（exit code 0）时返回首个非空输出行；供需要脚本真正执行成功
+/// 才算可用的探测（如 python 加载共享库）使用。
+fn probe_success(exe: &Path, args: &[&str]) -> Option<String> {
+    let output = build_command(exe, args).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Some(first_nonempty_line(&stdout).unwrap_or_default())
+}
+
+/// 构造命令并抑制 Windows 控制台黑框
+fn build_command(exe: &Path, args: &[&str]) -> Command {
+    let mut cmd = Command::new(exe);
+    cmd.args(args);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
 }
 
 fn first_nonempty_line(s: &str) -> Option<String> {
@@ -426,6 +524,11 @@ mod tests {
             .into_iter()
             .find(|r| r.key == Key::EnvCheckGit);
         assert!(git.expect("git 项应存在").required);
+
+        let python = requirements()
+            .into_iter()
+            .find(|r| r.key == Key::EnvCheckPython);
+        assert!(python.expect("python 项应存在").required);
     }
 
     #[test]
@@ -472,5 +575,21 @@ mod tests {
             Some("hello".to_string())
         );
         assert_eq!(first_nonempty_line("   \n\t\n"), None);
+    }
+
+    #[test]
+    fn python_extra_requirements_are_optional_rccl_nccl() {
+        let reqs = python_extra_requirements();
+        let keys: Vec<Key> = reqs.iter().map(|r| r.key).collect();
+        assert!(keys.contains(&Key::EnvCheckRccl));
+        assert!(keys.contains(&Key::EnvCheckNccl));
+        assert!(reqs.iter().all(|r| !r.required));
+    }
+
+    #[test]
+    fn nccl_version_script_embeds_lib_and_decodes_version() {
+        let s = nccl_version_script("librccl.so");
+        assert!(s.contains("ctypes.CDLL('librccl.so')"));
+        assert!(s.contains("f'{v.value//10000}.{(v.value//100)%100}.{v.value%100}'"));
     }
 }

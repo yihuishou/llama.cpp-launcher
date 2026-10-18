@@ -940,6 +940,8 @@ pub enum Key {
     EnvCheckPython,
     EnvCheckCuda,
     EnvCheckRocm,
+    EnvCheckRccl,
+    EnvCheckNccl,
 }
 
 impl Key {
@@ -2724,8 +2726,12 @@ impl Key {
             (Key::EnvCheckPython, &Language::En) => "Python",
             (Key::EnvCheckCuda, &Language::Zh) => "CUDA 工具包",
             (Key::EnvCheckCuda, &Language::En) => "CUDA Toolkit",
-            (Key::EnvCheckRocm, &Language::Zh) => "ROCm 工具包",
-            (Key::EnvCheckRocm, &Language::En) => "ROCm Toolkit",
+    (Key::EnvCheckRocm, &Language::Zh) => "ROCm 工具包",
+    (Key::EnvCheckRocm, &Language::En) => "ROCm Toolkit",
+    (Key::EnvCheckRccl, &Language::Zh) => "RCCL",
+    (Key::EnvCheckRccl, &Language::En) => "RCCL",
+    (Key::EnvCheckNccl, &Language::Zh) => "NCCL",
+    (Key::EnvCheckNccl, &Language::En) => "NCCL",
         }
     }
 }
