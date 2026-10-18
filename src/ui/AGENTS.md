@@ -42,7 +42,7 @@
     - presets_panel: +PresetShareUi, PresetConfigUi, &RpcManager, 启动结果通知；返回 PresetPanelRequest 交给 app.rs 执行
 - 弹窗（Window）统一由 app.rs/presets_panel 每帧渲染入口调用，窗口内文本同样走 i18n；
   深浅色自适应用 ui.visuals()，主题色填充用 accent + alpha 175（低饱和度规范）。
-- 内联测试: widgets.rs:897, model_panel.rs:210, preset_share.rs:1825, launch_commands_panel.rs:103。
+- 内联测试: widgets.rs:897, model_panel.rs:210, preset_share.rs:1825, launch_commands_panel.rs:103, settings_panel.rs（末尾 tests 模块：env 条目 git 判定与 can_clone 门控）。
 
 ## ANTI-PATTERNS
 

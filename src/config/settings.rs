@@ -500,7 +500,7 @@ fn default_build_git_repo() -> String {
 }
 
 fn default_build_branch() -> String {
-    "main".to_string()
+    "master".to_string()
 }
 
 fn default_build_type() -> String {

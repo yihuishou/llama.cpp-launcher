@@ -531,6 +531,17 @@ pub fn ui(
         ui.label(i18n::t(i18n::Key::BuildTag, lang));
         ui.add(winui::FluentTextEdit::new(&mut settings.build_tag));
 
+        ui.add_space(4.0);
+        if ui
+            .add_enabled(
+                can_clone(env_check, settings),
+                widgets::rounded_button(i18n::t(i18n::Key::BuildBtnClone, lang), None),
+            )
+            .clicked()
+        {
+            // TODO: 克隆仓库逻辑
+        }
+
         ui.add_space(8.0);
         ui.separator();
         ui.add_space(4.0);
@@ -559,15 +570,6 @@ pub fn ui(
 
         // 操作按钮
         ui.horizontal_wrapped(|ui| {
-            if ui
-                .add(widgets::rounded_button(
-                    i18n::t(i18n::Key::BuildBtnClone, lang),
-                    None,
-                ))
-                .clicked()
-            {
-                // TODO: 克隆仓库逻辑
-            }
             if ui
                 .add(widgets::rounded_button(
                     i18n::t(i18n::Key::BuildBtnBuild, lang),
@@ -891,6 +893,30 @@ fn uninstall_service() -> Result<String, String> {
     Ok("服务已卸载".to_string())
 }
 
+/// 检测结果条目里 git 是否可用
+fn entries_have_git(entries: &[crate::env_check::EnvCheckEntry]) -> bool {
+    entries
+        .iter()
+        .any(|e| e.id == crate::env_check::ID_GIT && e.found)
+}
+
+/// Git 环境是否可用：优先本次运行结果，否则回退到已保存结果。
+fn git_available(env_check: &crate::env_check::EnvCheckHandle, settings: &AppSettings) -> bool {
+    match &env_check.snapshot().state {
+        crate::env_check::EnvCheckState::Done(results) => {
+            entries_have_git(&crate::env_check::to_entries(results))
+        }
+        _ => entries_have_git(&settings.env_check_result),
+    }
+}
+
+/// 「克隆仓库」是否可点：git 可用 + 仓库地址、分支均非空。
+fn can_clone(env_check: &crate::env_check::EnvCheckHandle, settings: &AppSettings) -> bool {
+    git_available(env_check, settings)
+        && !settings.build_git_repo.trim().is_empty()
+        && !settings.build_branch.trim().is_empty()
+}
+
 /// 渲染环境检测结果列表：逐行显示「组件名 + 必需/可选 + 已安装/未安装 + 版本」。
 fn render_env_entries(
     ui: &mut egui::Ui,
@@ -923,5 +949,52 @@ fn render_env_entries(
                 ui.label(RichText::new(&entry.version).small().weak());
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::env_check::{EnvCheckEntry, EnvCheckHandle, ID_GIT};
+
+    fn git_entry(found: bool) -> EnvCheckEntry {
+        EnvCheckEntry {
+            id: ID_GIT.to_string(),
+            found,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn entries_have_git_requires_id_and_found() {
+        assert!(entries_have_git(&[git_entry(true)]));
+        assert!(!entries_have_git(&[git_entry(false)]));
+        assert!(!entries_have_git(&[]));
+    }
+
+    #[test]
+    fn can_clone_needs_git_and_nonempty_repo_and_branch() {
+        let handle = EnvCheckHandle::new();
+        let mut settings = AppSettings {
+            env_check_result: vec![git_entry(true)],
+            build_git_repo: "https://github.com/ggml-org/llama.cpp.git".to_string(),
+            build_branch: "master".to_string(),
+            ..Default::default()
+        };
+        assert!(can_clone(&handle, &settings));
+
+        settings.build_git_repo = "   ".to_string();
+        assert!(!can_clone(&handle, &settings));
+
+        settings.build_git_repo = "https://github.com/ggml-org/llama.cpp.git".to_string();
+        settings.build_branch = String::new();
+        assert!(!can_clone(&handle, &settings));
+
+        settings.build_branch = "master".to_string();
+        settings.env_check_result = vec![git_entry(false)];
+        assert!(!can_clone(&handle, &settings));
+
+        settings.env_check_result = Vec::new();
+        assert!(!can_clone(&handle, &settings));
     }
 }
