@@ -4,6 +4,7 @@ pub mod app;
 pub mod config;
 pub mod downloader;
 pub mod engine;
+pub mod env_check;
 pub mod geo;
 pub mod i18n;
 pub mod kv_cache;
