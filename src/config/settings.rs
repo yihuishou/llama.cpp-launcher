@@ -3,6 +3,8 @@ use std::collections::VecDeque;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::env_check::EnvCheckEntry;
+
 const CONFIG_FILE: &str = "llama_cpp_launcher_settings.json";
 
 /// llama.cpp server 发行版类型
@@ -499,6 +501,32 @@ fn default_build_git_repo() -> String {
 
 fn default_build_branch() -> String {
     "main".to_string()
+}
+
+fn default_build_type() -> String {
+    "Release".to_string()
+}
+
+/// 手动编译整体状态（落盘，供下次启动展示）
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BuildStatus {
+    #[default]
+    Idle,
+    Cloning,
+    Building,
+    Done,
+    Failed,
+}
+
+/// 编译产物条目（构建成功后记录，供展示/复用）
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BuildArtifact {
+    /// 目标名，如 "llama-server"
+    pub name: String,
+    /// 二进制完整路径
+    pub path: String,
 }
 
 // context / batch_size / ubatch_size 以 k 为单位存储 (1k = 1024)
@@ -2817,6 +2845,75 @@ pub struct AppSettings {
     /// Vulkan 后端开关
     #[serde(default)]
     pub build_vulkan_enabled: bool,
+
+    // ── 编译环境检测结果（落盘，供下次启动展示）──
+    /// 上次检测结果快照
+    #[serde(default)]
+    pub env_check_result: Vec<EnvCheckEntry>,
+    /// 上次检测时间（本地时间字符串）
+    #[serde(default)]
+    pub env_check_checked_at: Option<String>,
+    /// 上次检测必需项是否齐全（驱动「开始编译」可用性）
+    #[serde(default)]
+    pub env_check_all_required_ok: bool,
+
+    // ── 手动编译输入配置 ──
+    /// 源码工作目录（clone/checkout 位置；空=默认）
+    #[serde(default)]
+    pub build_work_dir: String,
+    /// CMake 生成器（空=自动；"Ninja"/"Unix Makefiles"/"Visual Studio ..."）
+    #[serde(default)]
+    pub build_generator: String,
+    /// 构建类型（CMAKE_BUILD_TYPE）
+    #[serde(default = "default_build_type")]
+    pub build_type: String,
+    /// 并行任务数（0=自动）
+    #[serde(default)]
+    pub build_jobs: u32,
+    /// 额外 CMake 参数（原样追加）
+    #[serde(default)]
+    pub build_cmake_args: String,
+    /// 要构建的目标（空格分隔；空=默认目标集）
+    #[serde(default)]
+    pub build_targets: String,
+    /// CUDA 架构（CMAKE_CUDA_ARCHITECTURES）
+    #[serde(default)]
+    pub build_cuda_arch: String,
+    /// ROCm GPU 目标（AMDGPU_TARGETS）
+    #[serde(default)]
+    pub build_amdgpu_targets: String,
+    /// 是否使用 ccache
+    #[serde(default)]
+    pub build_use_ccache: bool,
+
+    // ── 手动编译状态 / 产物（落盘，供展示）──
+    /// 上次构建整体状态
+    #[serde(default)]
+    pub build_last_status: BuildStatus,
+    /// 上次构建开始时间
+    #[serde(default)]
+    pub build_last_started_at: Option<String>,
+    /// 上次构建结束时间
+    #[serde(default)]
+    pub build_last_finished_at: Option<String>,
+    /// 上次实际 checkout 到的 commit（判断「已是最新」）
+    #[serde(default)]
+    pub build_last_commit: String,
+    /// 上次构建失败原因（英文串，展示时拼 i18n 前缀）
+    #[serde(default)]
+    pub build_last_error: String,
+    /// 上次构建日志文件路径
+    #[serde(default)]
+    pub build_last_log_path: String,
+    /// 产物二进制清单
+    #[serde(default)]
+    pub build_artifacts: Vec<BuildArtifact>,
+    /// 产物实际编入的后端（"cuda"/"rocm"/"vulkan"/"cpu"）
+    #[serde(default)]
+    pub build_artifact_backends: Vec<String>,
+    /// 产物对应 commit/版本
+    #[serde(default)]
+    pub build_artifact_revision: String,
 }
 
 impl Default for AppSettings {
@@ -3115,6 +3212,27 @@ impl Default for AppSettings {
             build_cuda_enabled: false,
             build_rocm_enabled: false,
             build_vulkan_enabled: false,
+            env_check_result: Vec::new(),
+            env_check_checked_at: None,
+            env_check_all_required_ok: false,
+            build_work_dir: String::new(),
+            build_generator: String::new(),
+            build_type: default_build_type(),
+            build_jobs: 0,
+            build_cmake_args: String::new(),
+            build_targets: String::new(),
+            build_cuda_arch: String::new(),
+            build_amdgpu_targets: String::new(),
+            build_use_ccache: false,
+            build_last_status: BuildStatus::default(),
+            build_last_started_at: None,
+            build_last_finished_at: None,
+            build_last_commit: String::new(),
+            build_last_error: String::new(),
+            build_last_log_path: String::new(),
+            build_artifacts: Vec::new(),
+            build_artifact_backends: Vec::new(),
+            build_artifact_revision: String::new(),
         }
     }
 }

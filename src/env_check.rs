@@ -1,11 +1,10 @@
 //! 编译环境检测模块（llama.cpp 手动编译前置条件）。
 //!
-//! 探测编译 llama.cpp 所需的工具链与可选的 GPU 后端工具包。通用项（git、cmake、C++
-//! 编译器、ninja、make、python）沿 PATH 查找；GPU 项仅 CUDA 与 ROCm 做「环境变量 +
-//! 已知安装路径」特判：CUDA 取 `CUDA_PATH`、`CUDA_HOME`、NVIDIA 默认目录或 PATH 上的
-//! nvcc，ROCm 取 `ROCM_PATH`、`ROCM_HOME`、`/opt/rocm` 或 PATH 上的 hipcc。Windows 下
-//! PATH 搜索按 PATHEXT 拼扩展名，并用 `vswhere.exe` 定位 MSVC；Linux 走 PATH 上的
-//! `c++`、`clang++`、`g++`。
+//! 探测编译 llama.cpp 所需的工具链与可选的 GPU 后端工具包，统一以「版本命令」判定可用性：
+//! 直接调用工具并读取 `--version` 输出，能调起来即视为可用，调不起来（未在全局环境注册）
+//! 即不可用。覆盖 git、cmake、C++ 编译器、ninja、make、python，以及 CUDA（`nvcc --version`）
+//! 与 ROCm（`hipcc --version`）。Windows 下另用 `vswhere.exe` 定位 MSVC（编译器通常不在
+//! PATH 上）。
 //!
 //! 全部探测走后台线程（Handle 模式，对齐 `downloader::DownloadHandle` /
 //! `updater::UpdaterHandle`）：`Arc<AtomicBool>` 取消标志 + `Arc<Mutex<Status>>` 共享
@@ -18,6 +17,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
+use serde::{Deserialize, Serialize};
+
 use crate::i18n::Key;
 
 /// 单个组件的探测结果
@@ -27,6 +28,13 @@ pub enum Probe {
     Found { version: String, path: PathBuf },
     /// 未找到
     Missing,
+}
+
+impl Probe {
+    /// 是否已找到
+    pub fn is_found(&self) -> bool {
+        matches!(self, Probe::Found { .. })
+    }
 }
 
 /// 单个检测项结果（供 UI 逐行渲染）
@@ -43,8 +51,75 @@ pub struct CheckResult {
 impl CheckResult {
     /// 该项是否可用
     pub fn is_found(&self) -> bool {
-        matches!(self.probe, Probe::Found { .. })
+        self.probe.is_found()
     }
+}
+
+/// 组件稳定 id（配置序列化用，勿轻易改动）
+fn key_id(key: Key) -> Option<&'static str> {
+    match key {
+        Key::EnvCheckGit => Some("git"),
+        Key::EnvCheckCmake => Some("cmake"),
+        Key::EnvCheckCompiler => Some("compiler"),
+        Key::EnvCheckNinja => Some("ninja"),
+        Key::EnvCheckMake => Some("make"),
+        Key::EnvCheckPython => Some("python"),
+        Key::EnvCheckCuda => Some("cuda"),
+        Key::EnvCheckRocm => Some("rocm"),
+        _ => None,
+    }
+}
+
+/// 稳定 id → 组件名 i18n 键（展示用）
+pub fn id_to_key(id: &str) -> Option<Key> {
+    match id {
+        "git" => Some(Key::EnvCheckGit),
+        "cmake" => Some(Key::EnvCheckCmake),
+        "compiler" => Some(Key::EnvCheckCompiler),
+        "ninja" => Some(Key::EnvCheckNinja),
+        "make" => Some(Key::EnvCheckMake),
+        "python" => Some(Key::EnvCheckPython),
+        "cuda" => Some(Key::EnvCheckCuda),
+        "rocm" => Some(Key::EnvCheckRocm),
+        _ => None,
+    }
+}
+
+/// 可序列化的检测结果条目（落盘存配置，供下次启动展示）。
+///
+/// 存稳定 `id` 而非 [`i18n::Key`]：Key 是编译期枚举、不可序列化且可能变动。
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EnvCheckEntry {
+    pub id: String,
+    pub required: bool,
+    pub found: bool,
+    pub version: String,
+    pub path: String,
+}
+
+/// 把一次检测结果转为可落盘的条目列表
+pub fn to_entries(results: &[CheckResult]) -> Vec<EnvCheckEntry> {
+    results
+        .iter()
+        .filter_map(|r| {
+            key_id(r.key).map(|id| {
+                let (version, path) = match &r.probe {
+                    Probe::Found { version, path } => {
+                        (version.clone(), path.to_string_lossy().into_owned())
+                    }
+                    Probe::Missing => (String::new(), String::new()),
+                };
+                EnvCheckEntry {
+                    id: id.to_string(),
+                    required: r.required,
+                    found: r.is_found(),
+                    version,
+                    path,
+                }
+            })
+        })
+        .collect()
 }
 
 /// 检测整体状态
@@ -229,9 +304,9 @@ fn probe_make() -> Probe {
 
 fn probe_python() -> Probe {
     for name in ["python3", "python"] {
-        if let Some(exe) = find_in_path(name) {
-            let version = probe_version(&exe, &["--version"]).unwrap_or_default();
-            return Probe::Found { version, path: exe };
+        let probe = probe_tool(name, &["--version"]);
+        if probe.is_found() {
+            return probe;
         }
     }
     Probe::Missing
@@ -241,7 +316,7 @@ fn probe_compiler() -> Probe {
     #[cfg(windows)]
     {
         let msvc = probe_msvc();
-        if matches!(msvc, Probe::Found { .. }) {
+        if msvc.is_found() {
             return msvc;
         }
     }
@@ -251,9 +326,9 @@ fn probe_compiler() -> Probe {
         &["c++", "clang++", "g++"]
     };
     for name in names {
-        if let Some(exe) = find_in_path(name) {
-            let version = probe_version(&exe, &["--version"]).unwrap_or_default();
-            return Probe::Found { version, path: exe };
+        let probe = probe_tool(name, &["--version"]);
+        if probe.is_found() {
+            return probe;
         }
     }
     Probe::Missing
@@ -297,186 +372,28 @@ fn probe_msvc() -> Probe {
     }
 }
 
-/// CUDA：环境变量 → 已知安装路径 → PATH 上的 nvcc（仅此三者）
 fn probe_cuda() -> Probe {
-    for var in ["CUDA_PATH", "CUDA_HOME"] {
-        if let Some(root) = std::env::var_os(var).map(PathBuf::from) {
-            if let Some(found) = cuda_probe_root(&root) {
-                return found;
-            }
-        }
-    }
-    for root in cuda_known_roots() {
-        if let Some(found) = cuda_probe_root(&root) {
-            return found;
-        }
-    }
-    if let Some(exe) = find_in_path("nvcc") {
-        let version = probe_version(&exe, &["--version"]).unwrap_or_default();
-        return Probe::Found { version, path: exe };
-    }
-    Probe::Missing
+    probe_tool("nvcc", &["--version"])
 }
 
-fn cuda_probe_root(root: &Path) -> Option<Probe> {
-    let nvcc = cuda_nvcc(root);
-    if nvcc.is_file() {
-        let version = probe_version(&nvcc, &["--version"]).unwrap_or_default();
-        Some(Probe::Found {
-            version,
-            path: root.to_path_buf(),
-        })
-    } else {
-        None
-    }
-}
-
-fn cuda_nvcc(root: &Path) -> PathBuf {
-    let exe = if cfg!(windows) { "nvcc.exe" } else { "nvcc" };
-    root.join("bin").join(exe)
-}
-
-#[cfg(windows)]
-fn cuda_known_roots() -> Vec<PathBuf> {
-    let base = PathBuf::from(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA");
-    let mut roots: Vec<PathBuf> = std::fs::read_dir(&base)
-        .into_iter()
-        .flatten()
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.is_dir())
-        .collect();
-    // 版本目录倒序，新版本优先
-    roots.sort();
-    roots.reverse();
-    roots.push(base);
-    roots
-}
-
-#[cfg(not(windows))]
-fn cuda_known_roots() -> Vec<PathBuf> {
-    vec![PathBuf::from("/usr/local/cuda")]
-}
-
-/// ROCm：环境变量 → 已知安装路径 → PATH 上的 hipcc（仅此三者）
 fn probe_rocm() -> Probe {
-    for var in ["ROCM_PATH", "ROCM_HOME"] {
-        if let Some(root) = std::env::var_os(var).map(PathBuf::from) {
-            if let Some(found) = rocm_probe_root(&root) {
-                return found;
-            }
-        }
-    }
-    for root in rocm_known_roots() {
-        if let Some(found) = rocm_probe_root(&root) {
-            return found;
-        }
-    }
-    if let Some(exe) = find_in_path("hipcc") {
-        let version = probe_version(&exe, &["--version"]).unwrap_or_default();
-        return Probe::Found { version, path: exe };
-    }
-    Probe::Missing
+    probe_tool("hipcc", &["--version"])
 }
 
-fn rocm_probe_root(root: &Path) -> Option<Probe> {
-    let hipcc = rocm_hipcc(root);
-    if hipcc.is_file() {
-        let version = probe_version(&hipcc, &["--version"]).unwrap_or_default();
-        return Some(Probe::Found {
-            version,
-            path: root.to_path_buf(),
-        });
-    }
-    // 无 hipcc 时退回 ROCm 版本文件
-    let version_file = root.join(".info").join("version");
-    if version_file.is_file() {
-        let version = std::fs::read_to_string(&version_file)
-            .map(|s| s.trim().to_string())
-            .unwrap_or_default();
-        return Some(Probe::Found {
-            version,
-            path: root.to_path_buf(),
-        });
-    }
-    None
-}
-
-fn rocm_hipcc(root: &Path) -> PathBuf {
-    let exe = if cfg!(windows) { "hipcc.exe" } else { "hipcc" };
-    root.join("bin").join(exe)
-}
-
-#[cfg(not(windows))]
-fn rocm_known_roots() -> Vec<PathBuf> {
-    vec![PathBuf::from("/opt/rocm")]
-}
-
-#[cfg(windows)]
-fn rocm_known_roots() -> Vec<PathBuf> {
-    ["ProgramFiles", "ProgramFiles(x86)"]
-        .iter()
-        .filter_map(|v| std::env::var_os(v).map(PathBuf::from))
-        .map(|base| base.join("AMD").join("ROCm"))
-        .filter(|p| p.exists())
-        .collect()
-}
-
-/// PATH 搜索可执行文件；Windows 额外按 PATHEXT 逐个拼扩展名
-fn find_in_path(name: &str) -> Option<PathBuf> {
-    let path_var = std::env::var_os("PATH")?;
-
-    #[cfg(windows)]
-    let exts: Vec<String> = {
-        let raw = std::env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string());
-        let mut v: Vec<String> = raw
-            .split(';')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-        if v.is_empty() {
-            v.push(".EXE".to_string());
-        }
-        v
-    };
-
-    for dir in std::env::split_paths(&path_var) {
-        #[cfg(windows)]
-        {
-            let direct = dir.join(name);
-            if direct.is_file() {
-                return Some(direct);
-            }
-            for ext in &exts {
-                let candidate = dir.join(format!("{name}{ext}"));
-                if candidate.is_file() {
-                    return Some(candidate);
-                }
-            }
-        }
-        #[cfg(not(windows))]
-        {
-            let candidate = dir.join(name);
-            if candidate.is_file() {
-                return Some(candidate);
-            }
-        }
-    }
-    None
-}
-
-/// PATH 找 name → 运行 `name version_args` → 组装 Probe
+/// 直接调用 `name version_args`（依赖全局环境/PATH 的注册）：能调起来即视为可用，
+/// 调不起来即视为未安装。不再自行扫描 PATH 目录。
 fn probe_tool(name: &str, version_args: &[&str]) -> Probe {
-    match find_in_path(name) {
-        Some(exe) => {
-            let version = probe_version(&exe, version_args).unwrap_or_default();
-            Probe::Found { version, path: exe }
-        }
+    match probe_version(Path::new(name), version_args) {
+        Some(version) => Probe::Found {
+            version,
+            path: PathBuf::from(name),
+        },
         None => Probe::Missing,
     }
 }
 
-/// 运行 `exe args`，返回首个非空输出行（stdout 优先，为空则回退 stderr）
+/// 运行 `exe args`：成功调起即 Some（版本为首个非空输出行，可能为空），
+/// 调不起来（如 NotFound）返回 None。
 fn probe_version(exe: &Path, args: &[&str]) -> Option<String> {
     let mut cmd = Command::new(exe);
     cmd.args(args);
@@ -490,7 +407,11 @@ fn probe_version(exe: &Path, args: &[&str]) -> Option<String> {
     let output = cmd.output().ok()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    first_nonempty_line(&stdout).or_else(|| first_nonempty_line(&stderr))
+    Some(
+        first_nonempty_line(&stdout)
+            .or_else(|| first_nonempty_line(&stderr))
+            .unwrap_or_default(),
+    )
 }
 
 fn first_nonempty_line(s: &str) -> Option<String> {
@@ -512,7 +433,9 @@ mod tests {
         assert!(keys.contains(&Key::EnvCheckCompiler));
         assert!(keys.contains(&Key::EnvCheckCuda));
         assert!(keys.contains(&Key::EnvCheckRocm));
-        let git = requirements().into_iter().find(|r| r.key == Key::EnvCheckGit);
+        let git = requirements()
+            .into_iter()
+            .find(|r| r.key == Key::EnvCheckGit);
         assert!(git.expect("git 项应存在").required);
     }
 
@@ -545,12 +468,12 @@ mod tests {
     }
 
     #[test]
-    fn missing_binary_is_not_found() {
-        assert!(find_in_path("__env_check_no_such_binary_zzz__").is_none());
+    fn unregistered_binary_is_missing() {
         assert_eq!(
             probe_tool("__env_check_no_such_binary_zzz__", &["--version"]),
             Probe::Missing
         );
+        assert!(!Probe::Missing.is_found());
     }
 
     #[test]
