@@ -2836,15 +2836,9 @@ pub struct AppSettings {
     /// 编译产物输出目录（空字符串表示默认路径）
     #[serde(default)]
     pub build_output_dir: String,
-    /// CUDA 后端开关
+    /// 勾选的 GGML_* 编译开关名（拼为 -D<名称>=ON 传给 CMake）
     #[serde(default)]
-    pub build_cuda_enabled: bool,
-    /// ROCm 后端开关
-    #[serde(default)]
-    pub build_rocm_enabled: bool,
-    /// Vulkan 后端开关
-    #[serde(default)]
-    pub build_vulkan_enabled: bool,
+    pub build_ggml_options: Vec<String>,
 
     // ── 编译环境检测结果（落盘，供下次启动展示）──
     /// 上次检测结果快照
@@ -3209,9 +3203,7 @@ impl Default for AppSettings {
             build_branch: default_build_branch(),
             build_tag: String::new(),
             build_output_dir: String::new(),
-            build_cuda_enabled: false,
-            build_rocm_enabled: false,
-            build_vulkan_enabled: false,
+            build_ggml_options: Vec::new(),
             env_check_result: Vec::new(),
             env_check_checked_at: None,
             env_check_all_required_ok: false,

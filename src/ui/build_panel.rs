@@ -104,25 +104,14 @@ pub fn ui(
         ui.separator();
         ui.add_space(4.0);
 
-        // 后端选择
+        // 后端编译开关（按工具包安装状态显示）
         ui.label(i18n::t(i18n::Key::BuildBackend, lang));
-        let mut cuda = settings.build_cuda_enabled;
-        if widgets::toggle(ui, &mut cuda, i18n::t(i18n::Key::BuildCuda, lang), accent) {
-            settings.build_cuda_enabled = cuda;
-        }
-        let mut rocm = settings.build_rocm_enabled;
-        if widgets::toggle(ui, &mut rocm, i18n::t(i18n::Key::BuildRocm, lang), accent) {
-            settings.build_rocm_enabled = rocm;
-        }
-        let mut vulkan = settings.build_vulkan_enabled;
-        if widgets::toggle(
-            ui,
-            &mut vulkan,
-            i18n::t(i18n::Key::BuildVulkan, lang),
-            accent,
-        ) {
-            settings.build_vulkan_enabled = vulkan;
-        }
+        ui.label(
+            RichText::new(i18n::t(i18n::Key::BuildGgmlHint, lang))
+                .small()
+                .weak(),
+        );
+        render_ggml_options(ui, settings, env_check, lang);
 
         ui.add_space(8.0);
 
@@ -198,28 +187,74 @@ fn render_clone_status(
     }
 }
 
-/// 检测结果条目里 git 是否可用
-fn entries_have_git(entries: &[crate::env_check::EnvCheckEntry]) -> bool {
-    entries
-        .iter()
-        .any(|e| e.id == crate::env_check::ID_GIT && e.found)
+/// 检测结果条目里指定组件是否可用
+fn entry_found(entries: &[crate::env_check::EnvCheckEntry], id: &str) -> bool {
+    entries.iter().any(|e| e.id == id && e.found)
 }
 
-/// Git 环境是否可用：优先本次运行结果，否则回退到已保存结果。
-fn git_available(env_check: &crate::env_check::EnvCheckHandle, settings: &AppSettings) -> bool {
+/// 指定组件是否可用：优先本次运行结果，否则回退到已保存结果。
+fn component_available(
+    env_check: &crate::env_check::EnvCheckHandle,
+    settings: &AppSettings,
+    id: &str,
+) -> bool {
     match &env_check.snapshot().state {
         crate::env_check::EnvCheckState::Done(results) => {
-            entries_have_git(&crate::env_check::to_entries(results))
+            entry_found(&crate::env_check::to_entries(results), id)
         }
-        _ => entries_have_git(&settings.env_check_result),
+        _ => entry_found(&settings.env_check_result, id),
     }
 }
 
 /// 「克隆仓库」是否可点：git 可用 + 仓库地址、分支均非空。
 fn can_clone(env_check: &crate::env_check::EnvCheckHandle, settings: &AppSettings) -> bool {
-    git_available(env_check, settings)
+    component_available(env_check, settings, crate::env_check::ID_GIT)
         && !settings.build_git_repo.trim().is_empty()
         && !settings.build_branch.trim().is_empty()
+}
+
+/// 按工具包安装状态渲染 GGML_* 编译开关复选框；勾选结果写回 `settings.build_ggml_options`
+fn render_ggml_options(
+    ui: &mut egui::Ui,
+    settings: &mut AppSettings,
+    env_check: &crate::env_check::EnvCheckHandle,
+    lang: &i18n::Language,
+) {
+    let cuda_ok = component_available(env_check, settings, crate::env_check::ID_CUDA);
+    let rocm_ok = component_available(env_check, settings, crate::env_check::ID_ROCM);
+
+    for (group, available, title, missing) in [
+        (
+            crate::build::GgmlGroup::Cuda,
+            cuda_ok,
+            i18n::Key::BuildCuda,
+            i18n::Key::BuildCudaMissing,
+        ),
+        (
+            crate::build::GgmlGroup::Hip,
+            rocm_ok,
+            i18n::Key::BuildRocm,
+            i18n::Key::BuildRocmMissing,
+        ),
+    ] {
+        ui.add_space(4.0);
+        ui.label(i18n::t(title, lang));
+        if !available {
+            ui.label(RichText::new(i18n::t(missing, lang)).small().weak());
+            continue;
+        }
+        for &(name, desc) in crate::build::ggml_options(group) {
+            let mut checked =
+                crate::build::is_ggml_option_enabled(&settings.build_ggml_options, name);
+            let label = format!("{}({})", name, i18n::t(desc, lang));
+            if ui
+                .add(winui::FluentCheckBox::new(&mut checked, label))
+                .changed()
+            {
+                crate::build::set_ggml_option(&mut settings.build_ggml_options, name, checked);
+            }
+        }
+    }
 }
 
 /// 渲染环境检测结果列表：逐行显示「组件名 + 必需/可选 + 已安装/未安装 + 版本」。
@@ -271,10 +306,11 @@ mod tests {
     }
 
     #[test]
-    fn entries_have_git_requires_id_and_found() {
-        assert!(entries_have_git(&[git_entry(true)]));
-        assert!(!entries_have_git(&[git_entry(false)]));
-        assert!(!entries_have_git(&[]));
+    fn entry_found_requires_id_and_found() {
+        assert!(entry_found(&[git_entry(true)], ID_GIT));
+        assert!(!entry_found(&[git_entry(false)], ID_GIT));
+        assert!(!entry_found(&[], ID_GIT));
+        assert!(!entry_found(&[git_entry(true)], crate::env_check::ID_CUDA));
     }
 
     #[test]

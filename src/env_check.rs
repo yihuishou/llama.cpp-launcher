@@ -59,6 +59,12 @@ impl CheckResult {
 /// git 检测项的稳定 id（供 UI 判定依赖 git 的功能是否可用）
 pub const ID_GIT: &str = "git";
 
+/// CUDA 工具包检测项的稳定 id（供 UI 判定 CUDA 编译开关组是否展示）
+pub const ID_CUDA: &str = "cuda";
+
+/// ROCm 工具包检测项的稳定 id（供 UI 判定 ROCm 编译开关组是否展示）
+pub const ID_ROCM: &str = "rocm";
+
 /// 组件稳定 id（配置序列化用，勿轻易改动）
 fn key_id(key: Key) -> Option<&'static str> {
     match key {
@@ -67,8 +73,8 @@ fn key_id(key: Key) -> Option<&'static str> {
         Key::EnvCheckCompiler => Some("compiler"),
         Key::EnvCheckNinja => Some("ninja"),
         Key::EnvCheckPython => Some("python"),
-        Key::EnvCheckCuda => Some("cuda"),
-        Key::EnvCheckRocm => Some("rocm"),
+        Key::EnvCheckCuda => Some(ID_CUDA),
+        Key::EnvCheckRocm => Some(ID_ROCM),
         Key::EnvCheckRccl => Some("rccl"),
         Key::EnvCheckNccl => Some("nccl"),
         _ => None,
@@ -83,8 +89,8 @@ pub fn id_to_key(id: &str) -> Option<Key> {
         "compiler" => Some(Key::EnvCheckCompiler),
         "ninja" => Some(Key::EnvCheckNinja),
         "python" => Some(Key::EnvCheckPython),
-        "cuda" => Some(Key::EnvCheckCuda),
-        "rocm" => Some(Key::EnvCheckRocm),
+        ID_CUDA => Some(Key::EnvCheckCuda),
+        ID_ROCM => Some(Key::EnvCheckRocm),
         "rccl" => Some(Key::EnvCheckRccl),
         "nccl" => Some(Key::EnvCheckNccl),
         _ => None,

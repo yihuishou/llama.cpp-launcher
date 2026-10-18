@@ -23,6 +23,8 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
+use crate::i18n::Key;
+
 /// 源码目录名（位于程序同级目录下）
 pub const SOURCE_DIR_NAME: &str = "llama-source-code";
 
@@ -434,9 +436,118 @@ fn last_nonempty_line(s: &str) -> Option<String> {
         .map(str::to_string)
 }
 
+/// GGML_* 编译开关所属的工具包分组
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum GgmlGroup {
+    /// 需要 CUDA 工具包（`nvcc`）
+    Cuda,
+    /// 需要 ROCm 工具包（`hipcc`）
+    Hip,
+}
+
+/// CUDA 工具包相关的 GGML_* 开关：(CMake 选项名, 说明 i18n 键)
+pub const GGML_OPTIONS_CUDA: &[(&str, Key)] = &[
+    ("GGML_CUDA", Key::BuildOptCuda),
+    ("GGML_CUDA_GRAPHS", Key::BuildOptCudaGraphs),
+    ("GGML_CUDA_FORCE_MMQ", Key::BuildOptCudaForceMmq),
+    ("GGML_CUDA_FORCE_CUBLAS", Key::BuildOptCudaForceCublas),
+    ("GGML_CUDA_NO_VMM", Key::BuildOptCudaNoVmm),
+    ("GGML_CUDA_NO_PEER_COPY", Key::BuildOptCudaNoPeerCopy),
+    ("GGML_CUDA_NCCL", Key::BuildOptCudaNccl),
+    ("GGML_CUDA_DEBUG", Key::BuildOptCudaDebug),
+];
+
+/// ROCm 工具包相关的 GGML_* 开关：(CMake 选项名, 说明 i18n 键)
+pub const GGML_OPTIONS_HIP: &[(&str, Key)] = &[
+    ("GGML_HIP", Key::BuildOptHip),
+    ("GGML_HIP_RCCL", Key::BuildOptHipRccl),
+    ("GGML_HIP_GRAPHS", Key::BuildOptHipGraphs),
+    ("GGML_HIP_NO_VMM", Key::BuildOptHipNoVmm),
+    ("GGML_HIP_EXPORT_METRICS", Key::BuildOptHipExportMetrics),
+];
+
+/// 某工具包分组下的全部开关（均为默认关闭的布尔项：勾选 → `-D<名称>=ON`，不勾 → 省略）
+pub fn ggml_options(group: GgmlGroup) -> &'static [(&'static str, Key)] {
+    match group {
+        GgmlGroup::Cuda => GGML_OPTIONS_CUDA,
+        GgmlGroup::Hip => GGML_OPTIONS_HIP,
+    }
+}
+
+/// 全部开关名（CUDA 组在前）
+fn all_ggml_options() -> impl Iterator<Item = &'static str> {
+    GGML_OPTIONS_CUDA
+        .iter()
+        .chain(GGML_OPTIONS_HIP)
+        .map(|(name, _)| *name)
+}
+
+/// 指定开关是否已勾选
+pub fn is_ggml_option_enabled(enabled: &[String], name: &str) -> bool {
+    enabled.iter().any(|e| e == name)
+}
+
+/// 勾选 / 取消勾选一个开关（重复勾选不会重复入列）
+pub fn set_ggml_option(enabled: &mut Vec<String>, name: &str, on: bool) {
+    if on {
+        if !is_ggml_option_enabled(enabled, name) {
+            enabled.push(name.to_string());
+        }
+    } else {
+        enabled.retain(|e| e != name);
+    }
+}
+
+/// 把勾选的开关按清单顺序拼成 CMake 参数（清单外的名字被忽略）
+pub fn ggml_cmake_args(enabled: &[String]) -> Vec<String> {
+    all_ggml_options()
+        .filter(|name| is_ggml_option_enabled(enabled, name))
+        .map(|name| format!("-D{}=ON", name))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ggml_cmake_args_follows_catalog_order_and_skips_unknown() {
+        let enabled = vec![
+            "GGML_HIP".to_string(),
+            "GGML_NOT_A_REAL_OPTION".to_string(),
+            "GGML_CUDA".to_string(),
+        ];
+        assert_eq!(
+            ggml_cmake_args(&enabled),
+            ["-DGGML_CUDA=ON", "-DGGML_HIP=ON"]
+        );
+        assert!(ggml_cmake_args(&[]).is_empty());
+    }
+
+    #[test]
+    fn set_ggml_option_avoids_duplicates() {
+        let mut enabled = Vec::new();
+        set_ggml_option(&mut enabled, "GGML_CUDA", true);
+        set_ggml_option(&mut enabled, "GGML_CUDA", true);
+        assert_eq!(enabled, ["GGML_CUDA"]);
+        assert!(is_ggml_option_enabled(&enabled, "GGML_CUDA"));
+
+        set_ggml_option(&mut enabled, "GGML_CUDA", false);
+        assert!(enabled.is_empty());
+        assert!(!is_ggml_option_enabled(&enabled, "GGML_CUDA"));
+    }
+
+    #[test]
+    fn ggml_option_names_are_unique_and_both_groups_populated() {
+        assert!(!GGML_OPTIONS_CUDA.is_empty());
+        assert!(!GGML_OPTIONS_HIP.is_empty());
+
+        let mut names: Vec<&str> = all_ggml_options().collect();
+        let total = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), total);
+    }
 
     #[test]
     fn clone_args_uses_branch_when_no_tag() {

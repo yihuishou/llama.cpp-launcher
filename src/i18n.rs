@@ -915,7 +915,22 @@ pub enum Key {
     BuildOutputDir,
     BuildCuda,
     BuildRocm,
-    BuildVulkan,
+    BuildCudaMissing,
+    BuildRocmMissing,
+    BuildGgmlHint,
+    BuildOptCuda,
+    BuildOptCudaGraphs,
+    BuildOptCudaForceMmq,
+    BuildOptCudaForceCublas,
+    BuildOptCudaNoVmm,
+    BuildOptCudaNoPeerCopy,
+    BuildOptCudaNccl,
+    BuildOptCudaDebug,
+    BuildOptHip,
+    BuildOptHipRccl,
+    BuildOptHipGraphs,
+    BuildOptHipNoVmm,
+    BuildOptHipExportMetrics,
     BuildBtnClone,
     BuildBtnUpdate,
     BuildBtnBuild,
@@ -2687,8 +2702,56 @@ impl Key {
             (Key::BuildCuda, &Language::En) => "CUDA Backend",
             (Key::BuildRocm, &Language::Zh) => "ROCm 后端",
             (Key::BuildRocm, &Language::En) => "ROCm Backend",
-            (Key::BuildVulkan, &Language::Zh) => "Vulkan 后端",
-            (Key::BuildVulkan, &Language::En) => "Vulkan Backend",
+            (Key::BuildCudaMissing, &Language::Zh) => "未检测到 CUDA 工具包(nvcc)，CUDA 编译开关不可用",
+            (Key::BuildCudaMissing, &Language::En) => {
+                "CUDA toolkit (nvcc) not detected - CUDA build options unavailable"
+            }
+            (Key::BuildRocmMissing, &Language::Zh) => "未检测到 ROCm 工具包(hipcc)，ROCm 编译开关不可用",
+            (Key::BuildRocmMissing, &Language::En) => {
+                "ROCm toolkit (hipcc) not detected - ROCm build options unavailable"
+            }
+            (Key::BuildGgmlHint, &Language::Zh) => "勾选的开关会拼成 -D<名称>=ON 传给 CMake",
+            (Key::BuildGgmlHint, &Language::En) => {
+                "Checked switches are passed to CMake as -D<name>=ON"
+            }
+            (Key::BuildOptCuda, &Language::Zh) => "启用 CUDA 后端",
+            (Key::BuildOptCuda, &Language::En) => "Enable the CUDA backend",
+            (Key::BuildOptCudaGraphs, &Language::Zh) => "用 CUDA Graph 降低内核启动开销",
+            (Key::BuildOptCudaGraphs, &Language::En) => {
+                "Use CUDA Graphs to cut kernel launch overhead"
+            }
+            (Key::BuildOptCudaForceMmq, &Language::Zh) => "强制使用 MMQ(量化矩阵乘)内核",
+            (Key::BuildOptCudaForceMmq, &Language::En) => "Force the MMQ (quantized matmul) kernel",
+            (Key::BuildOptCudaForceCublas, &Language::Zh) => "强制用 cuBLAS 做矩阵乘",
+            (Key::BuildOptCudaForceCublas, &Language::En) => "Force cuBLAS for matmul",
+            (Key::BuildOptCudaNoVmm, &Language::Zh) => "禁用 CUDA 虚拟内存管理(不再链接 cuda_driver)",
+            (Key::BuildOptCudaNoVmm, &Language::En) => {
+                "Disable CUDA virtual memory management (drops cuda_driver)"
+            }
+            (Key::BuildOptCudaNoPeerCopy, &Language::Zh) => "禁用多卡间的 P2P 直接拷贝",
+            (Key::BuildOptCudaNoPeerCopy, &Language::En) => {
+                "Disable peer-to-peer copies between GPUs"
+            }
+            (Key::BuildOptCudaNccl, &Language::Zh) => "启用 NCCL 多卡通信(需已安装 NCCL)",
+            (Key::BuildOptCudaNccl, &Language::En) => {
+                "Enable NCCL multi-GPU communication (requires NCCL)"
+            }
+            (Key::BuildOptCudaDebug, &Language::Zh) => "生成调试信息 -lineinfo(编译更慢)",
+            (Key::BuildOptCudaDebug, &Language::En) => "Emit debug info -lineinfo (slower build)",
+            (Key::BuildOptHip, &Language::Zh) => "启用 ROCm/HIP 后端",
+            (Key::BuildOptHip, &Language::En) => "Enable the ROCm/HIP backend",
+            (Key::BuildOptHipRccl, &Language::Zh) => "启用 RCCL 多卡通信(需已安装 RCCL)",
+            (Key::BuildOptHipRccl, &Language::En) => {
+                "Enable RCCL multi-GPU communication (requires RCCL)"
+            }
+            (Key::BuildOptHipGraphs, &Language::Zh) => "用 HIP Graph 降低内核启动开销",
+            (Key::BuildOptHipGraphs, &Language::En) => {
+                "Use HIP Graphs to cut kernel launch overhead"
+            }
+            (Key::BuildOptHipNoVmm, &Language::Zh) => "禁用 HIP 虚拟内存管理",
+            (Key::BuildOptHipNoVmm, &Language::En) => "Disable HIP virtual memory management",
+            (Key::BuildOptHipExportMetrics, &Language::Zh) => "导出内核性能指标",
+            (Key::BuildOptHipExportMetrics, &Language::En) => "Export kernel performance metrics",
             (Key::BuildBtnClone, &Language::Zh) => "克隆仓库",
             (Key::BuildBtnClone, &Language::En) => "Clone Repository",
             (Key::BuildBtnUpdate, &Language::Zh) => "更新",

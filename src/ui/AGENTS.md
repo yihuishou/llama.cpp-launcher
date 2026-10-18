@@ -17,7 +17,7 @@
 - launch_commands_panel: server/RPC 最终启动命令只读展示
 - presets_panel: 预设保存/应用/删除/重命名/自启动 + 分享/引入入口；返回 PresetPanelRequest（None/StartServer/StartRpc/OpenConfig）
 - preset_share: 预设分享/引入模块（分享码 encode/decode、依赖声明 ShareDecl、引入配置窗口草稿隔离、声明阅读窗口）；进程生命周期仍走 engine，由 app.rs 响应 PresetPanelRequest
-- build_panel: llama.cpp 编译页（编译环境检测、仓库/分支/Tag、后端选择、克隆/编译入口），原设置面板内的编译卡片
+- build_panel: llama.cpp 编译页（编译环境检测、仓库/分支/Tag、GGML_* 后端编译开关按工具包安装状态显示、克隆/编译入口），原设置面板内的编译卡片
 - settings_panel: 应用设置（主题、语言、日志、自动更新等）
 - widgets: 可复用组件（rounded_button、toggle_trailing、nav_row、dialog_skeleton、segmented_width、R_CTL 圆角常量）
 - helper: WinUI 3 帮助按钮（question-circle 字形，悬停+点击气泡，try_icon 兜底）
