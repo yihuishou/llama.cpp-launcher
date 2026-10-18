@@ -1,6 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 pub mod app;
+pub mod build;
 pub mod config;
 pub mod downloader;
 pub mod engine;

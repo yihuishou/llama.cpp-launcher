@@ -2,12 +2,14 @@
 
 ## OVERVIEW
 
-src 根下 11 个顶层单文件模块：app 外壳、i18n、下载/自更新、主题、KV 估算、网络/地理、快捷方式、调试工具。面板见 ui/，进程见 engine/，配置见 config/。
+src 根下 12 个顶层单文件模块：app 外壳、i18n、下载/自更新、主题、KV 估算、网络/地理、快捷方式、调试工具、编译环境检测/源码克隆。面板见 ui/，进程见 engine/，配置见 config/。
 
 ## STRUCTURE
 
 - main.rs: 入口（`windows_subsystem = "windows"` 无控制台）：init_logger（FileLogger/NoOpLogger 由配置 log_to_file 决定）、`--updater-switch <pid>` waiter 分支、`--minimized` 检测、fluent-egui native_options（app_id、透明窗口）、load_window_icon / load_icon_fonts / load_cjk_font
 - app.rs: LlamaLauncherApp（settings/settings_manager/server_manager/rpc_manager/downloader/updater/preset_share/preset_config/nav/lang 等字段）+ eframe::App::ui 路由 + 菜单栏 + DWM/Mica 同步 + 开机自启（HKCU Run）+ 浏览器打开
+- build.rs: CloneHandle + SourceOp(Clone/Update) + CloneState(Idle/Running/Done/Failed) + CloneStatus(percent/op)；`start_clone`/`start_update` 后台跑 git（Handle 模式 + kill 子进程取消 + 独立线程按 `\r`/`\n` 切段解析 `--progress` 百分比）；克隆 `git clone --progress [--branch <ref>] <repo>` 到程序同级 `llama-source-code/`，更新在既有目录内 `update_steps`（有 Tag → `fetch --tags --force`+`checkout <tag>`；无 Tag → `checkout <branch>`+`pull --ff-only`）；`resolve_ref` 取 Tag 优先否则分支；注意与根目录 Cargo `build.rs` 无关
+- env_check.rs: Probe/CheckResult/EnvCheckEntry/EnvCheckState + EnvCheckHandle + ID_GIT；编译环境检测（git/cmake/编译器/ninja/python，Python 可用时追加 RCCL/NCCL），全以版本命令判定
 - i18n.rs: Key enum + Language(Zh/En) + t()；所有 UI 文本唯一入口（2603 行，项目第二大文件）
 - downloader.rs: DownloadHandle + DownloadVariant + DownloadState + download_in_background()/run_download()；官方/镜像源、nightly channel、流式下载（DlError::Cancelled/Failed）
 - updater.rs: UpdaterHandle + UpdateState(Idle/Checking/UpToDate/Available/Downloading/Installing/Error) + UpdateStatus；run_updater_waiter（--updater-switch 等待旧进程退出后换名）+ cleanup_leftovers_on_startup（exe.old）
@@ -25,7 +27,7 @@ src 根下 11 个顶层单文件模块：app 外壳、i18n、下载/自更新、
 - UI 面向文案走 i18n::t；后台线程错误串为英文（如 UpdateState::Error(String)），UI 层拼 i18n 前缀
 - 网络一律 net::build_agent()；下载/更新共享该 Agent 构造
 - CJK 字体仅 assets/NotoSansSC-Regular.ttf 经 include_bytes! 内嵌，放 Proportional 与 Monospace 族尾部（拉丁字形仍由默认字体渲染）
-- 内联测试分布: i18n.rs 无、geo.rs:94、kv_cache.rs:438、downloader.rs:1194（app/updater/theme/shortcut/net_proxy 零测试）
+- 内联测试分布: i18n.rs 无、geo.rs:94、kv_cache.rs:438、downloader.rs:1194、env_check.rs:511、build.rs:261（app/updater/theme/shortcut/net_proxy 零测试）
 
 ## ANTI-PATTERNS (THIS PROJECT)
 

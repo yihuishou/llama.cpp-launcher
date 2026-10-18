@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-11 个 egui 面板 + widgets/helper 可复用组件 + 模型标签解析。纯渲染，业务逻辑委托给 app/config/engine。详见根 AGENTS.md / engine/AGENTS.md / config/AGENTS.md。
+12 个 egui 面板 + widgets/helper 可复用组件 + 模型标签解析。纯渲染，业务逻辑委托给 app/config/engine。详见根 AGENTS.md / engine/AGENTS.md / config/AGENTS.md。
 
 ## STRUCTURE
 
@@ -17,6 +17,7 @@
 - launch_commands_panel: server/RPC 最终启动命令只读展示
 - presets_panel: 预设保存/应用/删除/重命名/自启动 + 分享/引入入口；返回 PresetPanelRequest（None/StartServer/StartRpc/OpenConfig）
 - preset_share: 预设分享/引入模块（分享码 encode/decode、依赖声明 ShareDecl、引入配置窗口草稿隔离、声明阅读窗口）；进程生命周期仍走 engine，由 app.rs 响应 PresetPanelRequest
+- build_panel: llama.cpp 编译页（编译环境检测、仓库/分支/Tag、后端选择、克隆/编译入口），原设置面板内的编译卡片
 - settings_panel: 应用设置（主题、语言、日志、自动更新等）
 - widgets: 可复用组件（rounded_button、toggle_trailing、nav_row、dialog_skeleton、segmented_width、R_CTL 圆角常量）
 - helper: WinUI 3 帮助按钮（question-circle 字形，悬停+点击气泡，try_icon 兜底）
@@ -40,9 +41,10 @@
     - model_panel: +&mut ServerManager, &mut RpcManager；FileMode(Main/Mmproj/DFlash)；auto_detect_model_dir / is_dflash_file()
     - log_panel: ui() +&mut ServerManager（服务器日志）；rpc_ui() +&mut RpcManager（远程调用日志）
     - presets_panel: +PresetShareUi, PresetConfigUi, &RpcManager, 启动结果通知；返回 PresetPanelRequest 交给 app.rs 执行
+    - build_panel: +&EnvCheckHandle, &CloneHandle（编译环境检测结果 + 源码克隆句柄）
 - 弹窗（Window）统一由 app.rs/presets_panel 每帧渲染入口调用，窗口内文本同样走 i18n；
   深浅色自适应用 ui.visuals()，主题色填充用 accent + alpha 175（低饱和度规范）。
-- 内联测试: widgets.rs:897, model_panel.rs:210, preset_share.rs:1825, launch_commands_panel.rs:103, settings_panel.rs（末尾 tests 模块：env 条目 git 判定与 can_clone 门控）。
+- 内联测试: widgets.rs:897, model_panel.rs:210, preset_share.rs:1825, launch_commands_panel.rs:103, build_panel.rs（末尾 tests 模块：env 条目 git 判定与 can_clone 门控）。
 
 ## ANTI-PATTERNS
 

@@ -1,3 +1,4 @@
+pub mod build_panel;
 pub mod helper;
 pub mod launch_commands_panel;
 pub mod log_panel;

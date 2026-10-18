@@ -5,11 +5,13 @@ use crate::downloader::DownloadHandle;
 use crate::engine::rpc::{RpcManager, RpcState};
 use crate::engine::server::{ServerManager, ServerState};
 use crate::env_check::{self, EnvCheckHandle, EnvCheckState};
+
+use crate::build::CloneHandle;
 use crate::i18n::{self, Language};
 use crate::spacing_debugger::SpacingDebugger;
 use crate::ui::{
-    launch_commands_panel, log_panel, mcp_panel, model_panel, params_panel, presets_panel,
-    rpc_panel, server_panel, settings_panel, widgets,
+    build_panel, launch_commands_panel, log_panel, mcp_panel, model_panel, params_panel,
+    presets_panel, rpc_panel, server_panel, settings_panel, widgets,
 };
 use egui::Color32;
 
@@ -25,6 +27,7 @@ enum NavSection {
     RpcLog,
     Commands,
     Presets,
+    Build,
     Settings,
 }
 
@@ -36,6 +39,7 @@ pub struct LlamaLauncherApp {
     downloader: DownloadHandle,
     updater: crate::updater::UpdaterHandle,
     env_check: EnvCheckHandle,
+    clone_handle: CloneHandle,
     check_update: Option<poll_promise::Promise<(String, Option<String>)>>,
     install_exit_timer: f32, // 自更新安装阶段：显示"正在安装"的倒计时
     preset_share: crate::ui::preset_share::PresetShareUi,
@@ -158,6 +162,7 @@ impl LlamaLauncherApp {
             downloader: DownloadHandle::new(),
             updater: crate::updater::UpdaterHandle::new(),
             env_check: EnvCheckHandle::new(),
+            clone_handle: CloneHandle::new(),
             check_update: None,
             install_exit_timer: 0.0,
             preset_share: crate::ui::preset_share::PresetShareUi::default(),
@@ -441,6 +446,11 @@ impl LlamaLauncherApp {
                         NavSection::Presets,
                         widgets::NavIcon::Presets,
                         i18n::t(i18n::Key::TabPresets, &self.lang),
+                    ),
+                    (
+                        NavSection::Build,
+                        widgets::NavIcon::Build,
+                        i18n::t(i18n::Key::NavBuild, &self.lang),
                     ),
                     (
                         NavSection::Settings,
@@ -841,6 +851,13 @@ impl eframe::App for LlamaLauncherApp {
                                     }
                                 }
                             }
+                            NavSection::Build => build_panel::ui(
+                                ui,
+                                &mut self.settings,
+                                &self.lang,
+                                &self.env_check,
+                                &self.clone_handle,
+                            ),
                             NavSection::Settings => settings_panel::ui(
                                 ui,
                                 &mut self.settings,
@@ -850,7 +867,6 @@ impl eframe::App for LlamaLauncherApp {
                                 &mut self.show_about,
                                 &mut self.debug_mode,
                                 &self.updater,
-                                &self.env_check,
                             ),
                         });
                 });
@@ -888,6 +904,7 @@ impl Drop for LlamaLauncherApp {
         self.downloader.request_cancel();
         self.updater.request_cancel();
         self.env_check.request_cancel();
+        self.clone_handle.request_cancel();
         self.save();
     }
 }

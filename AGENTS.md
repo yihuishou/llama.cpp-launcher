@@ -19,9 +19,11 @@ root/
 ├── .github/workflows/release.yml  # tag v* → win x64/arm64 + linux x64/aarch64 → GitHub Release
 ├── src/main.rs             # 入口: logger / --updater-switch / --minimized / native_options / 字体
 ├── src/app.rs              # LlamaLauncherApp: 路由/菜单/DWM-Mica/开机自启
+├── src/build.rs            # 后台 git clone llama.cpp 源码 → 程序同级 llama-source-code/
+├── src/env_check.rs        # 编译环境检测（git/cmake/编译器/ninja/python + CUDA/ROCm/RCCL/NCCL）
 ├── src/config/             # AppSettings/Preset/GpuLayersMode/LlamaCppType + 读写
 ├── src/engine/             # server/rpc-server 进程管理 + 日志聚合
-├── src/ui/                 # 11 个 egui 面板 + widgets/helper
+├── src/ui/                 # 12 个 egui 面板 + widgets/helper
 ├── src/i18n.rs             # i18n::t(Key, lang)，zh/en key→文案映射
 ├── src/downloader.rs       # llama.cpp 下载器（官方/镜像/nightly，变体选择）
 ├── src/updater.rs          # 应用自更新（Windows 热更新 + waiter 进程）
