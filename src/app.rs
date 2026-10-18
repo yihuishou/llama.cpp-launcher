@@ -4,6 +4,7 @@ use crate::config::settings::{
 use crate::downloader::DownloadHandle;
 use crate::engine::rpc::{RpcManager, RpcState};
 use crate::engine::server::{ServerManager, ServerState};
+use crate::env_check::{self, EnvCheckHandle, EnvCheckState};
 use crate::i18n::{self, Language};
 use crate::spacing_debugger::SpacingDebugger;
 use crate::ui::{
@@ -34,6 +35,7 @@ pub struct LlamaLauncherApp {
     rpc_manager: RpcManager,
     downloader: DownloadHandle,
     updater: crate::updater::UpdaterHandle,
+    env_check: EnvCheckHandle,
     check_update: Option<poll_promise::Promise<(String, Option<String>)>>,
     install_exit_timer: f32, // 自更新安装阶段：显示"正在安装"的倒计时
     preset_share: crate::ui::preset_share::PresetShareUi,
@@ -155,6 +157,7 @@ impl LlamaLauncherApp {
             rpc_manager,
             downloader: DownloadHandle::new(),
             updater: crate::updater::UpdaterHandle::new(),
+            env_check: EnvCheckHandle::new(),
             check_update: None,
             install_exit_timer: 0.0,
             preset_share: crate::ui::preset_share::PresetShareUi::default(),
@@ -847,10 +850,23 @@ impl eframe::App for LlamaLauncherApp {
                                 &mut self.show_about,
                                 &mut self.debug_mode,
                                 &self.updater,
+                                &self.env_check,
                             ),
                         });
                 });
             });
+
+        // 环境检测完成后落盘（与当前所在页面无关）；仅在结果变化时写入，避免每帧写盘
+        if let EnvCheckState::Done(results) = &self.env_check.snapshot().state {
+            let entries = env_check::to_entries(results);
+            if self.settings.env_check_result != entries {
+                self.settings.env_check_all_required_ok = env_check::all_required_found(results);
+                self.settings.env_check_result = entries;
+                self.settings.env_check_checked_at =
+                    Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+                let _ = self.settings_manager.save(&self.settings);
+            }
+        }
 
         // 调试模式：绘制控件间距可视化
         if self.debug_mode {
@@ -871,6 +887,7 @@ impl Drop for LlamaLauncherApp {
         self.rpc_manager.stop();
         self.downloader.request_cancel();
         self.updater.request_cancel();
+        self.env_check.request_cancel();
         self.save();
     }
 }

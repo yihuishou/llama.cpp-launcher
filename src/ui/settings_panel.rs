@@ -19,6 +19,7 @@ pub fn ui(
     show_about: &mut bool,
     debug_mode: &mut bool,
     updater: &crate::updater::UpdaterHandle,
+    env_check: &crate::env_check::EnvCheckHandle,
 ) {
     let accent = crate::theme::accent_color(&settings.accent_color);
 
@@ -482,6 +483,42 @@ pub fn ui(
     widgets::card(ui, i18n::t(i18n::Key::SettingsBuild, lang), accent, |ui| {
         ui.add_space(8.0);
 
+        // 编译环境检测（卡片第一项）
+        ui.horizontal_wrapped(|ui| {
+            ui.label(i18n::t(i18n::Key::EnvCheckTitle, lang));
+            if ui
+                .add_enabled(
+                    !env_check.is_busy(),
+                    widgets::rounded_button(i18n::t(i18n::Key::EnvCheckBtnRun, lang), Some(accent)),
+                )
+                .clicked()
+            {
+                env_check.run();
+            }
+        });
+
+        match &env_check.snapshot().state {
+            crate::env_check::EnvCheckState::Running => {
+                ui.label(RichText::new(i18n::t(i18n::Key::EnvCheckStatusRunning, lang)).weak());
+            }
+            crate::env_check::EnvCheckState::Done(results) => {
+                ui.label(RichText::new(i18n::t(i18n::Key::EnvCheckStatusDone, lang)).weak());
+                let entries = crate::env_check::to_entries(results);
+                render_env_entries(ui, &entries, lang);
+            }
+            crate::env_check::EnvCheckState::Idle => {
+                if settings.env_check_result.is_empty() {
+                    ui.label(RichText::new(i18n::t(i18n::Key::EnvCheckStatusIdle, lang)).weak());
+                } else {
+                    render_env_entries(ui, &settings.env_check_result, lang);
+                }
+            }
+        }
+
+        ui.add_space(8.0);
+        ui.separator();
+        ui.add_space(4.0);
+
         // Git 仓库
         ui.label(i18n::t(i18n::Key::BuildGitRepo, lang));
         ui.add(winui::FluentTextEdit::new(&mut settings.build_git_repo));
@@ -852,4 +889,39 @@ fn uninstall_service() -> Result<String, String> {
         .output();
 
     Ok("服务已卸载".to_string())
+}
+
+/// 渲染环境检测结果列表：逐行显示「组件名 + 必需/可选 + 已安装/未安装 + 版本」。
+fn render_env_entries(
+    ui: &mut egui::Ui,
+    entries: &[crate::env_check::EnvCheckEntry],
+    lang: &i18n::Language,
+) {
+    let palette = winui::palette(widgets::current_theme(ui));
+    for entry in entries {
+        ui.horizontal_wrapped(|ui| {
+            let name = crate::env_check::id_to_key(&entry.id)
+                .map(|key| i18n::t(key, lang).to_string())
+                .unwrap_or_else(|| entry.id.clone());
+            ui.label(name);
+
+            let required = if entry.required {
+                i18n::Key::EnvCheckTagRequired
+            } else {
+                i18n::Key::EnvCheckTagOptional
+            };
+            ui.label(RichText::new(i18n::t(required, lang)).small().weak());
+
+            let (tag, color) = if entry.found {
+                (i18n::Key::EnvCheckTagFound, palette.success)
+            } else {
+                (i18n::Key::EnvCheckTagMissing, palette.danger)
+            };
+            ui.label(RichText::new(i18n::t(tag, lang)).small().color(color));
+
+            if !entry.version.is_empty() {
+                ui.label(RichText::new(&entry.version).small().weak());
+            }
+        });
+    }
 }
