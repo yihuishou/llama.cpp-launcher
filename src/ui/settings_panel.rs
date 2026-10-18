@@ -899,11 +899,11 @@ fn render_env_entries(
 ) {
     let palette = winui::palette(widgets::current_theme(ui));
     for entry in entries {
+        let Some(key) = crate::env_check::id_to_key(&entry.id) else {
+            continue;
+        };
         ui.horizontal_wrapped(|ui| {
-            let name = crate::env_check::id_to_key(&entry.id)
-                .map(|key| i18n::t(key, lang).to_string())
-                .unwrap_or_else(|| entry.id.clone());
-            ui.label(name);
+            ui.label(i18n::t(key, lang));
 
             let required = if entry.required {
                 i18n::Key::EnvCheckTagRequired

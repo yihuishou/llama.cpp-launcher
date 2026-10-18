@@ -2,7 +2,7 @@
 //!
 //! 探测编译 llama.cpp 所需的工具链与可选的 GPU 后端工具包，统一以「版本命令」判定可用性：
 //! 直接调用工具并读取 `--version` 输出，能调起来即视为可用，调不起来（未在全局环境注册）
-//! 即不可用。覆盖 git、cmake、C++ 编译器、ninja、make、python，以及 CUDA（`nvcc --version`）
+//! 即不可用。覆盖 git、cmake、C++ 编译器、ninja、python，以及 CUDA（`nvcc --version`）
 //! 与 ROCm（`hipcc --version`）。Windows 下另用 `vswhere.exe` 定位 MSVC（编译器通常不在
 //! PATH 上）。
 //!
@@ -62,7 +62,6 @@ fn key_id(key: Key) -> Option<&'static str> {
         Key::EnvCheckCmake => Some("cmake"),
         Key::EnvCheckCompiler => Some("compiler"),
         Key::EnvCheckNinja => Some("ninja"),
-        Key::EnvCheckMake => Some("make"),
         Key::EnvCheckPython => Some("python"),
         Key::EnvCheckCuda => Some("cuda"),
         Key::EnvCheckRocm => Some("rocm"),
@@ -77,7 +76,6 @@ pub fn id_to_key(id: &str) -> Option<Key> {
         "cmake" => Some(Key::EnvCheckCmake),
         "compiler" => Some(Key::EnvCheckCompiler),
         "ninja" => Some(Key::EnvCheckNinja),
-        "make" => Some(Key::EnvCheckMake),
         "python" => Some(Key::EnvCheckPython),
         "cuda" => Some(Key::EnvCheckCuda),
         "rocm" => Some(Key::EnvCheckRocm),
@@ -263,11 +261,6 @@ fn requirements() -> Vec<Requirement> {
             probe: probe_ninja,
         },
         Requirement {
-            key: Key::EnvCheckMake,
-            required: false,
-            probe: probe_make,
-        },
-        Requirement {
             key: Key::EnvCheckPython,
             required: false,
             probe: probe_python,
@@ -296,10 +289,6 @@ fn probe_cmake() -> Probe {
 
 fn probe_ninja() -> Probe {
     probe_tool("ninja", &["--version"])
-}
-
-fn probe_make() -> Probe {
-    probe_tool("make", &["--version"])
 }
 
 fn probe_python() -> Probe {
