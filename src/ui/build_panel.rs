@@ -104,14 +104,14 @@ pub fn ui(
         ui.separator();
         ui.add_space(4.0);
 
-        // 后端编译开关（按工具包安装状态显示）
-        ui.label(i18n::t(i18n::Key::BuildBackend, lang));
+        // 编译选项（CUDA/ROCm 按工具包安装状态门控，网页客户端资源始终显示）
+        ui.label(i18n::t(i18n::Key::BuildOptions, lang));
         ui.label(
-            RichText::new(i18n::t(i18n::Key::BuildGgmlHint, lang))
+            RichText::new(i18n::t(i18n::Key::BuildOptionsHint, lang))
                 .small()
                 .weak(),
         );
-        render_ggml_options(ui, settings, env_check, lang);
+        render_cmake_options(ui, settings, env_check, lang);
 
         ui.add_space(8.0);
 
@@ -213,8 +213,9 @@ fn can_clone(env_check: &crate::env_check::EnvCheckHandle, settings: &AppSetting
         && !settings.build_branch.trim().is_empty()
 }
 
-/// 按工具包安装状态渲染 GGML_* 编译开关复选框；勾选结果写回 `settings.build_ggml_options`
-fn render_ggml_options(
+/// 按分组渲染编译开关复选框；`gated` 为 `Some(false)` 时隐藏该组并提示缺失的工具包。
+/// 勾选结果写回 `settings.build_cmake_options`
+fn render_cmake_options(
     ui: &mut egui::Ui,
     settings: &mut AppSettings,
     env_check: &crate::env_check::EnvCheckHandle,
@@ -223,35 +224,47 @@ fn render_ggml_options(
     let cuda_ok = component_available(env_check, settings, crate::env_check::ID_CUDA);
     let rocm_ok = component_available(env_check, settings, crate::env_check::ID_ROCM);
 
-    for (group, available, title, missing) in [
+    for (group, gated, title, missing) in [
         (
-            crate::build::GgmlGroup::Cuda,
-            cuda_ok,
+            crate::build::OptionGroup::Cuda,
+            Some(cuda_ok),
             i18n::Key::BuildCuda,
-            i18n::Key::BuildCudaMissing,
+            Some(i18n::Key::BuildCudaMissing),
         ),
         (
-            crate::build::GgmlGroup::Hip,
-            rocm_ok,
+            crate::build::OptionGroup::Hip,
+            Some(rocm_ok),
             i18n::Key::BuildRocm,
-            i18n::Key::BuildRocmMissing,
+            Some(i18n::Key::BuildRocmMissing),
+        ),
+        (
+            crate::build::OptionGroup::Ui,
+            None,
+            i18n::Key::BuildUiAssets,
+            None,
         ),
     ] {
         ui.add_space(4.0);
         ui.label(i18n::t(title, lang));
-        if !available {
-            ui.label(RichText::new(i18n::t(missing, lang)).small().weak());
+        if let Some(false) = gated {
+            if let Some(missing) = missing {
+                ui.label(RichText::new(i18n::t(missing, lang)).small().weak());
+            }
             continue;
         }
-        for &(name, desc) in crate::build::ggml_options(group) {
+        for &(option, desc) in crate::build::cmake_options(group) {
             let mut checked =
-                crate::build::is_ggml_option_enabled(&settings.build_ggml_options, name);
-            let label = format!("{}({})", name, i18n::t(desc, lang));
+                crate::build::is_option_selected(&settings.build_cmake_options, option);
+            let label = format!("{}({})", option, i18n::t(desc, lang));
             if ui
                 .add(winui::FluentCheckBox::new(&mut checked, label))
                 .changed()
             {
-                crate::build::set_ggml_option(&mut settings.build_ggml_options, name, checked);
+                crate::build::set_option_selected(
+                    &mut settings.build_cmake_options,
+                    option,
+                    checked,
+                );
             }
         }
     }

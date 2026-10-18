@@ -908,16 +908,17 @@ pub enum Key {
 
     // llama.cpp 编译
     SettingsBuild,
-    BuildBackend,
+    BuildOptions,
     BuildGitRepo,
     BuildBranch,
     BuildTag,
     BuildOutputDir,
     BuildCuda,
     BuildRocm,
+    BuildUiAssets,
     BuildCudaMissing,
     BuildRocmMissing,
-    BuildGgmlHint,
+    BuildOptionsHint,
     BuildOptCuda,
     BuildOptCudaGraphs,
     BuildOptCudaForceMmq,
@@ -931,6 +932,8 @@ pub enum Key {
     BuildOptHipGraphs,
     BuildOptHipNoVmm,
     BuildOptHipExportMetrics,
+    BuildOptLlamaBuildUi,
+    BuildOptLlamaUsePrebuiltUi,
     BuildBtnClone,
     BuildBtnUpdate,
     BuildBtnBuild,
@@ -1226,8 +1229,8 @@ impl Key {
             (Key::CheckboxEnableWebClient, &Language::En) => "Web Client (--webui)",
             (Key::LabelWebUiPath, &Language::Zh) => "网页客户端静态文件目录 (--path):",
             (Key::LabelWebUiPath, &Language::En) => "Web client static files (--path):",
-            (Key::HelpWebUiPath, &Language::Zh) => "指定网页客户端 (Web UI) 前端文件的提供目录。留空使用 llama-server 二进制内置的 Web UI；填写目录 (如 tools/server/webui 的构建产物) 后从该目录提供前端文件，无需重新编译 llama-server 即可更换网页客户端界面。",
-            (Key::HelpWebUiPath, &Language::En) => "Directory to serve the Web UI frontend files from. Empty = use the Web UI embedded in the llama-server binary. Set a directory (e.g. tools/server/webui build output) to serve your own frontend without recompiling llama-server.",
+            (Key::HelpWebUiPath, &Language::Zh) => "指定网页客户端 (Web UI) 前端文件的提供目录。留空使用 llama-server 二进制内置的 Web UI；填写目录 (如 tools/ui/dist) 后从该目录提供前端文件，无需重新编译 llama-server 即可更换网页客户端界面。",
+            (Key::HelpWebUiPath, &Language::En) => "Directory to serve the Web UI frontend files from. Empty = use the Web UI embedded in the llama-server binary. Set a directory (e.g. tools/ui/dist) to serve your own frontend without recompiling llama-server.",
             (Key::CheckboxLogTimestamps, &Language::Zh) => "日志时间戳 (--log-timestamps)",
             (Key::CheckboxLogTimestamps, &Language::En) => "Log Timestamps (--log-timestamps)",
             (Key::LabelLogVerbosity, &Language::Zh) => "日志级别 (--log-verbosity):",
@@ -2688,8 +2691,8 @@ impl Key {
             // llama.cpp 编译
             (Key::SettingsBuild, &Language::Zh) => "llama.cpp 编译",
             (Key::SettingsBuild, &Language::En) => "llama.cpp Build",
-            (Key::BuildBackend, &Language::Zh) => "编译后端",
-            (Key::BuildBackend, &Language::En) => "Build Backends",
+            (Key::BuildOptions, &Language::Zh) => "编译选项",
+            (Key::BuildOptions, &Language::En) => "Build Options",
             (Key::BuildGitRepo, &Language::Zh) => "Git 仓库",
             (Key::BuildGitRepo, &Language::En) => "Git Repository",
             (Key::BuildBranch, &Language::Zh) => "分支",
@@ -2702,6 +2705,8 @@ impl Key {
             (Key::BuildCuda, &Language::En) => "CUDA Backend",
             (Key::BuildRocm, &Language::Zh) => "ROCm 后端",
             (Key::BuildRocm, &Language::En) => "ROCm Backend",
+            (Key::BuildUiAssets, &Language::Zh) => "网页客户端资源",
+            (Key::BuildUiAssets, &Language::En) => "Web UI Assets",
             (Key::BuildCudaMissing, &Language::Zh) => "未检测到 CUDA 工具包(nvcc)，CUDA 编译开关不可用",
             (Key::BuildCudaMissing, &Language::En) => {
                 "CUDA toolkit (nvcc) not detected - CUDA build options unavailable"
@@ -2710,9 +2715,11 @@ impl Key {
             (Key::BuildRocmMissing, &Language::En) => {
                 "ROCm toolkit (hipcc) not detected - ROCm build options unavailable"
             }
-            (Key::BuildGgmlHint, &Language::Zh) => "勾选的开关会拼成 -D<名称>=ON 传给 CMake",
-            (Key::BuildGgmlHint, &Language::En) => {
-                "Checked switches are passed to CMake as -D<name>=ON"
+            (Key::BuildOptionsHint, &Language::Zh) => {
+                "勾选的开关会拼成 -D<参数> 传给 CMake(布尔项自动补 =ON)"
+            }
+            (Key::BuildOptionsHint, &Language::En) => {
+                "Checked switches are passed to CMake as -D<parameter> (booleans get =ON appended)"
             }
             (Key::BuildOptCuda, &Language::Zh) => "启用 CUDA 后端",
             (Key::BuildOptCuda, &Language::En) => "Enable the CUDA backend",
@@ -2752,6 +2759,16 @@ impl Key {
             (Key::BuildOptHipNoVmm, &Language::En) => "Disable HIP virtual memory management",
             (Key::BuildOptHipExportMetrics, &Language::Zh) => "导出内核性能指标",
             (Key::BuildOptHipExportMetrics, &Language::En) => "Export kernel performance metrics",
+            (Key::BuildOptLlamaBuildUi, &Language::Zh) => "用 npm 在本地构建网页客户端(需 Node.js)",
+            (Key::BuildOptLlamaBuildUi, &Language::En) => {
+                "Build the Web UI locally with npm (requires Node.js)"
+            }
+            (Key::BuildOptLlamaUsePrebuiltUi, &Language::Zh) => {
+                "允许从 Hugging Face 下载预编译网页客户端(关掉可离线构建)"
+            }
+            (Key::BuildOptLlamaUsePrebuiltUi, &Language::En) => {
+                "Allow downloading the prebuilt Web UI from Hugging Face (disable for offline builds)"
+            }
             (Key::BuildBtnClone, &Language::Zh) => "克隆仓库",
             (Key::BuildBtnClone, &Language::En) => "Clone Repository",
             (Key::BuildBtnUpdate, &Language::Zh) => "更新",
