@@ -2734,12 +2734,8 @@ impl Key {
             }
             (Key::BuildOptCuda, &Language::Zh) => "启用 CUDA 后端",
             (Key::BuildOptCuda, &Language::En) => "Enable the CUDA backend",
-            (Key::BuildOptCudaFaAllQuants, &Language::Zh) => {
-                "为 FlashAttention 编译全部量化类型的内核，CUDA/ROCm 共用 (二进制更大，量化 KV 加速更快)"
-            }
-            (Key::BuildOptCudaFaAllQuants, &Language::En) => {
-                "Compile FlashAttention kernels for all quant types, shared by CUDA/ROCm (larger binary)"
-            }
+            (Key::BuildOptCudaFaAllQuants, &Language::Zh) => "为 FlashAttention 编译全部 K/V 类型组合 (编译更慢)",
+            (Key::BuildOptCudaFaAllQuants, &Language::En) => "Compile FlashAttention for all K/V type combinations (slower build)",
             (Key::BuildOptCudaGraphs, &Language::Zh) => "启用 CUDA Graph 以减少内核启动开销",
             (Key::BuildOptCudaGraphs, &Language::En) => {
                 "Enable CUDA Graphs to reduce kernel launch overhead"
