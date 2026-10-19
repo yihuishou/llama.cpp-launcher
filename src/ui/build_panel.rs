@@ -228,6 +228,21 @@ fn can_clone(env_check: &crate::env_check::EnvCheckHandle, settings: &AppSetting
         && !settings.build_branch.trim().is_empty()
 }
 
+/// 开关复选框的显示名：`选项名 (说明)`；spec 固定为 `=OFF` 的（勾选即禁用某特性）前置「禁用」
+fn option_display_label(option: &str, desc: i18n::Key, lang: &i18n::Language) -> String {
+    let name = crate::build::option_label(option);
+    if crate::build::option_is_disable(option) {
+        format!(
+            "{} {} ({})",
+            i18n::t(i18n::Key::BuildDisablePrefix, lang),
+            name,
+            i18n::t(desc, lang)
+        )
+    } else {
+        format!("{} ({})", name, i18n::t(desc, lang))
+    }
+}
+
 /// 按分组渲染编译开关复选框；`gated` 为 `Some(false)` 时隐藏该组并提示缺失的工具包。
 /// 勾选结果写回 `settings.build_cmake_options`
 fn render_cmake_options(
@@ -276,11 +291,7 @@ fn render_cmake_options(
         for &(option, desc) in crate::build::cmake_options(group) {
             let mut checked =
                 crate::build::is_option_selected(&settings.build_cmake_options, option);
-            let label = format!(
-                "{} ({})",
-                crate::build::option_label(option),
-                i18n::t(desc, lang)
-            );
+            let label = option_display_label(option, desc, lang);
             if ui
                 .add(winui::FluentCheckBox::new(&mut checked, label))
                 .changed()
@@ -375,5 +386,24 @@ mod tests {
 
         settings.env_check_result = Vec::new();
         assert!(!can_clone(&handle, &settings));
+    }
+
+    #[test]
+    fn disable_spec_gets_disabled_prefix_in_label() {
+        let lang = i18n::Language::Zh;
+
+        let disabled = option_display_label(
+            "LLAMA_BUILD_TESTS=OFF",
+            i18n::Key::BuildOptLlamaBuildTests,
+            &lang,
+        );
+        assert!(
+            disabled.starts_with("禁用 LLAMA_BUILD_TESTS ("),
+            "{disabled}"
+        );
+
+        let plain = option_display_label("GGML_CUDA", i18n::Key::BuildOptCuda, &lang);
+        assert!(plain.starts_with("GGML_CUDA ("), "{plain}");
+        assert!(!plain.contains("禁用"));
     }
 }

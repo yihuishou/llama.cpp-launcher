@@ -530,6 +530,12 @@ pub fn option_label(spec: &str) -> &str {
     spec.split_once('=').map_or(spec, |(name, _)| name)
 }
 
+/// spec 是否用固定值关掉了某个特性（如 `LLAMA_OPENSSL=OFF`）：勾选即「禁用」
+pub fn option_is_disable(spec: &str) -> bool {
+    spec.split_once('=')
+        .is_some_and(|(_, value)| value.eq_ignore_ascii_case("OFF"))
+}
+
 /// 把勾选的开关按清单顺序拼成 CMake 参数（清单外的名字被忽略）
 pub fn selected_cmake_args(selected: &[String]) -> Vec<String> {
     all_cmake_options()
@@ -665,6 +671,22 @@ mod tests {
         set_option_selected(&mut selected, "GGML_CUDA", false);
         assert!(selected.is_empty());
         assert!(!is_option_selected(&selected, "GGML_CUDA"));
+    }
+
+    #[test]
+    fn option_is_disable_detects_pinned_off_specs() {
+        for spec in [
+            "LLAMA_BUILD_TESTS=OFF",
+            "LLAMA_BUILD_EXAMPLES=OFF",
+            "LLAMA_BUILD_APP=OFF",
+            "LLAMA_OPENSSL=OFF",
+            "LLAMA_USE_PREBUILT_UI=OFF",
+        ] {
+            assert!(option_is_disable(spec), "{spec} 应判定为禁用型");
+        }
+
+        assert!(!option_is_disable("GGML_RPC"));
+        assert!(!option_is_disable("GGML_CUDA"));
     }
 
     #[test]
