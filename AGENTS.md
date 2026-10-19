@@ -23,7 +23,7 @@ root/
 ├── src/env_check.rs        # 编译环境检测（git/cmake/编译器/ninja/python + CUDA/ROCm/RCCL/NCCL）
 ├── src/config/             # AppSettings/Preset/GpuLayersMode/LlamaCppType + 读写
 ├── src/engine/             # server/rpc-server 进程管理 + 日志聚合
-├── src/ui/                 # 12 个 egui 面板 + widgets/helper
+├── src/ui/                 # 13 个 egui 面板 + widgets/helper
 ├── src/i18n.rs             # i18n::t(Key, lang)，zh/en key→文案映射
 ├── src/downloader.rs       # llama.cpp 下载器（官方/镜像/nightly，变体选择）
 ├── src/updater.rs          # 应用自更新（Windows 热更新 + waiter 进程）

@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-12 个 egui 面板 + widgets/helper 可复用组件 + 模型标签解析。纯渲染，业务逻辑委托给 app/config/engine。详见根 AGENTS.md / engine/AGENTS.md / config/AGENTS.md。
+13 个 egui 面板 + widgets/helper 可复用组件 + 模型标签解析。纯渲染，业务逻辑委托给 app/config/engine。详见根 AGENTS.md / engine/AGENTS.md / config/AGENTS.md。
 
 ## STRUCTURE
 
@@ -13,7 +13,7 @@
   线程、采样、采样器链、结构化输出；另含 5 个高级分组——长上下文缩放（RoPE/YaRN）、
   适配器（LoRA/控制向量）、服务与运行、高级加载与性能、嵌入与重排
 - mcp_panel: MCP 服务器配置、状态管理
-- log_panel: 服务器日志 ui() + 远程调用日志 rpc_ui()，共享 render()/LogSource trait；prefill 进度条、max_log_lines 上限
+- log_panel: 服务器日志 ui() + 远程调用日志 rpc_ui() + 编译日志 build_ui()，共享 render()/LogSource trait；prefill 进度条、max_log_lines 上限
 - launch_commands_panel: server/RPC 最终启动命令只读展示
 - presets_panel: 预设保存/应用/删除/重命名/自启动 + 分享/引入入口；返回 PresetPanelRequest（None/StartServer/StartRpc/OpenConfig）
 - preset_share: 预设分享/引入模块（分享码 encode/decode、依赖声明 ShareDecl、引入配置窗口草稿隔离、声明阅读窗口）；进程生命周期仍走 engine，由 app.rs 响应 PresetPanelRequest
@@ -29,7 +29,7 @@
 | 面板函数签名与路由约定        | mod.rs / app.rs（tab_selected） | 路由由 app.rs 控制；本目录只负责渲染 |
 | model_panel 标签解析规则 | model_panel::parse_tags()    | 按文件名分段着色               |
 | 预设分享/引入           | preset_share.rs              | ShareDecl/encode/decode/config_window |
-| 日志渲染（跨 server/rpc） | log_panel::render()          | LogSource trait 抽象         |
+| 日志渲染（跨 server/rpc/build） | log_panel::render()     | LogSource trait 抽象         |
 | UI 组件（卡片/按钮/开关）   | widgets.rs                   | rounded_button/nav_row/dialog_skeleton 等 |
 | 帮助气泡按钮              | helper.rs                    | help_button/_small/_inline，iconflow question-circle |
 
@@ -39,7 +39,7 @@
 - 面板函数签名统一：fn ui(&mut Ui, settings: &mut AppSettings, lang: &Language)
 - 例外（允许额外参数）:
     - model_panel: +&mut ServerManager, &mut RpcManager；FileMode(Main/Mmproj/DFlash)；auto_detect_model_dir / is_dflash_file()
-    - log_panel: ui() +&mut ServerManager（服务器日志）；rpc_ui() +&mut RpcManager（远程调用日志）
+    - log_panel: ui() +&mut ServerManager（服务器日志）；rpc_ui() +&mut RpcManager（远程调用日志）；build_ui() +&mut CloneHandle（编译日志）
     - presets_panel: +PresetShareUi, PresetConfigUi, &RpcManager, 启动结果通知；返回 PresetPanelRequest 交给 app.rs 执行
     - build_panel: +&EnvCheckHandle, &CloneHandle（编译环境检测结果 + 源码克隆句柄）
 - 弹窗（Window）统一由 app.rs/presets_panel 每帧渲染入口调用，窗口内文本同样走 i18n；
