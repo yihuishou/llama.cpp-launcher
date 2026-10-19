@@ -37,6 +37,23 @@ fn find_msvc_rc_dir() -> Option<String> {
         .map(|p| p.to_string_lossy().to_string())
 }
 
+/// 把 `CARGO_PKG_VERSION`（形如 `0.2.2`）打包成 VERSIONINFO 需要的 u64（四段各占 16 位）。
+///
+/// 必须与 Cargo.toml 同源，不要退回写死的字面量 —— 那样 exe 属性里的版本会再次漂移。
+fn package_version_u64() -> u64 {
+    let version = std::env::var("CARGO_PKG_VERSION").unwrap_or_default();
+    let mut parts = version.split('.').map(|part| {
+        let digits: String = part.chars().take_while(|c| c.is_ascii_digit()).collect();
+        digits.parse::<u16>().unwrap_or(0)
+    });
+    let (major, minor, patch) = (
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+        parts.next().unwrap_or(0),
+    );
+    ((major as u64) << 48) | ((minor as u64) << 32) | ((patch as u64) << 16)
+}
+
 fn main() {
     // build.rs 运行在 host 上，不能用 #[cfg(windows)] 判断目标平台
     // 必须通过 CARGO_CFG_TARGET_OS 环境变量判断
@@ -54,8 +71,9 @@ fn main() {
         res.set("LegalCopyright", "Copyright 2025");
         res.set("InternalName", "llama.cpp launcher");
         res.set("OriginalFilename", "llama_cpp_launcher.exe");
-        res.set_version_info(winres::VersionInfo::FILEVERSION, 0x0000000100000000u64);
-        res.set_version_info(winres::VersionInfo::PRODUCTVERSION, 0x0000000100000000u64);
+        let version = package_version_u64();
+        res.set_version_info(winres::VersionInfo::FILEVERSION, version);
+        res.set_version_info(winres::VersionInfo::PRODUCTVERSION, version);
         res.set_version_info(winres::VersionInfo::FILEOS, 0x40004u64);
         res.set_version_info(winres::VersionInfo::FILETYPE, 0x2u64);
         // 兜底：资源编译失败也不中断构建（仅丢失图标与版本信息，不影响功能）
