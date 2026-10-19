@@ -503,6 +503,24 @@ fn default_build_branch() -> String {
     "master".to_string()
 }
 
+/// 默认勾选的编译开关。`GGML_RPC` 上游默认关闭，但本启动器要管理 ggml-rpc-server，故默认开启；
+/// `LLAMA_BUILD_TESTS`/`LLAMA_BUILD_EXAMPLES`/`LLAMA_BUILD_APP` 上游默认开启，而启动器只用
+/// server 与 rpc-server，故默认关闭以缩短编译时间
+fn default_build_cmake_options() -> Vec<String> {
+    vec![
+        "GGML_RPC".to_string(),
+        "LLAMA_BUILD_TESTS=OFF".to_string(),
+        "LLAMA_BUILD_EXAMPLES=OFF".to_string(),
+        "LLAMA_BUILD_APP=OFF".to_string(),
+    ]
+}
+
+/// 默认 CMake 生成器。固定 Ninja：上游的 HIP 手动构建配方即 `-G Ninja`，且单配置生成器下
+/// `CMAKE_BUILD_TYPE` 才真正生效（多配置生成器会忽略它，只认 `--config`）
+pub(crate) fn default_build_generator() -> String {
+    "Ninja".to_string()
+}
+
 fn default_build_type() -> String {
     "Release".to_string()
 }
@@ -2837,7 +2855,7 @@ pub struct AppSettings {
     #[serde(default)]
     pub build_output_dir: String,
     /// 勾选的编译开关参数（拼为 `-D<参数>` 传给 CMake；不含 `=` 的补 `=ON`）
-    #[serde(default, alias = "build_ggml_options")]
+    #[serde(default = "default_build_cmake_options", alias = "build_ggml_options")]
     pub build_cmake_options: Vec<String>,
 
     // ── 编译环境检测结果（落盘，供下次启动展示）──
@@ -2855,8 +2873,8 @@ pub struct AppSettings {
     /// 源码工作目录（clone/checkout 位置；空=默认）
     #[serde(default)]
     pub build_work_dir: String,
-    /// CMake 生成器（空=自动；"Ninja"/"Unix Makefiles"/"Visual Studio ..."）
-    #[serde(default)]
+    /// CMake 生成器（编译强制使用 Ninja：留空时回退 Ninja）
+    #[serde(default = "default_build_generator")]
     pub build_generator: String,
     /// 构建类型（CMAKE_BUILD_TYPE）
     #[serde(default = "default_build_type")]
@@ -3203,12 +3221,12 @@ impl Default for AppSettings {
             build_branch: default_build_branch(),
             build_tag: String::new(),
             build_output_dir: String::new(),
-            build_cmake_options: Vec::new(),
+            build_cmake_options: default_build_cmake_options(),
             env_check_result: Vec::new(),
             env_check_checked_at: None,
             env_check_all_required_ok: false,
             build_work_dir: String::new(),
-            build_generator: String::new(),
+            build_generator: default_build_generator(),
             build_type: default_build_type(),
             build_jobs: 0,
             build_cmake_args: String::new(),
@@ -3853,5 +3871,50 @@ mod tests {
         assert!(settings.mcp_config_json.is_empty());
         assert!(settings.mcp_server_states.is_empty());
         assert!(settings.build_effective_mcp_json().is_none());
+    }
+
+    /// 默认勾选的开关名必须都在 build.rs 的清单内（防止清单改名后默认值变成无效项）
+    #[test]
+    fn build_cmake_options_defaults_are_all_in_catalog() {
+        use crate::build::{cmake_options, OptionGroup};
+
+        let catalog: Vec<&str> = [
+            OptionGroup::General,
+            OptionGroup::Cuda,
+            OptionGroup::Hip,
+            OptionGroup::Ui,
+        ]
+        .iter()
+        .flat_map(|group| cmake_options(*group).iter().map(|(option, _)| *option))
+        .collect();
+
+        let defaults = default_build_cmake_options();
+        assert!(
+            defaults.contains(&"GGML_RPC".to_string()),
+            "RPC 后端应默认开启"
+        );
+        for option in defaults {
+            assert!(
+                catalog.contains(&option.as_str()),
+                "默认开关 {option} 不在编译开关清单中"
+            );
+        }
+    }
+
+    /// 默认值与旧配置兼容：缺少 build_cmake_options 字段的 JSON 反序列化后取默认勾选
+    #[test]
+    fn build_cmake_options_defaults_applied() {
+        let mut value = serde_json::to_value(AppSettings::default()).expect("默认配置应可序列化");
+        value
+            .as_object_mut()
+            .expect("配置应序列化为对象")
+            .remove("build_cmake_options");
+
+        let parsed: AppSettings = serde_json::from_value(value).expect("旧配置应可反序列化");
+        assert_eq!(parsed.build_cmake_options, default_build_cmake_options());
+        assert_eq!(
+            AppSettings::default().build_cmake_options,
+            default_build_cmake_options()
+        );
     }
 }

@@ -20,6 +20,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+
+use crate::config::settings::{default_build_generator, AppSettings};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -542,6 +544,89 @@ pub fn selected_cmake_args(selected: &[String]) -> Vec<String> {
         .collect()
 }
 
+fn resolve_source_dir(settings: &AppSettings) -> String {
+    let configured = settings.build_work_dir.trim();
+    if !configured.is_empty() {
+        return configured.to_string();
+    }
+    source_code_dir()
+        .map(|dir| dir.display().to_string())
+        .unwrap_or_else(|| SOURCE_DIR_NAME.to_string())
+}
+
+fn quote_if_needed(value: &str) -> String {
+    if value.contains(' ') {
+        format!("\"{}\"", value)
+    } else {
+        value.to_string()
+    }
+}
+
+/// 「开始编译」将执行的完整命令：首行为 CMake 配置步骤，次行为 CMake 构建步骤。
+/// 勾选的开关复用 [`selected_cmake_args`]，保证预览与实际构建参数同源。
+/// 生成器恒拼 `-G Ninja`（`build_generator` 留空时回退默认值），不交给 CMake 自动选。
+pub fn cmake_command_preview(settings: &AppSettings) -> String {
+    let source = resolve_source_dir(settings);
+    let build_dir = {
+        let configured = settings.build_output_dir.trim();
+        if configured.is_empty() {
+            Path::new(&source).join("build").display().to_string()
+        } else {
+            configured.to_string()
+        }
+    };
+
+    let mut configure = vec![
+        "cmake".to_string(),
+        "-S".to_string(),
+        quote_if_needed(&source),
+        "-B".to_string(),
+        quote_if_needed(&build_dir),
+    ];
+    let generator = {
+        let configured = settings.build_generator.trim();
+        if configured.is_empty() {
+            default_build_generator()
+        } else {
+            configured.to_string()
+        }
+    };
+    configure.push("-G".to_string());
+    configure.push(quote_if_needed(&generator));
+    let build_type = settings.build_type.trim();
+    if !build_type.is_empty() {
+        configure.push(format!("-DCMAKE_BUILD_TYPE={}", build_type));
+    }
+    configure.extend(selected_cmake_args(&settings.build_cmake_options));
+    configure.extend(
+        settings
+            .build_cmake_args
+            .split_whitespace()
+            .map(str::to_string),
+    );
+
+    let mut build = vec![
+        "cmake".to_string(),
+        "--build".to_string(),
+        quote_if_needed(&build_dir),
+    ];
+    if !build_type.is_empty() {
+        build.push("--config".to_string());
+        build.push(build_type.to_string());
+    }
+    let targets: Vec<&str> = settings.build_targets.split_whitespace().collect();
+    if !targets.is_empty() {
+        build.push("--target".to_string());
+        build.extend(targets.into_iter().map(str::to_string));
+    }
+    if settings.build_jobs > 0 {
+        build.push("-j".to_string());
+        build.push(settings.build_jobs.to_string());
+    }
+
+    format!("{}\n{}", configure.join(" "), build.join(" "))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -702,5 +787,67 @@ mod tests {
         assert_eq!(option_label("LLAMA_BUILD_TESTS=OFF"), "LLAMA_BUILD_TESTS");
         assert_eq!(option_label("GGML_CUDA=ON"), "GGML_CUDA");
         assert_eq!(option_label("GGML_RPC"), "GGML_RPC");
+    }
+
+    #[test]
+    fn cmake_preview_shows_configure_then_build_with_selected_options() {
+        let preview = cmake_command_preview(&AppSettings::default());
+        let mut lines = preview.lines();
+
+        let configure = lines.next().expect("缺少配置行");
+        assert!(configure.starts_with("cmake -S "));
+        assert!(configure.contains("-G Ninja"));
+        assert!(configure.contains("-DCMAKE_BUILD_TYPE=Release"));
+        assert!(configure.contains("-DGGML_RPC=ON"));
+        assert!(configure.contains("-DLLAMA_BUILD_TESTS=OFF"));
+
+        let build = lines.next().expect("缺少构建行");
+        assert!(build.starts_with("cmake --build "));
+        assert!(build.contains("--config Release"));
+        assert_eq!(lines.count(), 0, "只应有配置与构建两行");
+    }
+
+    #[test]
+    fn cmake_preview_quotes_spaced_values_and_appends_extra_args() {
+        let settings = AppSettings {
+            build_work_dir: "C:/my source/llama".to_string(),
+            build_generator: "Visual Studio 17 2022".to_string(),
+            build_cmake_args: "-DLLAMA_CURL=OFF -DFOO=1".to_string(),
+            build_targets: "llama-server ggml-rpc-server".to_string(),
+            build_jobs: 8,
+            ..AppSettings::default()
+        };
+
+        let preview = cmake_command_preview(&settings);
+        let build_dir = Path::new("C:/my source/llama").join("build");
+
+        assert!(preview.contains("-S \"C:/my source/llama\""));
+        assert!(preview.contains(&format!("-B \"{}\"", build_dir.display())));
+        assert!(preview.contains("-G \"Visual Studio 17 2022\""));
+        assert!(preview.contains("-DLLAMA_CURL=OFF -DFOO=1"));
+        assert!(preview.contains("--target llama-server ggml-rpc-server"));
+        assert!(preview.ends_with("-j 8"));
+    }
+
+    #[test]
+    fn cmake_preview_prefers_configured_output_dir() {
+        let settings = AppSettings {
+            build_output_dir: "D:/builds/llama".to_string(),
+            ..AppSettings::default()
+        };
+        let preview = cmake_command_preview(&settings);
+
+        assert!(preview.contains("-B D:/builds/llama"));
+        assert!(!preview.contains("D:/builds/llama/build"));
+    }
+
+    #[test]
+    fn cmake_preview_forces_ninja_when_generator_cleared() {
+        let settings = AppSettings {
+            build_generator: String::new(),
+            ..AppSettings::default()
+        };
+
+        assert!(cmake_command_preview(&settings).contains("-G Ninja"));
     }
 }

@@ -21,7 +21,7 @@ AppSettings/Preset/GpuLayersMode 定义、序列化策略、默认值以及配�
 | 默认值定义              | settings.rs (default_* 函数)                  | 每个 AppSettings 字段对应一个 default_* 函数       |
 | MCP 配置解析           | settings.rs (parse_mcp_servers)               | 解析 mcp_config_json 为服务器列表                  |
 | KVMem 变体识别           | settings.rs (LlamaCppType)                    | from_server_path() 按 exe 名推断；engine 据此决定是否拼 --kvmem* 参数 |
-| 内联测试群              | settings.rs:3413-                             | exe 搜索深度边界、旧 JSON 兼容、Preset kvmem 往返、MCP 解析（项目最大测试群） |
+| 内联测试群              | settings.rs:3535-                             | exe 搜索深度边界、旧 JSON 兼容、Preset kvmem 往返、MCP 解析、编译开关默认值（项目最大测试群） |
 
 ## CONVENTIONS
 
