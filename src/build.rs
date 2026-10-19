@@ -523,6 +523,11 @@ pub fn set_option_selected(selected: &mut Vec<String>, option: &str, on: bool) {
     }
 }
 
+/// 开关清单里的 spec 去掉 `=值` 后缀后的选项名，用于界面显示
+pub fn option_label(spec: &str) -> &str {
+    spec.split_once('=').map_or(spec, |(name, _)| name)
+}
+
 /// 把勾选的开关按清单顺序拼成 CMake 参数（清单外的名字被忽略）
 pub fn selected_cmake_args(selected: &[String]) -> Vec<String> {
     all_cmake_options()
@@ -690,5 +695,12 @@ mod tests {
         assert_eq!(handle.snapshot().state, CloneState::Idle);
         assert_eq!(handle.snapshot().percent, None);
         assert_eq!(handle.snapshot().op, None);
+    }
+
+    #[test]
+    fn option_label_strips_value_suffix() {
+        assert_eq!(option_label("LLAMA_BUILD_TESTS=OFF"), "LLAMA_BUILD_TESTS");
+        assert_eq!(option_label("GGML_CUDA=ON"), "GGML_CUDA");
+        assert_eq!(option_label("GGML_RPC"), "GGML_RPC");
     }
 }

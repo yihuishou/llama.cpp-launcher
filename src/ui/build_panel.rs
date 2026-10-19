@@ -261,7 +261,11 @@ fn render_cmake_options(
         for &(option, desc) in crate::build::cmake_options(group) {
             let mut checked =
                 crate::build::is_option_selected(&settings.build_cmake_options, option);
-            let label = format!("{}({})", option, i18n::t(desc, lang));
+            let label = format!(
+                "{} ({})",
+                crate::build::option_label(option),
+                i18n::t(desc, lang)
+            );
             if ui
                 .add(winui::FluentCheckBox::new(&mut checked, label))
                 .changed()

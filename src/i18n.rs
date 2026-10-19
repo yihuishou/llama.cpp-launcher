@@ -2724,72 +2724,66 @@ impl Key {
                 "ROCm toolkit (hipcc) not detected - ROCm build options unavailable"
             }
             (Key::BuildOptionsHint, &Language::Zh) => {
-                "勾选的开关会拼成 -D<参数> 传给 CMake(布尔项自动补 =ON)"
+                "勾选的开关会以 -D<参数> 形式传给 CMake"
             }
             (Key::BuildOptionsHint, &Language::En) => {
-                "Checked switches are passed to CMake as -D<parameter> (booleans get =ON appended)"
+                "Checked switches are passed to CMake as -D<parameter>"
             }
             (Key::BuildOptCuda, &Language::Zh) => "启用 CUDA 后端",
             (Key::BuildOptCuda, &Language::En) => "Enable the CUDA backend",
-            (Key::BuildOptCudaGraphs, &Language::Zh) => "用 CUDA Graph 降低内核启动开销",
+            (Key::BuildOptCudaGraphs, &Language::Zh) => "启用 CUDA Graph 以减少内核启动开销",
             (Key::BuildOptCudaGraphs, &Language::En) => {
-                "Use CUDA Graphs to cut kernel launch overhead"
+                "Enable CUDA Graphs to reduce kernel launch overhead"
             }
-            (Key::BuildOptCudaForceMmq, &Language::Zh) => "强制使用 MMQ(量化矩阵乘)内核",
-            (Key::BuildOptCudaForceMmq, &Language::En) => "Force the MMQ (quantized matmul) kernel",
-            (Key::BuildOptCudaForceCublas, &Language::Zh) => "强制用 cuBLAS 做矩阵乘",
-            (Key::BuildOptCudaForceCublas, &Language::En) => "Force cuBLAS for matmul",
-            (Key::BuildOptCudaNoVmm, &Language::Zh) => "禁用 CUDA 虚拟内存管理(不再链接 cuda_driver)",
-            (Key::BuildOptCudaNoVmm, &Language::En) => {
-                "Disable CUDA virtual memory management (drops cuda_driver)"
+            (Key::BuildOptCudaForceMmq, &Language::Zh) => "强制使用 MMQ 内核",
+            (Key::BuildOptCudaForceMmq, &Language::En) => "Force the MMQ kernel",
+            (Key::BuildOptCudaForceCublas, &Language::Zh) => "强制使用 cuBLAS 进行矩阵乘法",
+            (Key::BuildOptCudaForceCublas, &Language::En) => {
+                "Force cuBLAS for matrix multiplication"
             }
-            (Key::BuildOptCudaNoPeerCopy, &Language::Zh) => "禁用多卡间的 P2P 直接拷贝",
+            (Key::BuildOptCudaNoVmm, &Language::Zh) => "禁用 CUDA 虚拟内存管理",
+            (Key::BuildOptCudaNoVmm, &Language::En) => "Disable CUDA virtual memory management",
+            (Key::BuildOptCudaNoPeerCopy, &Language::Zh) => "禁用多 GPU 间的 P2P 直接拷贝",
             (Key::BuildOptCudaNoPeerCopy, &Language::En) => {
                 "Disable peer-to-peer copies between GPUs"
             }
-            (Key::BuildOptCudaNccl, &Language::Zh) => "启用 NCCL 多卡通信(需已安装 NCCL)",
-            (Key::BuildOptCudaNccl, &Language::En) => {
-                "Enable NCCL multi-GPU communication (requires NCCL)"
-            }
-            (Key::BuildOptCudaDebug, &Language::Zh) => "生成调试信息 -lineinfo(编译更慢)",
-            (Key::BuildOptCudaDebug, &Language::En) => "Emit debug info -lineinfo (slower build)",
+            (Key::BuildOptCudaNccl, &Language::Zh) => "启用 NCCL 多 GPU 通信",
+            (Key::BuildOptCudaNccl, &Language::En) => "Enable NCCL multi-GPU communication",
+            (Key::BuildOptCudaDebug, &Language::Zh) => "生成调试信息 -lineinfo",
+            (Key::BuildOptCudaDebug, &Language::En) => "Emit -lineinfo debug info",
             (Key::BuildOptHip, &Language::Zh) => "启用 ROCm/HIP 后端",
             (Key::BuildOptHip, &Language::En) => "Enable the ROCm/HIP backend",
-            (Key::BuildOptHipRccl, &Language::Zh) => "启用 RCCL 多卡通信(需已安装 RCCL)",
-            (Key::BuildOptHipRccl, &Language::En) => {
-                "Enable RCCL multi-GPU communication (requires RCCL)"
-            }
-            (Key::BuildOptHipGraphs, &Language::Zh) => "用 HIP Graph 降低内核启动开销",
+            (Key::BuildOptHipRccl, &Language::Zh) => "启用 RCCL 多 GPU 通信",
+            (Key::BuildOptHipRccl, &Language::En) => "Enable RCCL multi-GPU communication",
+            (Key::BuildOptHipGraphs, &Language::Zh) => "启用 HIP Graph 以减少内核启动开销",
             (Key::BuildOptHipGraphs, &Language::En) => {
-                "Use HIP Graphs to cut kernel launch overhead"
+                "Enable HIP Graphs to reduce kernel launch overhead"
             }
             (Key::BuildOptHipNoVmm, &Language::Zh) => "禁用 HIP 虚拟内存管理",
             (Key::BuildOptHipNoVmm, &Language::En) => "Disable HIP virtual memory management",
             (Key::BuildOptHipExportMetrics, &Language::Zh) => "导出内核性能指标",
             (Key::BuildOptHipExportMetrics, &Language::En) => "Export kernel performance metrics",
-            (Key::BuildOptGgmlRpc, &Language::Zh) => "启用 RPC 后端(编出 ggml-rpc-server)",
+            (Key::BuildOptGgmlRpc, &Language::Zh) => "启用 RPC 后端并构建 ggml-rpc-server",
             (Key::BuildOptGgmlRpc, &Language::En) => {
-                "Enable the RPC backend (builds ggml-rpc-server)"
+                "Enable the RPC backend and build ggml-rpc-server"
             }
-            (Key::BuildOptLlamaBuildTests, &Language::Zh) => "跳过测试构建(明显加快编译)",
-            (Key::BuildOptLlamaBuildTests, &Language::En) => "Skip tests (noticeably faster build)",
-            (Key::BuildOptLlamaBuildExamples, &Language::Zh) => "跳过示例构建(含 pocs，加快编译)",
-            (Key::BuildOptLlamaBuildExamples, &Language::En) => "Skip examples (incl. pocs, faster build)",
-            (Key::BuildOptLlamaBuildApp, &Language::Zh) => "跳过统一二进制 llama(只要 server/rpc-server 时可关)",
+            (Key::BuildOptLlamaBuildTests, &Language::Zh) => "不构建测试",
+            (Key::BuildOptLlamaBuildTests, &Language::En) => "Do not build tests",
+            (Key::BuildOptLlamaBuildExamples, &Language::Zh) => "不构建示例程序",
+            (Key::BuildOptLlamaBuildExamples, &Language::En) => "Do not build examples",
+            (Key::BuildOptLlamaBuildApp, &Language::Zh) => "不构建统一二进制 llama",
             (Key::BuildOptLlamaBuildApp, &Language::En) => {
-                "Skip the unified llama binary (only want server/rpc-server)"
+                "Do not build the unified llama binary"
             }
-            (Key::BuildOptLlamaOpenssl, &Language::Zh) => "不编 HTTPS 支持(省一个依赖)",
-            (Key::BuildOptLlamaOpenssl, &Language::En) => "Disable HTTPS support (drops a dependency)",
-            (Key::BuildOptLlamaBuildUi, &Language::Zh) => "用 npm 在本地构建网页客户端(需 Node.js)",
-            (Key::BuildOptLlamaBuildUi, &Language::En) => {
-                "Build the Web UI locally with npm (requires Node.js)"
-            }
+            (Key::BuildOptLlamaOpenssl, &Language::Zh) => "不启用 HTTPS 支持",
+            (Key::BuildOptLlamaOpenssl, &Language::En) => "Do not enable HTTPS support",
+            (Key::BuildOptLlamaBuildUi, &Language::Zh) => "使用 npm 本地构建网页客户端",
+            (Key::BuildOptLlamaBuildUi, &Language::En) => "Build the Web UI locally with npm",
             (Key::BuildOptLlamaUsePrebuiltUi, &Language::Zh) => {
-                "允许从 Hugging Face 下载预编译网页客户端(关掉可离线构建)"
+                "允许从 Hugging Face 下载预编译网页客户端"
             }
             (Key::BuildOptLlamaUsePrebuiltUi, &Language::En) => {
-                "Allow downloading the prebuilt Web UI from Hugging Face (disable for offline builds)"
+                "Allow downloading the prebuilt Web UI from Hugging Face"
             }
             (Key::BuildBtnClone, &Language::Zh) => "克隆仓库",
             (Key::BuildBtnClone, &Language::En) => "Clone Repository",
