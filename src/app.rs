@@ -28,6 +28,7 @@ enum NavSection {
     Commands,
     Presets,
     Build,
+    BuildLog,
     Settings,
 }
 
@@ -453,6 +454,11 @@ impl LlamaLauncherApp {
                         i18n::t(i18n::Key::NavBuild, &self.lang),
                     ),
                     (
+                        NavSection::BuildLog,
+                        widgets::NavIcon::BuildLog,
+                        i18n::t(i18n::Key::NavBuildLog, &self.lang),
+                    ),
+                    (
                         NavSection::Settings,
                         widgets::NavIcon::Settings,
                         i18n::t(i18n::Key::NavSettings, &self.lang),
@@ -857,6 +863,12 @@ impl eframe::App for LlamaLauncherApp {
                                 &self.lang,
                                 &self.env_check,
                                 &self.clone_handle,
+                            ),
+                            NavSection::BuildLog => log_panel::build_ui(
+                                ui,
+                                &mut self.settings,
+                                &mut self.clone_handle,
+                                &self.lang,
                             ),
                             NavSection::Settings => settings_panel::ui(
                                 ui,

@@ -52,6 +52,7 @@ pub enum Key {
     NavServer,
     NavRpc,
     NavBuild,
+    NavBuildLog,
     NavSettings,
 
     // 设置面板
@@ -549,6 +550,7 @@ pub enum Key {
     // 日志面板
     PanelLogTitle,
     PanelRpcLogTitle,
+    PanelBuildLogTitle,
     HintLogSession,
     HintNoLogs,
     CheckboxAutoScroll,
@@ -1066,6 +1068,8 @@ impl Key {
             (Key::NavRpc, &Language::En) => "RPC",
             (Key::NavBuild, &Language::Zh) => "llama.cpp 编译",
             (Key::NavBuild, &Language::En) => "llama.cpp Build",
+            (Key::NavBuildLog, &Language::Zh) => "llama.cpp 编译日志",
+            (Key::NavBuildLog, &Language::En) => "llama.cpp Build Log",
             (Key::NavSettings, &Language::Zh) => "设置",
             (Key::NavSettings, &Language::En) => "Settings",
 
@@ -1996,6 +2000,8 @@ impl Key {
             (Key::PanelLogTitle, &Language::En) => "Server Logs",
             (Key::PanelRpcLogTitle, &Language::Zh) => "远程调用日志",
             (Key::PanelRpcLogTitle, &Language::En) => "RPC Log",
+            (Key::PanelBuildLogTitle, &Language::Zh) => "llama.cpp 编译日志",
+            (Key::PanelBuildLogTitle, &Language::En) => "llama.cpp Build Log",
             (Key::HintLogSession, &Language::Zh) => "日志仅在当前会话中保留",
             (Key::HintLogSession, &Language::En) => "Logs are only kept for the current session",
             (Key::HintNoLogs, &Language::Zh) => "暂无日志输出",

@@ -91,6 +91,7 @@ pub enum NavIcon {
     Commands,
     Presets,
     Build,
+    BuildLog,
     Settings,
 }
 
@@ -844,7 +845,7 @@ pub fn rounded_button(text: &str, fill: Option<Color32>) -> egui::Button<'_> {
 /// Regular），不是渲染字号——实际字号由 `FontId` 决定，两者独立。
 ///
 /// Regular 档在前：它是非实心的可变字体，描边风格与导航项 13px 文字协调，
-/// 且在 18px 下比静态字面锐利；Filled 档仅作兜底。实测两者都覆盖全部 11 个图标。
+/// 且在 18px 下比静态字面锐利；Filled 档仅作兜底。实测两者都覆盖全部 12 个图标。
 fn nav_icon_glyph(kind: NavIcon) -> Option<(char, &'static str)> {
     use iconflow::{Pack, Size, Style};
 
@@ -872,6 +873,7 @@ fn nav_icon_name(kind: NavIcon) -> &'static str {
         NavIcon::Commands => "play",
         NavIcon::Presets => "star",
         NavIcon::Build => "wrench",
+        NavIcon::BuildLog => "window-console",
         NavIcon::Settings => "settings",
     }
 }
@@ -900,7 +902,7 @@ pub fn nav_icon_paint(painter: &Painter, rect: Rect, kind: NavIcon, color: Color
 mod nav_icon_tests {
     use super::NavIcon;
 
-    const ALL: [NavIcon; 11] = [
+    const ALL: [NavIcon; 12] = [
         NavIcon::Server,
         NavIcon::Rpc,
         NavIcon::Model,
@@ -911,6 +913,7 @@ mod nav_icon_tests {
         NavIcon::Commands,
         NavIcon::Presets,
         NavIcon::Build,
+        NavIcon::BuildLog,
         NavIcon::Settings,
     ];
 

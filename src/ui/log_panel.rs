@@ -1,3 +1,4 @@
+use crate::build::CloneHandle;
 use crate::config::settings::AppSettings;
 use crate::engine::rpc::RpcManager;
 use crate::engine::server::{LogEntry, LogLevel, ServerManager};
@@ -5,7 +6,7 @@ use crate::i18n;
 use crate::ui::widgets;
 use fluent_egui::winui;
 
-/// 日志源抽象：保证「服务器日志」与「远程调用日志」两个面板功能完全一致、永不漂移
+/// 日志源抽象：保证「服务器日志」「远程调用日志」「编译日志」三个面板功能完全一致、永不漂移
 trait LogSource {
     fn logs(&self) -> Vec<LogEntry>;
     fn clear_logs(&mut self);
@@ -17,6 +18,15 @@ impl LogSource for ServerManager {
     }
     fn clear_logs(&mut self) {
         ServerManager::clear_logs(self)
+    }
+}
+
+impl LogSource for CloneHandle {
+    fn logs(&self) -> Vec<LogEntry> {
+        CloneHandle::logs(self)
+    }
+    fn clear_logs(&mut self) {
+        CloneHandle::clear_logs(self)
     }
 }
 
@@ -209,5 +219,23 @@ pub fn rpc_ui(
         rpc,
         0.0,
         "rpc_log_scroll_area",
+    );
+}
+
+/// llama.cpp 编译日志面板（克隆 / 更新，后续 CMake 配置与构建）；构建无 prefill 进度，传 0.0
+pub fn build_ui(
+    ui: &mut egui::Ui,
+    settings: &mut AppSettings,
+    clone: &mut CloneHandle,
+    lang: &i18n::Language,
+) {
+    render(
+        ui,
+        settings,
+        i18n::Key::PanelBuildLogTitle,
+        lang,
+        clone,
+        0.0,
+        "build_log_scroll_area",
     );
 }

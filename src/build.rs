@@ -14,7 +14,12 @@
 //! 优先）否则分支。目标目录固定为「程序所在目录 / `llama-source-code`」，已存在且非空则拒绝。
 //! 更新在既有源码目录内执行 [`update_steps`]：有 Tag → `fetch --tags --force` + `checkout <tag>`；
 //! 无 Tag → `checkout <branch>` + `pull --ff-only`。
+//!
+//! 日志：worker 把每条 git 命令与 stderr 输出追加进 [`CloneHandle::logs`]（VecDeque 环形缓冲，
+//! 容量 [`MAX_LOG_LINES`]，与 server/rpc 日志同规格），供「llama.cpp 编译日志」面板展示；
+//! 后续 CMake 配置/构建阶段复用同一缓冲。
 
+use std::collections::VecDeque;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
@@ -22,6 +27,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::config::settings::{default_build_generator, AppSettings};
+use crate::engine::server::{LogEntry, LogLevel, MAX_LOG_LINES};
 use crate::env_check::{EnvCheckEntry, ID_CUDA, ID_NCCL, ID_RCCL, ID_ROCM};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -70,6 +76,7 @@ pub struct CloneHandle {
     status: Arc<Mutex<CloneStatus>>,
     child: Arc<Mutex<Option<Child>>>,
     worker: Arc<Mutex<Option<JoinHandle<()>>>>,
+    logs: Arc<Mutex<VecDeque<LogEntry>>>,
 }
 
 impl Default for CloneHandle {
@@ -85,6 +92,7 @@ impl CloneHandle {
             status: Arc::new(Mutex::new(CloneStatus::default())),
             child: Arc::new(Mutex::new(None)),
             worker: Arc::new(Mutex::new(None)),
+            logs: Arc::new(Mutex::new(VecDeque::new())),
         }
     }
 
@@ -113,10 +121,11 @@ impl CloneHandle {
         let cancel = Arc::clone(&self.cancel);
         let status = Arc::clone(&self.status);
         let child = Arc::clone(&self.child);
+        let logs = Arc::clone(&self.logs);
         let handle = thread::spawn(move || {
             let state = match op {
-                SourceOp::Clone => run_clone(&cancel, &child, &status, &repo, &branch, &tag),
-                SourceOp::Update => run_update(&cancel, &child, &status, &branch, &tag),
+                SourceOp::Clone => run_clone(&cancel, &child, &status, &logs, &repo, &branch, &tag),
+                SourceOp::Update => run_update(&cancel, &child, &status, &logs, &branch, &tag),
             };
             let mut st = status.lock().unwrap();
             // 被取消则回到 Idle，而非展示半份结果
@@ -138,6 +147,16 @@ impl CloneHandle {
     /// 是否正在克隆 / 更新（UI 禁用按钮用）
     pub fn is_busy(&self) -> bool {
         matches!(self.snapshot().state, CloneState::Running)
+    }
+
+    /// 构建日志（内部 VecDeque 环形缓冲，对外转 Vec；同 ServerManager）
+    pub fn logs(&self) -> Vec<LogEntry> {
+        self.logs.lock().unwrap().iter().cloned().collect()
+    }
+
+    /// 清空构建日志
+    pub fn clear_logs(&mut self) {
+        self.logs.lock().unwrap().clear();
     }
 
     /// Drop / 关窗调用：置取消标志并 kill 子进程
@@ -245,24 +264,37 @@ fn prepare_dir(dest: &Path) -> Option<String> {
     }
 }
 
+/// 追加一行构建日志；超出 [`MAX_LOG_LINES`] 丢弃最旧行
+fn push_log(logs: &Mutex<VecDeque<LogEntry>>, level: LogLevel, text: impl Into<String>) {
+    let mut logs = logs.lock().unwrap();
+    if logs.len() >= MAX_LOG_LINES {
+        logs.pop_front();
+    }
+    logs.push_back(LogEntry {
+        text: text.into(),
+        level,
+    });
+}
+
 /// 首次克隆：准备目录 → `git clone` → 终态
 fn run_clone(
     cancel: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
     status: &Arc<Mutex<CloneStatus>>,
+    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
     repo: &str,
     branch: &str,
     tag: &str,
 ) -> CloneState {
     let Some(dest) = source_code_dir() else {
-        return CloneState::Failed("cannot resolve program directory".to_string());
+        return failed(logs, "cannot resolve program directory".to_string());
     };
     if let Some(msg) = prepare_dir(&dest) {
-        return CloneState::Failed(msg);
+        return failed(logs, msg);
     }
 
     let steps = [clone_args(repo, branch, tag, &dest)];
-    run_steps(cancel, child_slot, status, steps, &dest)
+    run_steps(cancel, child_slot, status, logs, steps, &dest)
 }
 
 /// 更新：校验既有源码目录 → 依次执行 `update_steps` → 终态
@@ -270,21 +302,28 @@ fn run_update(
     cancel: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
     status: &Arc<Mutex<CloneStatus>>,
+    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
     branch: &str,
     tag: &str,
 ) -> CloneState {
     let Some(dest) = source_code_dir() else {
-        return CloneState::Failed("cannot resolve program directory".to_string());
+        return failed(logs, "cannot resolve program directory".to_string());
     };
     if !dest.join(".git").exists() {
-        return CloneState::Failed(format!(
-            "not a git repository (clone first): {}",
-            dest.display()
-        ));
+        return failed(
+            logs,
+            format!("not a git repository (clone first): {}", dest.display()),
+        );
     }
 
     let steps = update_steps(&dest, branch, tag);
-    run_steps(cancel, child_slot, status, steps, &dest)
+    run_steps(cancel, child_slot, status, logs, steps, &dest)
+}
+
+/// 记一条错误日志并生成失败终态（避免每个失败点重复两行）
+fn failed(logs: &Arc<Mutex<VecDeque<LogEntry>>>, msg: String) -> CloneState {
+    push_log(logs, LogLevel::Error, msg.clone());
+    CloneState::Failed(msg)
 }
 
 /// 依次执行若干 git 命令，任一失败即中止；全部成功则返回 `Done(dest)`
@@ -292,14 +331,15 @@ fn run_steps(
     cancel: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
     status: &Arc<Mutex<CloneStatus>>,
+    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
     steps: impl IntoIterator<Item = Vec<String>>,
     dest: &Path,
 ) -> CloneState {
     for args in steps {
-        match run_git(cancel, child_slot, status, &args) {
+        match run_git(cancel, child_slot, status, logs, &args) {
             Ok((exit, _)) if exit.success() => {}
-            Ok((exit, text)) => return CloneState::Failed(describe_failure(&text, &exit)),
-            Err(e) => return CloneState::Failed(e),
+            Ok((exit, text)) => return failed(logs, describe_failure(&text, &exit)),
+            Err(e) => return failed(logs, e),
         }
     }
     CloneState::Done(dest.to_path_buf())
@@ -310,6 +350,7 @@ fn run_git(
     cancel: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
     status: &Arc<Mutex<CloneStatus>>,
+    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
     args: &[String],
 ) -> Result<(ExitStatus, String), String> {
     let mut cmd = Command::new("git");
@@ -327,10 +368,13 @@ fn run_git(
         .spawn()
         .map_err(|e| format!("cannot start git: {}", e))?;
 
+    push_log(logs, LogLevel::Info, format!("$ git {}", args.join(" ")));
+
     // 独立线程抽干 stderr：逐段解析进度（顺带防止管道写满阻塞 git）并留存失败信息
     let stderr_reader = child.stderr.take().map(|pipe| {
         let status = Arc::clone(status);
-        thread::spawn(move || read_progress(pipe, &status))
+        let logs = Arc::clone(logs);
+        thread::spawn(move || read_progress(pipe, &status, &logs))
     });
 
     *child_slot.lock().unwrap() = Some(child);
@@ -349,7 +393,11 @@ fn run_git(
 }
 
 /// 读取 git stderr：按 `\r` / `\n` 切段，逐段解析百分比并刷新进度；返回完整文本供失败诊断
-fn read_progress(pipe: impl Read, status: &Arc<Mutex<CloneStatus>>) -> String {
+fn read_progress(
+    pipe: impl Read,
+    status: &Arc<Mutex<CloneStatus>>,
+    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
+) -> String {
     let mut reader = BufReader::new(pipe);
     let mut buf = [0u8; 4096];
     let mut pending: Vec<u8> = Vec::new();
@@ -365,20 +413,21 @@ fn read_progress(pipe: impl Read, status: &Arc<Mutex<CloneStatus>>) -> String {
         while let Some(idx) = pending.iter().position(|&b| b == b'\r' || b == b'\n') {
             let mut segment: Vec<u8> = pending.drain(..=idx).collect();
             segment.pop(); // 去掉分隔符
-            record_segment(&segment, &mut all, &mut max_percent, status);
+            record_segment(&segment, &mut all, &mut max_percent, status, logs);
         }
     }
-    record_segment(&pending, &mut all, &mut max_percent, status);
+    record_segment(&pending, &mut all, &mut max_percent, status, logs);
 
     String::from_utf8_lossy(&all).into_owned()
 }
 
-/// 记录一段 stderr：累积文本 + 取更大百分比写入共享状态
+/// 记录一段 stderr：追加构建日志 + 累积文本 + 取更大百分比写入共享状态
 fn record_segment(
     segment: &[u8],
     all: &mut Vec<u8>,
     max_percent: &mut Option<u8>,
     status: &Arc<Mutex<CloneStatus>>,
+    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
 ) {
     if segment.is_empty() {
         return;
@@ -387,6 +436,7 @@ fn record_segment(
     all.push(b'\n');
 
     let text = String::from_utf8_lossy(segment);
+    push_log(logs, LogLevel::Info, text.to_string());
     if let Some(pct) = parse_percent(&text) {
         if max_percent.is_none_or(|m| pct > m) {
             *max_percent = Some(pct);
@@ -695,6 +745,32 @@ pub fn cmake_command_preview(settings: &AppSettings) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn push_log_keeps_order_and_caps_at_max_lines() {
+        let mut handle = CloneHandle::new();
+        push_log(
+            &handle.logs,
+            LogLevel::Info,
+            "$ git clone --progress repo dest",
+        );
+        push_log(&handle.logs, LogLevel::Warn, "warning: something");
+
+        let logs = handle.logs();
+        assert_eq!(logs.len(), 2);
+        assert_eq!(logs[0].text, "$ git clone --progress repo dest");
+        assert_eq!(logs[1].level, LogLevel::Warn);
+
+        for i in 0..MAX_LOG_LINES {
+            push_log(&handle.logs, LogLevel::Info, format!("line {i}"));
+        }
+        let logs = handle.logs();
+        assert_eq!(logs.len(), MAX_LOG_LINES);
+        assert_eq!(logs[0].text, "line 0");
+
+        handle.clear_logs();
+        assert!(handle.logs().is_empty());
+    }
 
     #[test]
     fn selected_cmake_args_follows_catalog_order_and_skips_unknown() {
