@@ -115,6 +115,21 @@ pub fn ui(
 
         ui.add_space(8.0);
 
+        ui.label(i18n::t(i18n::Key::BuildCmdPreview, lang));
+        let command_preview = crate::build::cmake_command_preview(settings);
+        ui.monospace(&command_preview);
+        if ui
+            .add(winui::FluentButton::new(i18n::t(
+                i18n::Key::BtnCopyToClipboard,
+                lang,
+            )))
+            .clicked()
+        {
+            ui.ctx().copy_text(command_preview.clone());
+        }
+
+        ui.add_space(8.0);
+
         // 操作按钮
         ui.horizontal_wrapped(|ui| {
             if ui
