@@ -226,6 +226,12 @@ fn render_cmake_options(
 
     for (group, gated, title, missing) in [
         (
+            crate::build::OptionGroup::General,
+            None,
+            i18n::Key::BuildGeneral,
+            None,
+        ),
+        (
             crate::build::OptionGroup::Cuda,
             Some(cuda_ok),
             i18n::Key::BuildCuda,

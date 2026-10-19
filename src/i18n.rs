@@ -913,6 +913,7 @@ pub enum Key {
     BuildBranch,
     BuildTag,
     BuildOutputDir,
+    BuildGeneral,
     BuildCuda,
     BuildRocm,
     BuildUiAssets,
@@ -934,6 +935,11 @@ pub enum Key {
     BuildOptHipExportMetrics,
     BuildOptLlamaBuildUi,
     BuildOptLlamaUsePrebuiltUi,
+    BuildOptGgmlRpc,
+    BuildOptLlamaBuildTests,
+    BuildOptLlamaBuildExamples,
+    BuildOptLlamaBuildApp,
+    BuildOptLlamaOpenssl,
     BuildBtnClone,
     BuildBtnUpdate,
     BuildBtnBuild,
@@ -2701,6 +2707,8 @@ impl Key {
             (Key::BuildTag, &Language::En) => "Tag",
             (Key::BuildOutputDir, &Language::Zh) => "编译产物目录",
             (Key::BuildOutputDir, &Language::En) => "Build Output Directory",
+            (Key::BuildGeneral, &Language::Zh) => "通用",
+            (Key::BuildGeneral, &Language::En) => "General",
             (Key::BuildCuda, &Language::Zh) => "CUDA 后端",
             (Key::BuildCuda, &Language::En) => "CUDA Backend",
             (Key::BuildRocm, &Language::Zh) => "ROCm 后端",
@@ -2759,6 +2767,20 @@ impl Key {
             (Key::BuildOptHipNoVmm, &Language::En) => "Disable HIP virtual memory management",
             (Key::BuildOptHipExportMetrics, &Language::Zh) => "导出内核性能指标",
             (Key::BuildOptHipExportMetrics, &Language::En) => "Export kernel performance metrics",
+            (Key::BuildOptGgmlRpc, &Language::Zh) => "启用 RPC 后端(编出 ggml-rpc-server)",
+            (Key::BuildOptGgmlRpc, &Language::En) => {
+                "Enable the RPC backend (builds ggml-rpc-server)"
+            }
+            (Key::BuildOptLlamaBuildTests, &Language::Zh) => "跳过测试构建(明显加快编译)",
+            (Key::BuildOptLlamaBuildTests, &Language::En) => "Skip tests (noticeably faster build)",
+            (Key::BuildOptLlamaBuildExamples, &Language::Zh) => "跳过示例构建(含 pocs，加快编译)",
+            (Key::BuildOptLlamaBuildExamples, &Language::En) => "Skip examples (incl. pocs, faster build)",
+            (Key::BuildOptLlamaBuildApp, &Language::Zh) => "跳过统一二进制 llama(只要 server/rpc-server 时可关)",
+            (Key::BuildOptLlamaBuildApp, &Language::En) => {
+                "Skip the unified llama binary (only want server/rpc-server)"
+            }
+            (Key::BuildOptLlamaOpenssl, &Language::Zh) => "不编 HTTPS 支持(省一个依赖)",
+            (Key::BuildOptLlamaOpenssl, &Language::En) => "Disable HTTPS support (drops a dependency)",
             (Key::BuildOptLlamaBuildUi, &Language::Zh) => "用 npm 在本地构建网页客户端(需 Node.js)",
             (Key::BuildOptLlamaBuildUi, &Language::En) => {
                 "Build the Web UI locally with npm (requires Node.js)"

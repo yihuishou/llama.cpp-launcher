@@ -439,6 +439,8 @@ fn last_nonempty_line(s: &str) -> Option<String> {
 /// CMake 编译开关所属分组（决定面板上的分区与可用性门控）
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum OptionGroup {
+    /// 与后端无关（通用构建开关），始终可用
+    General,
     /// 需要 CUDA 工具包（`nvcc`）
     Cuda,
     /// 需要 ROCm 工具包（`hipcc`）
@@ -446,6 +448,16 @@ pub enum OptionGroup {
     /// 与后端无关（网页客户端资源），始终可用
     Ui,
 }
+
+/// 与后端无关的通用编译开关：(`-D` 后面的参数, 说明 i18n 键)。
+/// 这些选项上游默认值多为 ON，故此处显式固定为 `=OFF`（勾选即关闭该特性）
+pub const CMAKE_OPTIONS_GENERAL: &[(&str, Key)] = &[
+    ("GGML_RPC", Key::BuildOptGgmlRpc),
+    ("LLAMA_BUILD_TESTS=OFF", Key::BuildOptLlamaBuildTests),
+    ("LLAMA_BUILD_EXAMPLES=OFF", Key::BuildOptLlamaBuildExamples),
+    ("LLAMA_BUILD_APP=OFF", Key::BuildOptLlamaBuildApp),
+    ("LLAMA_OPENSSL=OFF", Key::BuildOptLlamaOpenssl),
+];
 
 /// CUDA 工具包相关的编译开关：(`-D` 后面的参数, 说明 i18n 键)
 pub const CMAKE_OPTIONS_CUDA: &[(&str, Key)] = &[
@@ -478,16 +490,18 @@ pub const CMAKE_OPTIONS_UI: &[(&str, Key)] = &[
 /// 某分组下的全部开关；参数不含 `=` 的按布尔项处理（勾选 → 补 `=ON`）
 pub fn cmake_options(group: OptionGroup) -> &'static [(&'static str, Key)] {
     match group {
+        OptionGroup::General => CMAKE_OPTIONS_GENERAL,
         OptionGroup::Cuda => CMAKE_OPTIONS_CUDA,
         OptionGroup::Hip => CMAKE_OPTIONS_HIP,
         OptionGroup::Ui => CMAKE_OPTIONS_UI,
     }
 }
 
-/// 全部开关参数（CUDA 组 → ROCm 组 → 网页客户端组）
+/// 全部开关参数（通用组 → CUDA 组 → ROCm 组 → 网页客户端组）
 fn all_cmake_options() -> impl Iterator<Item = &'static str> {
-    CMAKE_OPTIONS_CUDA
+    CMAKE_OPTIONS_GENERAL
         .iter()
+        .chain(CMAKE_OPTIONS_CUDA)
         .chain(CMAKE_OPTIONS_HIP)
         .chain(CMAKE_OPTIONS_UI)
         .map(|(option, _)| *option)
@@ -533,11 +547,15 @@ mod tests {
             "GGML_HIP".to_string(),
             "LLAMA_USE_PREBUILT_UI=OFF".to_string(),
             "GGML_NOT_A_REAL_OPTION".to_string(),
+            "LLAMA_BUILD_TESTS=OFF".to_string(),
             "GGML_CUDA".to_string(),
+            "GGML_RPC".to_string(),
         ];
         assert_eq!(
             selected_cmake_args(&selected),
             [
+                "-DGGML_RPC=ON",
+                "-DLLAMA_BUILD_TESTS=OFF",
                 "-DGGML_CUDA=ON",
                 "-DGGML_HIP=ON",
                 "-DLLAMA_USE_PREBUILT_UI=OFF"
@@ -561,6 +579,7 @@ mod tests {
 
     #[test]
     fn cmake_option_names_are_unique_and_every_group_populated() {
+        assert!(!CMAKE_OPTIONS_GENERAL.is_empty());
         assert!(!CMAKE_OPTIONS_CUDA.is_empty());
         assert!(!CMAKE_OPTIONS_HIP.is_empty());
         assert!(!CMAKE_OPTIONS_UI.is_empty());
