@@ -611,6 +611,14 @@ fn resolve_source_dir(settings: &AppSettings) -> String {
         .unwrap_or_else(|| SOURCE_DIR_NAME.to_string())
 }
 
+/// 源码目录是否已就绪（存在且非空）：与 [`cmake_command_preview`] 的 `-S` 同源解析，
+/// 保证按钮可用性判定与真正参与编译的目录一致。
+pub fn source_dir_ready(settings: &AppSettings) -> bool {
+    std::fs::read_dir(resolve_source_dir(settings))
+        .map(|mut entries| entries.next().is_some())
+        .unwrap_or(false)
+}
+
 fn quote_if_needed(value: &str) -> String {
     if value.contains(' ') {
         format!("\"{}\"", value)

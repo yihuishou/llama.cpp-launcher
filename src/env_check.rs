@@ -266,6 +266,15 @@ pub fn all_required_found(results: &[CheckResult]) -> bool {
         .all(CheckResult::is_found)
 }
 
+/// 所有必需项是否都已找到（按已落盘的检测条目判定）。
+///
+/// 空条目 = 从未检测过，一律视为未就绪——空集合上的 `all` 恒为真，
+/// 不能当「齐全」用，否则未检测时按钮会被误判为可用。
+pub fn all_required_found_entries(entries: &[EnvCheckEntry]) -> bool {
+    let required: Vec<&EnvCheckEntry> = entries.iter().filter(|e| e.required).collect();
+    !required.is_empty() && required.iter().all(|e| e.found)
+}
+
 /// 检测项定义：组件名 + 是否必需 + 探测函数
 struct Requirement {
     key: Key,

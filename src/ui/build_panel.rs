@@ -7,6 +7,7 @@ use crate::i18n;
 use crate::ui::widgets;
 use egui::RichText;
 use fluent_egui::winui;
+use std::borrow::Cow;
 
 pub fn ui(
     ui: &mut egui::Ui,
@@ -131,17 +132,25 @@ pub fn ui(
         ui.add_space(8.0);
 
         // 操作按钮
+        let build_enabled = can_build(env_check, settings, clone_handle);
         ui.horizontal_wrapped(|ui| {
             if ui
-                .add(widgets::rounded_button(
-                    i18n::t(i18n::Key::BuildBtnBuild, lang),
-                    None,
-                ))
+                .add_enabled(
+                    build_enabled,
+                    widgets::rounded_button(i18n::t(i18n::Key::BuildBtnBuild, lang), None),
+                )
                 .clicked()
             {
                 // TODO: 编译逻辑
             }
         });
+        if !build_enabled {
+            ui.label(
+                RichText::new(i18n::t(i18n::Key::BuildBtnBuildHint, lang))
+                    .small()
+                    .weak(),
+            );
+        }
     });
 }
 
@@ -207,18 +216,26 @@ fn entry_found(entries: &[crate::env_check::EnvCheckEntry], id: &str) -> bool {
     entries.iter().any(|e| e.id == id && e.found)
 }
 
+/// 当前生效的检测条目：优先本次运行结果，否则回退到已保存结果。
+fn env_entries<'a>(
+    env_check: &crate::env_check::EnvCheckHandle,
+    settings: &'a AppSettings,
+) -> Cow<'a, [crate::env_check::EnvCheckEntry]> {
+    match &env_check.snapshot().state {
+        crate::env_check::EnvCheckState::Done(results) => {
+            Cow::Owned(crate::env_check::to_entries(results))
+        }
+        _ => Cow::Borrowed(settings.env_check_result.as_slice()),
+    }
+}
+
 /// 指定组件是否可用：优先本次运行结果，否则回退到已保存结果。
 fn component_available(
     env_check: &crate::env_check::EnvCheckHandle,
     settings: &AppSettings,
     id: &str,
 ) -> bool {
-    match &env_check.snapshot().state {
-        crate::env_check::EnvCheckState::Done(results) => {
-            entry_found(&crate::env_check::to_entries(results), id)
-        }
-        _ => entry_found(&settings.env_check_result, id),
-    }
+    entry_found(&env_entries(env_check, settings), id)
 }
 
 /// 「克隆仓库」是否可点：git 可用 + 仓库地址、分支均非空。
@@ -226,6 +243,23 @@ fn can_clone(env_check: &crate::env_check::EnvCheckHandle, settings: &AppSetting
     component_available(env_check, settings, crate::env_check::ID_GIT)
         && !settings.build_git_repo.trim().is_empty()
         && !settings.build_branch.trim().is_empty()
+}
+
+/// 「开始编译」是否可点：环境必需项齐全 + CUDA/ROCm 工具包至少一个可用 + 源码目录非空；
+/// 克隆 / 更新进行中时也不可点——源码树正在变动，此时编译必然失败。
+fn can_build(
+    env_check: &crate::env_check::EnvCheckHandle,
+    settings: &AppSettings,
+    clone_handle: &crate::build::CloneHandle,
+) -> bool {
+    if clone_handle.is_busy() {
+        return false;
+    }
+    let entries = env_entries(env_check, settings);
+    crate::env_check::all_required_found_entries(&entries)
+        && (entry_found(&entries, crate::env_check::ID_CUDA)
+            || entry_found(&entries, crate::env_check::ID_ROCM))
+        && crate::build::source_dir_ready(settings)
 }
 
 /// 开关复选框的显示名：`选项名 (说明)`；spec 固定为 `=OFF` 的（勾选即禁用某特性）前置「禁用」
@@ -386,6 +420,57 @@ mod tests {
 
         settings.env_check_result = Vec::new();
         assert!(!can_clone(&handle, &settings));
+    }
+
+    #[test]
+    fn can_build_needs_required_gpu_and_source() {
+        let env_handle = EnvCheckHandle::new();
+        let clone_handle = crate::build::CloneHandle::default();
+        let source_dir = std::env::temp_dir().join("llama_launcher_can_build_probe");
+        let _ = std::fs::remove_dir_all(&source_dir);
+        std::fs::create_dir_all(&source_dir).unwrap();
+
+        let mut settings = AppSettings {
+            env_check_result: vec![
+                EnvCheckEntry {
+                    id: ID_GIT.to_string(),
+                    required: true,
+                    found: true,
+                    ..Default::default()
+                },
+                EnvCheckEntry {
+                    id: crate::env_check::ID_CUDA.to_string(),
+                    found: true,
+                    ..Default::default()
+                },
+            ],
+            build_work_dir: source_dir.display().to_string(),
+            ..Default::default()
+        };
+        assert!(!can_build(&env_handle, &settings, &clone_handle));
+
+        std::fs::write(source_dir.join("CMakeLists.txt"), "").unwrap();
+        assert!(can_build(&env_handle, &settings, &clone_handle));
+
+        settings
+            .env_check_result
+            .retain(|e| e.id != crate::env_check::ID_CUDA);
+        assert!(!can_build(&env_handle, &settings, &clone_handle));
+
+        settings.env_check_result.push(EnvCheckEntry {
+            id: crate::env_check::ID_ROCM.to_string(),
+            found: true,
+            ..Default::default()
+        });
+        assert!(can_build(&env_handle, &settings, &clone_handle));
+
+        settings.env_check_result[0].found = false;
+        assert!(!can_build(&env_handle, &settings, &clone_handle));
+
+        settings.env_check_result = Vec::new();
+        assert!(!can_build(&env_handle, &settings, &clone_handle));
+
+        let _ = std::fs::remove_dir_all(&source_dir);
     }
 
     #[test]
