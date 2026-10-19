@@ -505,13 +505,21 @@ fn default_build_branch() -> String {
 
 /// 默认勾选的编译开关。`GGML_RPC` 上游默认关闭，但本启动器要管理 ggml-rpc-server，故默认开启；
 /// `LLAMA_BUILD_TESTS`/`LLAMA_BUILD_EXAMPLES`/`LLAMA_BUILD_APP` 上游默认开启，而启动器只用
-/// server 与 rpc-server，故默认关闭以缩短编译时间
+/// server 与 rpc-server，故默认关闭以缩短编译时间；`GGML_CUDA`/`GGML_HIP` 默认启用对应后端，
+/// `GGML_CUDA_FA_ALL_QUANTS`（通用组）默认开启以支持量化 KV 的 FlashAttention——界面保留上游
+/// 旧名，拼参时由 `build::selected_cmake_args` 换成分组里的新名 `GGML_CUDA_FA_QUANTS=all`
+/// （对应工具包缺失时由 `build::sync_options_with_env` 在环境检测后清掉勾选，避免隐藏的分组
+/// 仍拼出 `-DGGML_CUDA=ON` 让 CMake 配置阶段失败）；`GGML_CUDA_NCCL`/`GGML_HIP_RCCL` 不在此列，
+/// 它们完全由环境检测结果决定
 fn default_build_cmake_options() -> Vec<String> {
     vec![
         "GGML_RPC".to_string(),
+        "GGML_CUDA_FA_ALL_QUANTS".to_string(),
         "LLAMA_BUILD_TESTS=OFF".to_string(),
         "LLAMA_BUILD_EXAMPLES=OFF".to_string(),
         "LLAMA_BUILD_APP=OFF".to_string(),
+        "GGML_CUDA".to_string(),
+        "GGML_HIP".to_string(),
     ]
 }
 

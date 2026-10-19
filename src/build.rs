@@ -22,6 +22,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::config::settings::{default_build_generator, AppSettings};
+use crate::env_check::{EnvCheckEntry, ID_CUDA, ID_NCCL, ID_RCCL, ID_ROCM};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -452,9 +453,12 @@ pub enum OptionGroup {
 }
 
 /// 与后端无关的通用编译开关：(`-D` 后面的参数, 说明 i18n 键)。
-/// 这些选项上游默认值多为 ON，故此处显式固定为 `=OFF`（勾选即关闭该特性）
+/// 部分选项上游默认为 ON，故此处显式固定为 `=OFF`（勾选即关闭该特性）；
+/// `GGML_CUDA_FA_ALL_QUANTS` 是 CUDA / ROCm / MUSA 共用的开关（`ggml_cuda_fattn_vec_instances`
+/// 由三个后端共同调用），故放通用组；界面保留上游旧名，拼参时改名为 `GGML_CUDA_FA_QUANTS=all`
 pub const CMAKE_OPTIONS_GENERAL: &[(&str, Key)] = &[
     ("GGML_RPC", Key::BuildOptGgmlRpc),
+    ("GGML_CUDA_FA_ALL_QUANTS", Key::BuildOptCudaFaAllQuants),
     ("LLAMA_BUILD_TESTS=OFF", Key::BuildOptLlamaBuildTests),
     ("LLAMA_BUILD_EXAMPLES=OFF", Key::BuildOptLlamaBuildExamples),
     ("LLAMA_BUILD_APP=OFF", Key::BuildOptLlamaBuildApp),
@@ -536,18 +540,65 @@ pub fn option_is_disable(spec: &str) -> bool {
         .is_some_and(|(_, value)| value.eq_ignore_ascii_case("OFF"))
 }
 
+/// 上游已废弃的 spec 名：界面沿用旧名（用户按旧名辨识），拼进命令行时换成新名
+const RENAMED_SPECS: &[(&str, &str)] = &[("GGML_CUDA_FA_ALL_QUANTS", "GGML_CUDA_FA_QUANTS=all")];
+
+/// 单个 spec 对应的 CMake 参数：布尔项补 `=ON`，含 `=` 的原样，废弃名换成新名
+fn cmake_arg(spec: &str) -> String {
+    let spec = RENAMED_SPECS
+        .iter()
+        .find(|(old, _)| *old == spec)
+        .map_or(spec, |(_, new)| *new);
+    if spec.contains('=') {
+        format!("-D{}", spec)
+    } else {
+        format!("-D{}=ON", spec)
+    }
+}
+
 /// 把勾选的开关按清单顺序拼成 CMake 参数（清单外的名字被忽略）
 pub fn selected_cmake_args(selected: &[String]) -> Vec<String> {
     all_cmake_options()
         .filter(|option| is_option_selected(selected, option))
-        .map(|option| {
-            if option.contains('=') {
-                format!("-D{}", option)
-            } else {
-                format!("-D{}=ON", option)
-            }
-        })
+        .map(cmake_arg)
         .collect()
+}
+
+/// 后端分组与其依赖的检测项 id：对应工具包缺失时整组取消勾选
+const BACKEND_GROUPS: &[(OptionGroup, &str)] =
+    &[(OptionGroup::Cuda, ID_CUDA), (OptionGroup::Hip, ID_ROCM)];
+
+/// 加速库开关与其依赖的检测项 id
+const DETECTED_OPTIONS: &[(&str, &str)] =
+    &[("GGML_CUDA_NCCL", ID_NCCL), ("GGML_HIP_RCCL", ID_RCCL)];
+
+/// 按环境检测结果校正编译开关的勾选。
+///
+/// CUDA / ROCm 工具包缺失时取消该组勾选：分组在界面上已被隐藏，留着勾选仍会拼出
+/// `-DGGML_CUDA=ON` 让 CMake 配置阶段直接失败。NCCL / RCCL 则完全跟随检测结果
+/// （装了勾上、没装取消）。未出现在 `entries` 里的检测项不参与同步——Python 不可用时
+/// RCCL / NCCL 根本不会被探测，此时无从判断，保留用户当前选择。
+pub fn sync_options_with_env(selected: &mut Vec<String>, entries: &[EnvCheckEntry]) {
+    let detection = |id: &str| {
+        entries
+            .iter()
+            .find(|entry| entry.id == id)
+            .map(|entry| entry.found)
+    };
+
+    for &(group, id) in BACKEND_GROUPS {
+        if detection(id) == Some(false) {
+            for &(option, _) in cmake_options(group) {
+                set_option_selected(selected, option, false);
+            }
+        }
+    }
+
+    for &(option, id) in DETECTED_OPTIONS {
+        if let Some(found) = detection(id) {
+            set_option_selected(selected, option, found);
+        }
+    }
 }
 
 fn resolve_source_dir(settings: &AppSettings) -> String {
@@ -812,6 +863,20 @@ mod tests {
     }
 
     #[test]
+    fn selected_cmake_args_renames_deprecated_spec_on_emit_only() {
+        let selected = vec!["GGML_CUDA_FA_ALL_QUANTS".to_string()];
+
+        assert_eq!(
+            selected_cmake_args(&selected),
+            vec!["-DGGML_CUDA_FA_QUANTS=all"]
+        );
+        assert_eq!(
+            option_label("GGML_CUDA_FA_ALL_QUANTS"),
+            "GGML_CUDA_FA_ALL_QUANTS"
+        );
+    }
+
+    #[test]
     fn cmake_preview_shows_configure_then_build_with_selected_options() {
         let preview = cmake_command_preview(&AppSettings::default());
         let mut lines = preview.lines();
@@ -871,5 +936,66 @@ mod tests {
         };
 
         assert!(cmake_command_preview(&settings).contains("-G Ninja"));
+    }
+
+    #[test]
+    fn sync_options_drops_backend_group_when_toolkit_missing() {
+        let mut selected = AppSettings::default().build_cmake_options;
+        assert!(selected.contains(&"GGML_CUDA".to_string()));
+        assert!(selected.contains(&"GGML_HIP".to_string()));
+
+        let entries = vec![
+            EnvCheckEntry {
+                id: ID_CUDA.to_string(),
+                found: false,
+                ..Default::default()
+            },
+            EnvCheckEntry {
+                id: ID_ROCM.to_string(),
+                found: true,
+                ..Default::default()
+            },
+        ];
+        sync_options_with_env(&mut selected, &entries);
+
+        assert!(!selected.contains(&"GGML_CUDA".to_string()));
+        assert!(selected.contains(&"GGML_HIP".to_string()));
+    }
+
+    #[test]
+    fn sync_options_follows_accelerator_detection_and_skips_undetectable() {
+        let mut selected = vec!["GGML_HIP_RCCL".to_string()];
+
+        sync_options_with_env(&mut selected, &[]);
+        assert!(selected.contains(&"GGML_HIP_RCCL".to_string()));
+
+        let entries = vec![
+            EnvCheckEntry {
+                id: ID_RCCL.to_string(),
+                found: false,
+                ..Default::default()
+            },
+            EnvCheckEntry {
+                id: ID_NCCL.to_string(),
+                found: true,
+                ..Default::default()
+            },
+        ];
+        sync_options_with_env(&mut selected, &entries);
+
+        assert!(!selected.contains(&"GGML_HIP_RCCL".to_string()));
+        assert!(selected.contains(&"GGML_CUDA_NCCL".to_string()));
+    }
+
+    #[test]
+    fn cmake_preview_defaults_enable_both_backends() {
+        let preview = cmake_command_preview(&AppSettings::default());
+
+        assert!(preview.contains("-DGGML_CUDA=ON"));
+        assert!(preview.contains("-DGGML_CUDA_FA_QUANTS=all"));
+        assert!(!preview.contains("-DGGML_CUDA_FA_ALL_QUANTS"));
+        assert!(preview.contains("-DGGML_HIP=ON"));
+        assert!(!preview.contains("-DGGML_CUDA_NCCL"));
+        assert!(!preview.contains("-DGGML_HIP_RCCL"));
     }
 }

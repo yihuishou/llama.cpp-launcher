@@ -878,6 +878,10 @@ impl eframe::App for LlamaLauncherApp {
             if self.settings.env_check_result != entries {
                 self.settings.env_check_all_required_ok = env_check::all_required_found(results);
                 self.settings.env_check_result = entries;
+                crate::build::sync_options_with_env(
+                    &mut self.settings.build_cmake_options,
+                    &self.settings.env_check_result,
+                );
                 self.settings.env_check_checked_at =
                     Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
                 let _ = self.settings_manager.save(&self.settings);
