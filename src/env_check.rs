@@ -65,13 +65,16 @@ pub const ID_CUDA: &str = "cuda";
 /// ROCm 工具包检测项的稳定 id（供 UI 判定 ROCm 编译开关组是否展示）
 pub const ID_ROCM: &str = "rocm";
 
+/// Ninja 检测项的稳定 id
+pub const ID_NINJA: &str = "ninja";
+
 /// 组件稳定 id（配置序列化用，勿轻易改动）
 fn key_id(key: Key) -> Option<&'static str> {
     match key {
         Key::EnvCheckGit => Some(ID_GIT),
         Key::EnvCheckCmake => Some("cmake"),
         Key::EnvCheckCompiler => Some("compiler"),
-        Key::EnvCheckNinja => Some("ninja"),
+        Key::EnvCheckNinja => Some(ID_NINJA),
         Key::EnvCheckPython => Some("python"),
         Key::EnvCheckCuda => Some(ID_CUDA),
         Key::EnvCheckRocm => Some(ID_ROCM),
@@ -87,7 +90,7 @@ pub fn id_to_key(id: &str) -> Option<Key> {
         "git" => Some(Key::EnvCheckGit),
         "cmake" => Some(Key::EnvCheckCmake),
         "compiler" => Some(Key::EnvCheckCompiler),
-        "ninja" => Some(Key::EnvCheckNinja),
+        ID_NINJA => Some(Key::EnvCheckNinja),
         "python" => Some(Key::EnvCheckPython),
         ID_CUDA => Some(Key::EnvCheckCuda),
         ID_ROCM => Some(Key::EnvCheckRocm),
@@ -264,7 +267,8 @@ struct Requirement {
     probe: fn() -> Probe,
 }
 
-/// 平台检测清单。GPU 后端（CUDA / ROCm）均为可选项，缺失不算失败。
+/// 平台检测清单。GPU 后端（CUDA / ROCm）均为可选项，缺失不算失败；
+/// ninja 是必需项——「开始编译」强制使用 Ninja 生成器，缺它配置阶段必然失败。
 fn requirements() -> Vec<Requirement> {
     let mut reqs = vec![
         Requirement {
@@ -284,7 +288,7 @@ fn requirements() -> Vec<Requirement> {
         },
         Requirement {
             key: Key::EnvCheckNinja,
-            required: false,
+            required: true,
             probe: probe_ninja,
         },
         Requirement {
@@ -535,6 +539,11 @@ mod tests {
             .into_iter()
             .find(|r| r.key == Key::EnvCheckPython);
         assert!(python.expect("python 项应存在").required);
+
+        let ninja = requirements()
+            .into_iter()
+            .find(|r| r.key == Key::EnvCheckNinja);
+        assert!(ninja.expect("ninja 项应存在").required);
     }
 
     #[test]
