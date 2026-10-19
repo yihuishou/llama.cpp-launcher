@@ -17,7 +17,7 @@
 - launch_commands_panel: server/RPC 最终启动命令只读展示
 - presets_panel: 预设保存/应用/删除/重命名/自启动 + 分享/引入入口；返回 PresetPanelRequest（None/StartServer/StartRpc/OpenConfig）
 - preset_share: 预设分享/引入模块（分享码 encode/decode、依赖声明 ShareDecl、引入配置窗口草稿隔离、声明阅读窗口）；进程生命周期仍走 engine，由 app.rs 响应 PresetPanelRequest
-- build_panel: llama.cpp 编译页（编译环境检测、仓库/分支/Tag、编译开关分组——CUDA/ROCm 按工具包安装状态门控（勾选由 build::sync_options_with_env 随环境检测校正：工具包缺失清空该组、NCCL/RCCL 按检测结果），通用与网页客户端资源始终显示、spec 为 =OFF 的开关显示名前置「禁用」、编译命令预览（monospace + 复制到剪贴板，源自 build::cmake_command_preview）、克隆/更新/编译入口），原设置面板内的编译卡片
+- build_panel: llama.cpp 编译页（编译环境检测、仓库/分支/Tag、编译开关分组——CUDA/ROCm 按工具包安装状态门控（勾选由 build::sync_options_with_env 随环境检测校正：工具包缺失清空该组、NCCL/RCCL 按检测结果），通用与网页客户端资源始终显示、spec 为 =OFF 的开关显示名前置「禁用」、编译命令预览（monospace + 复制到剪贴板，源自 build::cmake_command_preview）、克隆/更新/编译入口——「开始编译」可用性 = 环境必需项齐全 + CUDA/ROCm 工具包至少一个可用 + 源码目录非空 + 未在克隆/更新中，由 can_build 判定（禁用时按钮下方显示 BuildBtnBuildHint）），原设置面板内的编译卡片
 - settings_panel: 应用设置（主题、语言、日志、自动更新等）
 - widgets: 可复用组件（rounded_button、toggle_trailing、nav_row、dialog_skeleton、segmented_width、R_CTL 圆角常量）
 - helper: WinUI 3 帮助按钮（question-circle 字形，悬停+点击气泡，try_icon 兜底）
@@ -44,7 +44,7 @@
     - build_panel: +&EnvCheckHandle, &CloneHandle（编译环境检测结果 + 源码克隆句柄）
 - 弹窗（Window）统一由 app.rs/presets_panel 每帧渲染入口调用，窗口内文本同样走 i18n；
   深浅色自适应用 ui.visuals()，主题色填充用 accent + alpha 175（低饱和度规范）。
-- 内联测试: widgets.rs:897, model_panel.rs:210, preset_share.rs:1825, launch_commands_panel.rs:103, build_panel.rs（末尾 tests 模块：env 条目 git 判定与 can_clone 门控）。
+- 内联测试: widgets.rs:897, model_panel.rs:210, preset_share.rs:1825, launch_commands_panel.rs:103, build_panel.rs（末尾 tests 模块：env 条目 git 判定、can_clone 门控与 can_build 门控——临时目录探测源码非空）。
 
 ## ANTI-PATTERNS
 
