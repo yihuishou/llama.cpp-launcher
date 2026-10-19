@@ -12,7 +12,7 @@ llama.cpp 桌面启动器。Rust + eframe/egui 0.35 + fluent-egui（WinUI 3）GU
 
 ```
 root/
-├── Cargo.toml              # 单 binary v0.2.1 → llama_cpp_launcher(.exe)
+├── Cargo.toml              # 单 binary v0.2.2 → llama_cpp_launcher(.exe)
 ├── build.rs                # winres 图标/版本信息（Windows，主动定位 rc.exe，失败仅告警）+ 图标复制（Linux）
 ├── assets/                 # llama.ico（窗口/exe 图标）、NotoSansSC-Regular.ttf（内嵌 CJK 回退）
 ├── doc/                    # server / rpc / kvmem 参数参考 txt（v0.6.0）
