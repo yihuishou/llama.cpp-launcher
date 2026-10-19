@@ -68,6 +68,12 @@ pub const ID_ROCM: &str = "rocm";
 /// Ninja 检测项的稳定 id
 pub const ID_NINJA: &str = "ninja";
 
+/// RCCL 检测项的稳定 id（仅在 Python 可用时才会被探测，编译开关据此同步勾选）
+pub const ID_RCCL: &str = "rccl";
+
+/// NCCL 检测项的稳定 id（仅在 Python 可用时才会被探测，编译开关据此同步勾选）
+pub const ID_NCCL: &str = "nccl";
+
 /// 组件稳定 id（配置序列化用，勿轻易改动）
 fn key_id(key: Key) -> Option<&'static str> {
     match key {
@@ -78,8 +84,8 @@ fn key_id(key: Key) -> Option<&'static str> {
         Key::EnvCheckPython => Some("python"),
         Key::EnvCheckCuda => Some(ID_CUDA),
         Key::EnvCheckRocm => Some(ID_ROCM),
-        Key::EnvCheckRccl => Some("rccl"),
-        Key::EnvCheckNccl => Some("nccl"),
+        Key::EnvCheckRccl => Some(ID_RCCL),
+        Key::EnvCheckNccl => Some(ID_NCCL),
         _ => None,
     }
 }
@@ -94,8 +100,8 @@ pub fn id_to_key(id: &str) -> Option<Key> {
         "python" => Some(Key::EnvCheckPython),
         ID_CUDA => Some(Key::EnvCheckCuda),
         ID_ROCM => Some(Key::EnvCheckRocm),
-        "rccl" => Some(Key::EnvCheckRccl),
-        "nccl" => Some(Key::EnvCheckNccl),
+        ID_RCCL => Some(Key::EnvCheckRccl),
+        ID_NCCL => Some(Key::EnvCheckNccl),
         _ => None,
     }
 }
