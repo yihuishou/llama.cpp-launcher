@@ -1,4 +1,4 @@
-use crate::build::CloneHandle;
+use crate::build::BuildHandle;
 use crate::config::settings::AppSettings;
 use crate::engine::rpc::RpcManager;
 use crate::engine::server::{LogEntry, LogLevel, ServerManager};
@@ -21,12 +21,12 @@ impl LogSource for ServerManager {
     }
 }
 
-impl LogSource for CloneHandle {
+impl LogSource for BuildHandle {
     fn logs(&self) -> Vec<LogEntry> {
-        CloneHandle::logs(self)
+        self.log().snapshot()
     }
     fn clear_logs(&mut self) {
-        CloneHandle::clear_logs(self)
+        self.log().clear()
     }
 }
 
@@ -222,11 +222,11 @@ pub fn rpc_ui(
     );
 }
 
-/// llama.cpp 编译日志面板（克隆 / 更新，后续 CMake 配置与构建）；构建无 prefill 进度，传 0.0
+/// llama.cpp 编译日志面板（克隆 / 更新 + CMake 配置与构建）；构建无 prefill 进度，传 0.0
 pub fn build_ui(
     ui: &mut egui::Ui,
     settings: &mut AppSettings,
-    clone: &mut CloneHandle,
+    build: &mut BuildHandle,
     lang: &i18n::Language,
 ) {
     render(
@@ -234,7 +234,7 @@ pub fn build_ui(
         settings,
         i18n::Key::PanelBuildLogTitle,
         lang,
-        clone,
+        build,
         0.0,
         "build_log_scroll_area",
     );

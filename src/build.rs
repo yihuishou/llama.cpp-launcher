@@ -15,12 +15,12 @@
 //! 更新在既有源码目录内执行 [`update_steps`]：有 Tag → `fetch --tags --force` + `checkout <tag>`；
 //! 无 Tag → `checkout <branch>` + `pull --ff-only`。
 //!
-//! 日志：worker 把每条 git 命令与 stderr 输出追加进 [`CloneHandle::logs`]（VecDeque 环形缓冲，
+//! 日志：worker 把每条 git 命令与 stderr 输出追加进 [`BuildLog`]（VecDeque 环形缓冲，
 //! 容量 [`MAX_LOG_LINES`]，与 server/rpc 日志同规格），供「llama.cpp 编译日志」面板展示；
 //! 后续 CMake 配置/构建阶段复用同一缓冲。
 
 use std::collections::VecDeque;
-use std::io::{BufReader, Read};
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -70,30 +70,67 @@ pub struct CloneStatus {
     pub op: Option<SourceOp>,
 }
 
+/// 构建日志缓冲（克隆/更新与 CMake 配置/构建共用一份）
+///
+/// 内部为 VecDeque 环形缓冲，容量 [`MAX_LOG_LINES`]，超限丢弃最旧行（同 server/rpc）；
+/// 克隆句柄与编译句柄各持一个克隆，指向同一缓冲，因此「编译日志」面板能看到两条链路的输出。
+#[derive(Clone, Default)]
+pub struct BuildLog {
+    lines: Arc<Mutex<VecDeque<LogEntry>>>,
+}
+
+impl BuildLog {
+    /// 追加一行日志；超出容量时丢弃最旧行
+    pub fn push(&self, level: LogLevel, text: impl Into<String>) {
+        let text = text.into();
+        let mut lines = self.lines.lock().unwrap();
+        if lines.len() >= MAX_LOG_LINES {
+            lines.pop_front();
+        }
+        lines.push_back(LogEntry { text, level });
+    }
+
+    /// 拍摄当前日志快照（UI 每帧轮询）
+    pub fn snapshot(&self) -> Vec<LogEntry> {
+        self.lines.lock().unwrap().iter().cloned().collect()
+    }
+
+    /// 清空日志
+    pub fn clear(&self) {
+        self.lines.lock().unwrap().clear();
+    }
+}
+
 /// 后台克隆 / 更新控制句柄（模式对齐 downloader::DownloadHandle）
 pub struct CloneHandle {
     cancel: Arc<AtomicBool>,
     status: Arc<Mutex<CloneStatus>>,
     child: Arc<Mutex<Option<Child>>>,
     worker: Arc<Mutex<Option<JoinHandle<()>>>>,
-    logs: Arc<Mutex<VecDeque<LogEntry>>>,
+    log: BuildLog,
 }
 
 impl Default for CloneHandle {
     fn default() -> Self {
-        Self::new()
+        Self::new(BuildLog::default())
     }
 }
 
 impl CloneHandle {
-    pub fn new() -> Self {
+    /// `log` 与 [`BuildHandle`] 共享同一缓冲时，两个面板看到同一份构建日志
+    pub fn new(log: BuildLog) -> Self {
         Self {
             cancel: Arc::new(AtomicBool::new(false)),
             status: Arc::new(Mutex::new(CloneStatus::default())),
             child: Arc::new(Mutex::new(None)),
             worker: Arc::new(Mutex::new(None)),
-            logs: Arc::new(Mutex::new(VecDeque::new())),
+            log,
         }
+    }
+
+    /// 构建日志缓冲（与 [`BuildHandle`] 共享同一缓冲，日志面板据此渲染）
+    pub fn log(&self) -> &BuildLog {
+        &self.log
     }
 
     /// 启动后台克隆；进行中时忽略（防重复点击）
@@ -121,11 +158,11 @@ impl CloneHandle {
         let cancel = Arc::clone(&self.cancel);
         let status = Arc::clone(&self.status);
         let child = Arc::clone(&self.child);
-        let logs = Arc::clone(&self.logs);
+        let log = self.log.clone();
         let handle = thread::spawn(move || {
             let state = match op {
-                SourceOp::Clone => run_clone(&cancel, &child, &status, &logs, &repo, &branch, &tag),
-                SourceOp::Update => run_update(&cancel, &child, &status, &logs, &branch, &tag),
+                SourceOp::Clone => run_clone(&cancel, &child, &status, &log, &repo, &branch, &tag),
+                SourceOp::Update => run_update(&cancel, &child, &status, &log, &branch, &tag),
             };
             let mut st = status.lock().unwrap();
             // 被取消则回到 Idle，而非展示半份结果
@@ -149,22 +186,12 @@ impl CloneHandle {
         matches!(self.snapshot().state, CloneState::Running)
     }
 
-    /// 构建日志（内部 VecDeque 环形缓冲，对外转 Vec；同 ServerManager）
-    pub fn logs(&self) -> Vec<LogEntry> {
-        self.logs.lock().unwrap().iter().cloned().collect()
-    }
-
-    /// 清空构建日志
-    pub fn clear_logs(&mut self) {
-        self.logs.lock().unwrap().clear();
-    }
-
-    /// Drop / 关窗调用：置取消标志并 kill 子进程
+    /// Drop / 关窗调用：置取消标志并结束子进程树
     pub fn request_cancel(&self) {
         self.cancel.store(true, Ordering::SeqCst);
         if let Ok(mut slot) = self.child.lock() {
             if let Some(child) = slot.as_mut() {
-                let _ = child.kill();
+                kill_tree(child);
             }
         }
     }
@@ -264,37 +291,25 @@ fn prepare_dir(dest: &Path) -> Option<String> {
     }
 }
 
-/// 追加一行构建日志；超出 [`MAX_LOG_LINES`] 丢弃最旧行
-fn push_log(logs: &Mutex<VecDeque<LogEntry>>, level: LogLevel, text: impl Into<String>) {
-    let mut logs = logs.lock().unwrap();
-    if logs.len() >= MAX_LOG_LINES {
-        logs.pop_front();
-    }
-    logs.push_back(LogEntry {
-        text: text.into(),
-        level,
-    });
-}
-
 /// 首次克隆：准备目录 → `git clone` → 终态
 fn run_clone(
     cancel: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
     status: &Arc<Mutex<CloneStatus>>,
-    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
+    log: &BuildLog,
     repo: &str,
     branch: &str,
     tag: &str,
 ) -> CloneState {
     let Some(dest) = source_code_dir() else {
-        return failed(logs, "cannot resolve program directory".to_string());
+        return failed(log, "cannot resolve program directory".to_string());
     };
     if let Some(msg) = prepare_dir(&dest) {
-        return failed(logs, msg);
+        return failed(log, msg);
     }
 
     let steps = [clone_args(repo, branch, tag, &dest)];
-    run_steps(cancel, child_slot, status, logs, steps, &dest)
+    run_steps(cancel, child_slot, status, log, steps, &dest)
 }
 
 /// 更新：校验既有源码目录 → 依次执行 `update_steps` → 终态
@@ -302,27 +317,27 @@ fn run_update(
     cancel: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
     status: &Arc<Mutex<CloneStatus>>,
-    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
+    log: &BuildLog,
     branch: &str,
     tag: &str,
 ) -> CloneState {
     let Some(dest) = source_code_dir() else {
-        return failed(logs, "cannot resolve program directory".to_string());
+        return failed(log, "cannot resolve program directory".to_string());
     };
     if !dest.join(".git").exists() {
         return failed(
-            logs,
+            log,
             format!("not a git repository (clone first): {}", dest.display()),
         );
     }
 
     let steps = update_steps(&dest, branch, tag);
-    run_steps(cancel, child_slot, status, logs, steps, &dest)
+    run_steps(cancel, child_slot, status, log, steps, &dest)
 }
 
 /// 记一条错误日志并生成失败终态（避免每个失败点重复两行）
-fn failed(logs: &Arc<Mutex<VecDeque<LogEntry>>>, msg: String) -> CloneState {
-    push_log(logs, LogLevel::Error, msg.clone());
+fn failed(log: &BuildLog, msg: String) -> CloneState {
+    log.push(LogLevel::Error, msg.clone());
     CloneState::Failed(msg)
 }
 
@@ -331,15 +346,15 @@ fn run_steps(
     cancel: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
     status: &Arc<Mutex<CloneStatus>>,
-    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
+    log: &BuildLog,
     steps: impl IntoIterator<Item = Vec<String>>,
     dest: &Path,
 ) -> CloneState {
     for args in steps {
-        match run_git(cancel, child_slot, status, logs, &args) {
+        match run_git(cancel, child_slot, status, log, &args) {
             Ok((exit, _)) if exit.success() => {}
-            Ok((exit, text)) => return failed(logs, describe_failure(&text, &exit)),
-            Err(e) => return failed(logs, e),
+            Ok((exit, text)) => return failed(log, describe_failure(&text, &exit)),
+            Err(e) => return failed(log, e),
         }
     }
     CloneState::Done(dest.to_path_buf())
@@ -350,7 +365,7 @@ fn run_git(
     cancel: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
     status: &Arc<Mutex<CloneStatus>>,
-    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
+    log: &BuildLog,
     args: &[String],
 ) -> Result<(ExitStatus, String), String> {
     let mut cmd = Command::new("git");
@@ -368,13 +383,13 @@ fn run_git(
         .spawn()
         .map_err(|e| format!("cannot start git: {}", e))?;
 
-    push_log(logs, LogLevel::Info, format!("$ git {}", args.join(" ")));
+    log.push(LogLevel::Info, format!("$ git {}", args.join(" ")));
 
     // 独立线程抽干 stderr：逐段解析进度（顺带防止管道写满阻塞 git）并留存失败信息
     let stderr_reader = child.stderr.take().map(|pipe| {
         let status = Arc::clone(status);
-        let logs = Arc::clone(logs);
-        thread::spawn(move || read_progress(pipe, &status, &logs))
+        let log = log.clone();
+        thread::spawn(move || read_progress(pipe, &status, &log))
     });
 
     *child_slot.lock().unwrap() = Some(child);
@@ -393,11 +408,7 @@ fn run_git(
 }
 
 /// 读取 git stderr：按 `\r` / `\n` 切段，逐段解析百分比并刷新进度；返回完整文本供失败诊断
-fn read_progress(
-    pipe: impl Read,
-    status: &Arc<Mutex<CloneStatus>>,
-    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
-) -> String {
+fn read_progress(pipe: impl Read, status: &Arc<Mutex<CloneStatus>>, log: &BuildLog) -> String {
     let mut reader = BufReader::new(pipe);
     let mut buf = [0u8; 4096];
     let mut pending: Vec<u8> = Vec::new();
@@ -413,10 +424,10 @@ fn read_progress(
         while let Some(idx) = pending.iter().position(|&b| b == b'\r' || b == b'\n') {
             let mut segment: Vec<u8> = pending.drain(..=idx).collect();
             segment.pop(); // 去掉分隔符
-            record_segment(&segment, &mut all, &mut max_percent, status, logs);
+            record_segment(&segment, &mut all, &mut max_percent, status, log);
         }
     }
-    record_segment(&pending, &mut all, &mut max_percent, status, logs);
+    record_segment(&pending, &mut all, &mut max_percent, status, log);
 
     String::from_utf8_lossy(&all).into_owned()
 }
@@ -427,7 +438,7 @@ fn record_segment(
     all: &mut Vec<u8>,
     max_percent: &mut Option<u8>,
     status: &Arc<Mutex<CloneStatus>>,
-    logs: &Arc<Mutex<VecDeque<LogEntry>>>,
+    log: &BuildLog,
 ) {
     if segment.is_empty() {
         return;
@@ -436,7 +447,7 @@ fn record_segment(
     all.push(b'\n');
 
     let text = String::from_utf8_lossy(segment);
-    push_log(logs, LogLevel::Info, text.to_string());
+    log.push(LogLevel::Info, text.to_string());
     if let Some(pct) = parse_percent(&text) {
         if max_percent.is_none_or(|m| pct > m) {
             *max_percent = Some(pct);
@@ -456,24 +467,43 @@ fn wait_for_exit(
         if cancel.load(Ordering::SeqCst) {
             if let Ok(mut slot) = child_slot.lock() {
                 if let Some(child) = slot.as_mut() {
-                    let _ = child.kill();
+                    kill_tree(child);
                 }
             }
         }
         let waited = {
             let mut slot = child_slot
                 .lock()
-                .map_err(|_| "clone state poisoned".to_string())?;
+                .map_err(|_| "process state poisoned".to_string())?;
             slot.as_mut()
-                .ok_or_else(|| "clone process lost".to_string())?
+                .ok_or_else(|| "process lost".to_string())?
                 .try_wait()
         };
         match waited {
             Ok(Some(status)) => return Ok(status),
             Ok(None) => thread::sleep(Duration::from_millis(150)),
-            Err(e) => return Err(format!("git wait failed: {}", e)),
+            Err(e) => return Err(format!("process wait failed: {}", e)),
         }
     }
+}
+
+/// 结束子进程及其子孙进程（CMake → Ninja → 编译器链 / git 的辅助进程）。
+/// Windows 上 `Child::kill` 只杀直接子进程，忍者与编译器会残留并继续占 CPU，
+/// 故优先用 `taskkill /T /F` 整树终止；其他平台退回 kill。
+fn kill_tree(child: &mut Child) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let pid = child.id().to_string();
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid, "/T", "/F"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .creation_flags(CREATE_NO_WINDOW)
+            .status();
+    }
+    let _ = child.kill();
 }
 
 /// 失败时取 stderr 最后一行非空文本，兜底用退出码
@@ -677,10 +707,12 @@ fn quote_if_needed(value: &str) -> String {
     }
 }
 
-/// 「开始编译」将执行的完整命令：首行为 CMake 配置步骤，次行为 CMake 构建步骤。
+/// 「开始编译」实际执行的两条命令：`[配置, 构建]`。参数保持未加引号的原始值，直接交给
+/// [`Command::args`]；预览文本由 [`cmake_command_preview`] 按需加引号渲染，两者同源，
+/// 避免预览与真正执行的参数漂移。
 /// 勾选的开关复用 [`selected_cmake_args`]，保证预览与实际构建参数同源。
 /// 生成器恒拼 `-G Ninja`（`build_generator` 留空时回退默认值），不交给 CMake 自动选。
-pub fn cmake_command_preview(settings: &AppSettings) -> String {
+pub fn cmake_commands(settings: &AppSettings) -> [Vec<String>; 2] {
     let source = resolve_source_dir(settings);
     let build_dir = {
         let configured = settings.build_output_dir.trim();
@@ -694,9 +726,9 @@ pub fn cmake_command_preview(settings: &AppSettings) -> String {
     let mut configure = vec![
         "cmake".to_string(),
         "-S".to_string(),
-        quote_if_needed(&source),
+        source,
         "-B".to_string(),
-        quote_if_needed(&build_dir),
+        build_dir.clone(),
     ];
     let generator = {
         let configured = settings.build_generator.trim();
@@ -707,7 +739,7 @@ pub fn cmake_command_preview(settings: &AppSettings) -> String {
         }
     };
     configure.push("-G".to_string());
-    configure.push(quote_if_needed(&generator));
+    configure.push(generator);
     let build_type = settings.build_type.trim();
     if !build_type.is_empty() {
         configure.push(format!("-DCMAKE_BUILD_TYPE={}", build_type));
@@ -720,11 +752,7 @@ pub fn cmake_command_preview(settings: &AppSettings) -> String {
             .map(str::to_string),
     );
 
-    let mut build = vec![
-        "cmake".to_string(),
-        "--build".to_string(),
-        quote_if_needed(&build_dir),
-    ];
+    let mut build = vec!["cmake".to_string(), "--build".to_string(), build_dir];
     if !build_type.is_empty() {
         build.push("--config".to_string());
         build.push(build_type.to_string());
@@ -739,7 +767,243 @@ pub fn cmake_command_preview(settings: &AppSettings) -> String {
         build.push(settings.build_jobs.to_string());
     }
 
-    format!("{}\n{}", configure.join(" "), build.join(" "))
+    [configure, build]
+}
+
+/// 「开始编译」的命令预览：路径含空格时加引号，便于直接粘到终端；
+/// 内容与 [`cmake_commands`] 同源，首行为配置步骤，次行为构建步骤。
+pub fn cmake_command_preview(settings: &AppSettings) -> String {
+    cmake_commands(settings)
+        .iter()
+        .map(|args| {
+            args.iter()
+                .map(|arg| quote_if_needed(arg))
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// 编译阶段：配置（`cmake -S/-B` 生成构建系统）→ 编译（`cmake --build`）
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BuildPhase {
+    Configure,
+    Compile,
+}
+
+/// 编译状态
+#[derive(Clone, Debug, PartialEq, Default)]
+pub enum BuildState {
+    /// 空闲（初始 / 被取消）
+    #[default]
+    Idle,
+    /// 进行中
+    Running,
+    /// 配置与编译均成功
+    Done,
+    /// 失败：英文错误串（UI 层拼 i18n 前缀）
+    Failed(String),
+}
+
+/// 编译状态快照（UI 每帧轮询）
+#[derive(Clone, Debug, Default)]
+pub struct BuildStatus {
+    pub state: BuildState,
+    /// 进行中的阶段；非进行中为 None
+    pub phase: Option<BuildPhase>,
+}
+
+/// 后台编译控制句柄（Handle 模式，对齐 [`CloneHandle`]）
+pub struct BuildHandle {
+    cancel: Arc<AtomicBool>,
+    status: Arc<Mutex<BuildStatus>>,
+    child: Arc<Mutex<Option<Child>>>,
+    worker: Arc<Mutex<Option<JoinHandle<()>>>>,
+    log: BuildLog,
+}
+
+impl Default for BuildHandle {
+    fn default() -> Self {
+        Self::new(BuildLog::default())
+    }
+}
+
+impl BuildHandle {
+    pub fn new(log: BuildLog) -> Self {
+        Self {
+            cancel: Arc::new(AtomicBool::new(false)),
+            status: Arc::new(Mutex::new(BuildStatus::default())),
+            child: Arc::new(Mutex::new(None)),
+            worker: Arc::new(Mutex::new(None)),
+            log,
+        }
+    }
+
+    /// 启动后台编译；进行中时忽略（防重复点击）。
+    /// 设置在此刻快照，构建过程中改界面不影响本次命令。
+    pub fn start(&self, settings: &AppSettings) {
+        if self.is_busy() {
+            return;
+        }
+        self.cancel.store(false, Ordering::SeqCst);
+        {
+            let mut st = self.status.lock().unwrap();
+            st.state = BuildState::Running;
+            st.phase = Some(BuildPhase::Configure);
+        }
+
+        let cancel = Arc::clone(&self.cancel);
+        let status = Arc::clone(&self.status);
+        let child = Arc::clone(&self.child);
+        let log = self.log.clone();
+        let settings = settings.clone();
+        let handle = thread::spawn(move || {
+            let state = run_build(&cancel, &child, &status, &log, &settings);
+            let mut st = status.lock().unwrap();
+            // 被取消则回到 Idle，而非展示半份结果
+            st.state = if cancel.load(Ordering::SeqCst) {
+                BuildState::Idle
+            } else {
+                state
+            };
+            st.phase = None;
+        });
+        *self.worker.lock().unwrap() = Some(handle);
+    }
+
+    /// 返回当前状态快照
+    pub fn snapshot(&self) -> BuildStatus {
+        self.status.lock().unwrap().clone()
+    }
+
+    /// 构建日志缓冲（与 [`CloneHandle`] 共享同一缓冲）
+    pub fn log(&self) -> &BuildLog {
+        &self.log
+    }
+
+    /// 是否正在编译（UI 禁用按钮用）
+    pub fn is_busy(&self) -> bool {
+        matches!(self.snapshot().state, BuildState::Running)
+    }
+
+    /// Drop / 关窗调用：置取消标志并结束整棵编译进程树
+    pub fn request_cancel(&self) {
+        self.cancel.store(true, Ordering::SeqCst);
+        if let Ok(mut slot) = self.child.lock() {
+            if let Some(child) = slot.as_mut() {
+                kill_tree(child);
+            }
+        }
+    }
+}
+
+impl Drop for BuildHandle {
+    fn drop(&mut self) {
+        self.request_cancel();
+    }
+}
+
+/// 依次执行「配置」「编译」两条命令；任一失败即中止
+fn run_build(
+    cancel: &AtomicBool,
+    child_slot: &Mutex<Option<Child>>,
+    status: &Arc<Mutex<BuildStatus>>,
+    log: &BuildLog,
+    settings: &AppSettings,
+) -> BuildState {
+    let phases = [BuildPhase::Configure, BuildPhase::Compile];
+    for (args, phase) in cmake_commands(settings).iter().zip(phases) {
+        if let Ok(mut st) = status.lock() {
+            st.phase = Some(phase);
+        }
+        if let Err(msg) = run_step(cancel, child_slot, log, args) {
+            if cancel.load(Ordering::SeqCst) {
+                return BuildState::Idle;
+            }
+            log.push(LogLevel::Error, msg.clone());
+            return BuildState::Failed(msg);
+        }
+        if cancel.load(Ordering::SeqCst) {
+            return BuildState::Idle;
+        }
+    }
+    BuildState::Done
+}
+
+/// 跑一条命令：stdout / stderr 逐行进构建日志，非零退出返回错误串
+fn run_step(
+    cancel: &AtomicBool,
+    child_slot: &Mutex<Option<Child>>,
+    log: &BuildLog,
+    args: &[String],
+) -> Result<(), String> {
+    let Some((program, program_args)) = args.split_first() else {
+        return Err("empty build command".to_string());
+    };
+    log.push(LogLevel::Info, format!("$ {}", args.join(" ")));
+
+    let mut cmd = Command::new(program);
+    cmd.args(program_args);
+    cmd.stdin(Stdio::null());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("cannot start {}: {}", program, e))?;
+
+    // 两路输出各起一个线程抽干：ninja 的编译进度在 stdout，CMake 警告/错误在 stderr
+    let mut readers = Vec::new();
+    if let Some(pipe) = child.stdout.take() {
+        let log = log.clone();
+        readers.push(thread::spawn(move || stream_lines(pipe, &log)));
+    }
+    if let Some(pipe) = child.stderr.take() {
+        let log = log.clone();
+        readers.push(thread::spawn(move || stream_lines(pipe, &log)));
+    }
+
+    *child_slot.lock().unwrap() = Some(child);
+    let waited = wait_for_exit(cancel, child_slot);
+    if let Ok(mut slot) = child_slot.lock() {
+        *slot = None;
+    }
+    for reader in readers {
+        let _ = reader.join();
+    }
+
+    let exit = waited?;
+    if exit.success() {
+        Ok(())
+    } else {
+        Err(format!("{} failed ({})", program, exit))
+    }
+}
+
+/// 逐行读取子进程输出写入构建日志（读取线程同时负责排空管道，避免写满阻塞）
+fn stream_lines(pipe: impl Read, log: &BuildLog) {
+    let mut reader = BufReader::new(pipe);
+    let mut buf: Vec<u8> = Vec::new();
+    loop {
+        buf.clear();
+        match reader.read_until(b'\n', &mut buf) {
+            Ok(0) | Err(_) => return,
+            Ok(_) => {
+                let text = String::from_utf8_lossy(&buf);
+                let line = text.trim_end_matches(['\r', '\n']);
+                if !line.is_empty() {
+                    log.push(LogLevel::Info, line.to_string());
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -747,29 +1011,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn push_log_keeps_order_and_caps_at_max_lines() {
-        let mut handle = CloneHandle::new();
-        push_log(
-            &handle.logs,
-            LogLevel::Info,
-            "$ git clone --progress repo dest",
-        );
-        push_log(&handle.logs, LogLevel::Warn, "warning: something");
+    fn build_log_keeps_order_and_caps_at_max_lines() {
+        let log = BuildLog::default();
+        log.push(LogLevel::Info, "$ git clone --progress repo dest");
+        log.push(LogLevel::Warn, "warning: something");
 
-        let logs = handle.logs();
-        assert_eq!(logs.len(), 2);
-        assert_eq!(logs[0].text, "$ git clone --progress repo dest");
-        assert_eq!(logs[1].level, LogLevel::Warn);
+        let lines = log.snapshot();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].text, "$ git clone --progress repo dest");
+        assert_eq!(lines[1].level, LogLevel::Warn);
 
         for i in 0..MAX_LOG_LINES {
-            push_log(&handle.logs, LogLevel::Info, format!("line {i}"));
+            log.push(LogLevel::Info, format!("line {i}"));
         }
-        let logs = handle.logs();
-        assert_eq!(logs.len(), MAX_LOG_LINES);
-        assert_eq!(logs[0].text, "line 0");
+        let lines = log.snapshot();
+        assert_eq!(lines.len(), MAX_LOG_LINES);
+        assert_eq!(lines[0].text, "line 0");
 
-        handle.clear_logs();
-        assert!(handle.logs().is_empty());
+        log.clear();
+        assert!(log.snapshot().is_empty());
     }
 
     #[test]
@@ -932,11 +1192,27 @@ mod tests {
 
     #[test]
     fn handle_starts_idle_and_not_busy() {
-        let handle = CloneHandle::new();
+        let handle = CloneHandle::default();
         assert!(!handle.is_busy());
         assert_eq!(handle.snapshot().state, CloneState::Idle);
         assert_eq!(handle.snapshot().percent, None);
         assert_eq!(handle.snapshot().op, None);
+    }
+
+    #[test]
+    fn build_handle_starts_idle_and_shares_clone_log() {
+        let log = BuildLog::default();
+        let clone = CloneHandle::new(log.clone());
+        let build = BuildHandle::new(log);
+
+        assert!(!build.is_busy());
+        assert_eq!(build.snapshot().state, BuildState::Idle);
+        assert_eq!(build.snapshot().phase, None);
+
+        clone.log().push(LogLevel::Info, "shared line");
+        let lines = build.log().snapshot();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].text, "shared line");
     }
 
     #[test]
@@ -1020,6 +1296,22 @@ mod tests {
         };
 
         assert!(cmake_command_preview(&settings).contains("-G Ninja"));
+    }
+
+    #[test]
+    fn cmake_commands_stay_unquoted_and_match_preview() {
+        let settings = AppSettings {
+            build_work_dir: "C:/my source/llama".to_string(),
+            ..AppSettings::default()
+        };
+        let [configure, build] = cmake_commands(&settings);
+
+        assert!(configure.contains(&"C:/my source/llama".to_string()));
+        assert_eq!(build[0], "cmake");
+        assert_eq!(build[1], "--build");
+
+        let preview = cmake_command_preview(&settings);
+        assert!(preview.contains("-S \"C:/my source/llama\""), "{preview}");
     }
 
     #[test]

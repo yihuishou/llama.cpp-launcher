@@ -6,7 +6,7 @@ use crate::engine::rpc::{RpcManager, RpcState};
 use crate::engine::server::{ServerManager, ServerState};
 use crate::env_check::{self, EnvCheckHandle, EnvCheckState};
 
-use crate::build::CloneHandle;
+use crate::build::{BuildHandle, BuildLog, CloneHandle};
 use crate::i18n::{self, Language};
 use crate::spacing_debugger::SpacingDebugger;
 use crate::ui::{
@@ -41,6 +41,7 @@ pub struct LlamaLauncherApp {
     updater: crate::updater::UpdaterHandle,
     env_check: EnvCheckHandle,
     clone_handle: CloneHandle,
+    build_handle: BuildHandle,
     check_update: Option<poll_promise::Promise<(String, Option<String>)>>,
     install_exit_timer: f32, // 自更新安装阶段：显示"正在安装"的倒计时
     preset_share: crate::ui::preset_share::PresetShareUi,
@@ -155,6 +156,8 @@ impl LlamaLauncherApp {
         // 同步日志开关状态到全局标志
         crate::set_log_to_file(settings.log_to_file);
 
+        let build_log = BuildLog::default();
+
         Self {
             settings,
             settings_manager,
@@ -163,7 +166,8 @@ impl LlamaLauncherApp {
             downloader: DownloadHandle::new(),
             updater: crate::updater::UpdaterHandle::new(),
             env_check: EnvCheckHandle::new(),
-            clone_handle: CloneHandle::new(),
+            clone_handle: CloneHandle::new(build_log.clone()),
+            build_handle: BuildHandle::new(build_log),
             check_update: None,
             install_exit_timer: 0.0,
             preset_share: crate::ui::preset_share::PresetShareUi::default(),
@@ -863,11 +867,12 @@ impl eframe::App for LlamaLauncherApp {
                                 &self.lang,
                                 &self.env_check,
                                 &self.clone_handle,
+                                &self.build_handle,
                             ),
                             NavSection::BuildLog => log_panel::build_ui(
                                 ui,
                                 &mut self.settings,
-                                &mut self.clone_handle,
+                                &mut self.build_handle,
                                 &self.lang,
                             ),
                             NavSection::Settings => settings_panel::ui(
@@ -921,6 +926,7 @@ impl Drop for LlamaLauncherApp {
         self.updater.request_cancel();
         self.env_check.request_cancel();
         self.clone_handle.request_cancel();
+        self.build_handle.request_cancel();
         self.save();
     }
 }

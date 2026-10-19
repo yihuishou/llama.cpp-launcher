@@ -15,6 +15,7 @@ pub fn ui(
     lang: &i18n::Language,
     env_check: &crate::env_check::EnvCheckHandle,
     clone_handle: &crate::build::CloneHandle,
+    build_handle: &crate::build::BuildHandle,
 ) {
     let accent = crate::theme::accent_color(&settings.accent_color);
 
@@ -133,18 +134,30 @@ pub fn ui(
 
         // 操作按钮
         let build_enabled = can_build(env_check, settings, clone_handle);
+        let building = build_handle.is_busy();
         ui.horizontal_wrapped(|ui| {
             if ui
                 .add_enabled(
-                    build_enabled,
+                    build_enabled && !building,
                     widgets::rounded_button(i18n::t(i18n::Key::BuildBtnBuild, lang), None),
                 )
                 .clicked()
             {
-                // TODO: 编译逻辑
+                build_handle.start(settings);
+            }
+            if building
+                && ui
+                    .add(widgets::rounded_button(
+                        i18n::t(i18n::Key::BuildBtnCancelBuild, lang),
+                        None,
+                    ))
+                    .clicked()
+            {
+                build_handle.request_cancel();
             }
         });
-        if !build_enabled {
+        render_build_status(ui, build_handle, lang);
+        if !build_enabled && !building {
             ui.label(
                 RichText::new(i18n::t(i18n::Key::BuildBtnBuildHint, lang))
                     .small()
@@ -152,6 +165,53 @@ pub fn ui(
             );
         }
     });
+}
+
+/// 渲染编译状态：进行中（按阶段）/ 完成 / 失败（含英文原因）；空闲时不渲染。
+fn render_build_status(
+    ui: &mut egui::Ui,
+    build_handle: &crate::build::BuildHandle,
+    lang: &i18n::Language,
+) {
+    use crate::build::{BuildPhase, BuildState};
+
+    let palette = winui::palette(widgets::current_theme(ui));
+    let status = build_handle.snapshot();
+    match &status.state {
+        BuildState::Running => {
+            let key = match status.phase {
+                Some(BuildPhase::Compile) => i18n::Key::BuildStatusCompiling,
+                _ => i18n::Key::BuildStatusConfiguring,
+            };
+            ui.label(RichText::new(i18n::t(key, lang)).weak());
+            ui.label(
+                RichText::new(i18n::t(i18n::Key::BuildLogHint, lang))
+                    .small()
+                    .weak(),
+            );
+        }
+        BuildState::Done => {
+            ui.label(
+                RichText::new(i18n::t(i18n::Key::BuildStatusDone, lang))
+                    .small()
+                    .color(palette.success),
+            );
+        }
+        BuildState::Failed(msg) => {
+            ui.label(
+                RichText::new(i18n::t(i18n::Key::BuildStatusError, lang))
+                    .small()
+                    .color(palette.danger),
+            );
+            ui.label(RichText::new(msg.as_str()).small().weak());
+            ui.label(
+                RichText::new(i18n::t(i18n::Key::BuildLogHint, lang))
+                    .small()
+                    .weak(),
+            );
+        }
+        BuildState::Idle => {}
+    }
 }
 
 /// 渲染克隆 / 更新状态：进行中（含进度条）/ 完成（含源码目录）/ 失败（含英文原因）/ 空闲（提示目标目录）。
