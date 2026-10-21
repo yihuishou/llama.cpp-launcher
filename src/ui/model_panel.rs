@@ -1,4 +1,5 @@
 use crate::config::settings::AppSettings;
+use crate::gguf_tools::{self, Operation as ToolOperation, ToolHandle, ToolState};
 use crate::i18n;
 use crate::ui::widgets;
 use fluent_egui::winui;
@@ -10,6 +11,8 @@ use std::path::{Path, PathBuf};
 // 跨帧持有的异步加载任务（Promise 不实现 Clone/Sync，无法存入 egui 临时数据）
 thread_local! {
     static DETAIL_PROMISE: RefCell<Option<Promise<Result<ModelDetails, String>>>> = const { RefCell::new(None) };
+    /// 分割 / 合并后台任务（ToolHandle 含子进程，同样无法存入 egui 临时数据）
+    static TOOL_HANDLE: RefCell<Option<ToolHandle>> = const { RefCell::new(None) };
 }
 
 /// 自动检测模型文件夹
@@ -409,6 +412,38 @@ enum FileMode {
     Dflash,
 }
 
+/// 模型条目上的工具操作
+enum ToolRequest {
+    Split(PathBuf),
+    Merge {
+        first_shard: PathBuf,
+        shard_count: usize,
+    },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ToolKind {
+    Split,
+    Merge,
+}
+
+/// 分割 / 合并表单弹窗的跨帧状态
+#[derive(Clone)]
+struct ToolDialogState {
+    kind: ToolKind,
+    /// 分割时为模型文件，合并时为第一个分片
+    input: PathBuf,
+    /// 打开弹窗时解析一次，避免每帧递归搜索工具目录
+    tool: Option<PathBuf>,
+    split_size: String,
+    merge_name: String,
+    shard_count: usize,
+}
+
+fn tool_dialog_id() -> egui::Id {
+    egui::Id::new("gguf_tool_dialog")
+}
+
 /// 模型详情（点击 📋 按钮后读取的 GGUF 元数据）
 #[derive(Debug, Clone, Default)]
 struct ModelDetails {
@@ -537,12 +572,14 @@ fn detail_row(ui: &mut egui::Ui, label: &str, value: &str) {
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_file_list(
     ui: &mut egui::Ui,
     dir: &std::path::Path,
     selected_path: std::path::PathBuf,
     on_select: &mut impl FnMut(std::path::PathBuf),
     on_show_details: &mut impl FnMut(std::path::PathBuf),
+    on_tool: &mut impl FnMut(ToolRequest),
     lang: &i18n::Language,
     mode: FileMode,
     accent: egui::Color32,
@@ -696,6 +733,22 @@ fn render_file_list(
                     {
                         on_show_details(shards[0].clone());
                     }
+                    // 合并按钮（仅模型文件页）：第一个分片 + 分片总数
+                    if mode == FileMode::Main
+                        && ui
+                            .add(
+                                egui::Button::new(egui::RichText::new("🔗").size(12.0))
+                                    .fill(egui::Color32::TRANSPARENT)
+                                    .corner_radius(4.0),
+                            )
+                            .on_hover_text(i18n::t(i18n::Key::BtnMergeModel, lang))
+                            .clicked()
+                    {
+                        on_tool(ToolRequest::Merge {
+                            first_shard: shards[0].clone(),
+                            shard_count: total_count,
+                        });
+                    }
                 });
                 first_item = false;
                 pending_space = ITEM_GAP;
@@ -775,11 +828,330 @@ fn render_file_list(
                     {
                         on_show_details(file_path.clone());
                     }
+                    // 分割按钮（仅模型文件页）
+                    if mode == FileMode::Main
+                        && ui
+                            .add(
+                                egui::Button::new(egui::RichText::new("✂").size(12.0))
+                                    .fill(egui::Color32::TRANSPARENT)
+                                    .corner_radius(4.0),
+                            )
+                            .on_hover_text(i18n::t(i18n::Key::BtnSplitModel, lang))
+                            .clicked()
+                    {
+                        on_tool(ToolRequest::Split(file_path.clone()));
+                    }
                 });
                 first_item = false;
                 pending_space = ITEM_GAP;
             }
         });
+}
+
+fn open_tool_dialog(ui: &egui::Ui, request: ToolRequest, settings: &AppSettings) {
+    if TOOL_HANDLE.with(|cell| cell.borrow().is_some()) {
+        return;
+    }
+    let tool = gguf_tools::find_tool(&settings.server_path);
+    let state = match request {
+        ToolRequest::Split(path) => ToolDialogState {
+            kind: ToolKind::Split,
+            input: path,
+            tool,
+            split_size: "20G".to_string(),
+            merge_name: String::new(),
+            shard_count: 0,
+        },
+        ToolRequest::Merge {
+            first_shard,
+            shard_count,
+        } => {
+            let merge_name = gguf_tools::default_merge_output(&first_shard)
+                .and_then(|path| {
+                    path.file_name()
+                        .map(|name| name.to_string_lossy().to_string())
+                })
+                .unwrap_or_default();
+            ToolDialogState {
+                kind: ToolKind::Merge,
+                input: first_shard,
+                tool,
+                split_size: String::new(),
+                merge_name,
+                shard_count,
+            }
+        }
+    };
+    ui.data_mut(|map| map.insert_temp(tool_dialog_id(), Some(state)));
+}
+
+/// 渲染分割 / 合并表单。valid 已包含工具存在、参数合法和目标不冲突三项校验。
+fn render_tool_dialog(ctx: &egui::Context, lang: &i18n::Language) {
+    let snapshot = TOOL_HANDLE.with(|cell| cell.borrow().as_ref().map(ToolHandle::snapshot));
+    if let Some(snapshot) = snapshot {
+        render_tool_status_dialog(ctx, &snapshot, lang);
+        return;
+    }
+
+    let Some(Some(state)) =
+        ctx.data(|map| map.get_temp::<Option<ToolDialogState>>(tool_dialog_id()))
+    else {
+        return;
+    };
+    let tool = state.tool.clone();
+    let output_path = state.input.with_file_name(state.merge_name.trim());
+
+    let valid = tool.is_some()
+        && match state.kind {
+            ToolKind::Split => gguf_tools::validate_split_size(&state.split_size),
+            ToolKind::Merge => {
+                gguf_tools::validate_merge_file_name(&state.merge_name) && !output_path.exists()
+            }
+        };
+    let title = match state.kind {
+        ToolKind::Split => i18n::t(i18n::Key::SplitDialogTitle, lang),
+        ToolKind::Merge => i18n::t(i18n::Key::MergeDialogTitle, lang),
+    };
+    let start_label = match state.kind {
+        ToolKind::Split => i18n::t(i18n::Key::BtnStartSplit, lang),
+        ToolKind::Merge => i18n::t(i18n::Key::BtnStartMerge, lang),
+    }
+    .to_string();
+
+    let state_cell = RefCell::new(state);
+    let tool_for_footer = tool.clone();
+    let should_close = widgets::dialog(
+        ctx,
+        "gguf_tool_dialog_window",
+        title,
+        460.0,
+        ctx.content_rect().height() * 0.8,
+        |ui, _avail_h| {
+            let state = &mut *state_cell.borrow_mut();
+            let file_name = state
+                .input
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_default();
+            detail_row(ui, i18n::t(i18n::Key::DetailsFileName, lang), &file_name);
+
+            match state.kind {
+                ToolKind::Split => {
+                    detail_row(
+                        ui,
+                        i18n::t(i18n::Key::ToolOutputLabel, lang),
+                        &state
+                            .input
+                            .parent()
+                            .unwrap_or(Path::new(""))
+                            .display()
+                            .to_string(),
+                    );
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::SplitMaxSizeLabel, lang));
+                        ui.add(winui::FluentTextEdit::new(&mut state.split_size));
+                    });
+                    ui.label(
+                        egui::RichText::new(i18n::t(i18n::Key::SplitMaxSizeHint, lang))
+                            .small()
+                            .color(ui.visuals().weak_text_color()),
+                    );
+                    if !gguf_tools::validate_split_size(&state.split_size) {
+                        ui.colored_label(
+                            ui.visuals().error_fg_color,
+                            i18n::t(i18n::Key::ToolInvalidSize, lang),
+                        );
+                    }
+                    ui.add_space(6.0);
+                    ui.label(
+                        egui::RichText::new(i18n::t(i18n::Key::SplitOutputHint, lang))
+                            .small()
+                            .color(ui.visuals().weak_text_color()),
+                    );
+                }
+                ToolKind::Merge => {
+                    detail_row(
+                        ui,
+                        i18n::t(i18n::Key::MergeShardCountLabel, lang),
+                        &state.shard_count.to_string(),
+                    );
+                    detail_row(
+                        ui,
+                        i18n::t(i18n::Key::ToolOutputLabel, lang),
+                        &state
+                            .input
+                            .parent()
+                            .unwrap_or(Path::new(""))
+                            .display()
+                            .to_string(),
+                    );
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        ui.label(i18n::t(i18n::Key::MergeOutputNameLabel, lang));
+                        ui.add(winui::FluentTextEdit::new(&mut state.merge_name));
+                    });
+                    if gguf_tools::validate_merge_file_name(&state.merge_name)
+                        && output_path.exists()
+                    {
+                        ui.colored_label(
+                            ui.visuals().error_fg_color,
+                            i18n::t(i18n::Key::ToolTargetExists, lang),
+                        );
+                    }
+                }
+            }
+
+            if tool.is_none() {
+                ui.add_space(8.0);
+                ui.colored_label(
+                    ui.visuals().error_fg_color,
+                    i18n::t(i18n::Key::ToolNotFound, lang),
+                );
+            }
+        },
+        |ui| {
+            let mut close = false;
+            if ui
+                .add(winui::FluentButton::new(i18n::t(
+                    i18n::Key::BtnCancel,
+                    lang,
+                )))
+                .clicked()
+            {
+                close = true;
+            }
+            if ui
+                .add_enabled(valid, winui::FluentButton::new(start_label.as_str()))
+                .clicked()
+            {
+                let state = state_cell.borrow();
+                let tool_path = tool_for_footer
+                    .clone()
+                    .expect("tool presence checked by valid");
+                let handle = match state.kind {
+                    ToolKind::Split => ToolHandle::start_split(
+                        tool_path,
+                        state.input.clone(),
+                        state.split_size.trim().to_string(),
+                    ),
+                    ToolKind::Merge => {
+                        ToolHandle::start_merge(tool_path, state.input.clone(), output_path.clone())
+                    }
+                };
+                TOOL_HANDLE.with(|cell| *cell.borrow_mut() = Some(handle));
+                close = true;
+            }
+            close
+        },
+    );
+
+    if should_close {
+        ctx.data_mut(|map| map.remove_temp::<Option<ToolDialogState>>(tool_dialog_id()));
+    }
+}
+
+fn render_tool_status_dialog(
+    ctx: &egui::Context,
+    snapshot: &gguf_tools::ToolSnapshot,
+    lang: &i18n::Language,
+) {
+    let running = matches!(snapshot.state, ToolState::Running);
+    let title = match &snapshot.state {
+        ToolState::Running | ToolState::Cancelled => match snapshot.operation {
+            ToolOperation::Split => i18n::t(i18n::Key::SplitDialogTitle, lang),
+            ToolOperation::Merge => i18n::t(i18n::Key::MergeDialogTitle, lang),
+        },
+        ToolState::Done { .. } => i18n::t(i18n::Key::ToolDoneTitle, lang),
+        ToolState::Error(_) => i18n::t(i18n::Key::ToolErrorTitle, lang),
+    };
+
+    let should_close = widgets::dialog(
+        ctx,
+        "gguf_tool_status_dialog",
+        title,
+        460.0,
+        ctx.content_rect().height() * 0.8,
+        |ui, _avail_h| match &snapshot.state {
+            ToolState::Running => {
+                ui.horizontal(|ui| {
+                    ui.add(egui::Spinner::new().color(ui.visuals().strong_text_color()));
+                    let label = match snapshot.operation {
+                        ToolOperation::Split => i18n::t(i18n::Key::ToolRunningSplit, lang),
+                        ToolOperation::Merge => i18n::t(i18n::Key::ToolRunningMerge, lang),
+                    };
+                    ui.label(label);
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "({} {:.1}s)",
+                            i18n::t(i18n::Key::ToolElapsed, lang),
+                            snapshot.elapsed_secs
+                        ))
+                        .small()
+                        .color(ui.visuals().weak_text_color()),
+                    );
+                });
+                if !snapshot.last_line.is_empty() {
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new(&snapshot.last_line)
+                            .small()
+                            .monospace()
+                            .color(ui.visuals().weak_text_color()),
+                    );
+                }
+            }
+            ToolState::Done { output } => {
+                detail_row(
+                    ui,
+                    i18n::t(i18n::Key::ToolOutputLabel, lang),
+                    &output.display().to_string(),
+                );
+            }
+            ToolState::Error(message) => {
+                ui.colored_label(ui.visuals().error_fg_color, message);
+            }
+            ToolState::Cancelled => {
+                ui.label(i18n::t(i18n::Key::ToolCancelled, lang));
+            }
+        },
+        |ui| {
+            if running {
+                if ui
+                    .add(winui::FluentButton::new(i18n::t(
+                        i18n::Key::BtnCancel,
+                        lang,
+                    )))
+                    .clicked()
+                {
+                    TOOL_HANDLE.with(|cell| {
+                        if let Some(handle) = cell.borrow().as_ref() {
+                            handle.request_cancel();
+                        }
+                    });
+                }
+                false
+            } else {
+                ui.add(winui::FluentButton::new(i18n::t(i18n::Key::BtnClose, lang)))
+                    .clicked()
+            }
+        },
+    );
+
+    if should_close && !running {
+        TOOL_HANDLE.with(|cell| *cell.borrow_mut() = None);
+    }
+}
+
+pub fn cancel_tool_task() {
+    TOOL_HANDLE.with(|cell| {
+        {
+            if let Some(handle) = cell.borrow().as_ref() {
+                handle.request_cancel();
+            }
+        }
+        *cell.borrow_mut() = None;
+    });
 }
 
 pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) {
@@ -789,6 +1161,8 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
     let popup_id = ui.id().with("model_details_popup");
     // 本帧由详情按钮点击产生的异步加载任务
     let mut pending_promise: Option<Promise<Result<ModelDetails, String>>> = None;
+    // 本帧由模型条目工具按钮触发的分割 / 合并请求
+    let mut tool_request: Option<ToolRequest> = None;
 
     // ── 模型文件夹 ──
     widgets::card(
@@ -870,6 +1244,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 });
                 pending_promise = Some(promise);
             },
+            &mut |request| {
+                tool_request = Some(request);
+            },
             lang,
             FileMode::Main,
             accent,
@@ -897,6 +1274,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 });
                 pending_promise = Some(promise);
             },
+            &mut |_| {},
             lang,
             FileMode::Mmproj,
             accent,
@@ -924,6 +1302,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                 });
                 pending_promise = Some(promise);
             },
+            &mut |_| {},
             lang,
             FileMode::Dflash,
             accent,
@@ -1085,6 +1464,11 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         }
         None => {}
     }
+    if let Some(request) = tool_request {
+        open_tool_dialog(ui, request, settings);
+    }
+    render_tool_dialog(ui.ctx(), lang);
+
     // 底部留 2px，与预设/日志面板的底部边距约定一致
     ui.add_space(2.0);
 }

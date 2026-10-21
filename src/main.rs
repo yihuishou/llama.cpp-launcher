@@ -7,6 +7,7 @@ pub mod downloader;
 pub mod engine;
 pub mod env_check;
 pub mod geo;
+pub mod gguf_tools;
 pub mod i18n;
 pub mod kv_cache;
 pub mod net_proxy;

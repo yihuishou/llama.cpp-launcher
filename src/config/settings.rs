@@ -3528,6 +3528,12 @@ impl SettingsManager {
     pub fn auto_detect_rpc_path(&self) -> Option<PathBuf> {
         self.find_exe_recursive(&self.config_dir, "ggml-rpc-server", "llama")
     }
+
+    /// 自动检测 llama-gguf-split（模型分割 / 合并工具）路径
+    /// 搜索：exe 同级目录 → 含 "llama" 名称的子目录（通常与 llama-server 同目录）
+    pub fn auto_detect_gguf_split(&self) -> Option<PathBuf> {
+        self.find_exe_recursive(&self.config_dir, "llama-gguf-split", "llama")
+    }
 }
 
 /// 判断文件名是否为 llama-server 可执行文件（跨平台）

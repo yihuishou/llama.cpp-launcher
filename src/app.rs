@@ -930,6 +930,7 @@ impl Drop for LlamaLauncherApp {
         self.env_check.request_cancel();
         self.clone_handle.request_cancel();
         self.build_handle.request_cancel();
+        model_panel::cancel_tool_task();
         self.save();
     }
 }

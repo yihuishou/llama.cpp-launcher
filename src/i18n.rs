@@ -216,6 +216,29 @@ pub enum Key {
     DetailsUnknown,
     Loading,
 
+    // 模型分割 / 合并（llama-gguf-split）
+    BtnSplitModel,
+    BtnMergeModel,
+    SplitDialogTitle,
+    MergeDialogTitle,
+    SplitMaxSizeLabel,
+    SplitMaxSizeHint,
+    SplitOutputHint,
+    MergeOutputNameLabel,
+    MergeShardCountLabel,
+    BtnStartSplit,
+    BtnStartMerge,
+    ToolRunningSplit,
+    ToolRunningMerge,
+    ToolDoneTitle,
+    ToolErrorTitle,
+    ToolCancelled,
+    ToolNotFound,
+    ToolTargetExists,
+    ToolInvalidSize,
+    ToolOutputLabel,
+    ToolElapsed,
+
     // 参数面板
     PanelParamsTitle,
     LabelNCtx,
@@ -1381,6 +1404,60 @@ impl Key {
             (Key::DetailsUnknown, &Language::En) => "N/A",
             (Key::Loading, &Language::Zh) => "加载中...",
             (Key::Loading, &Language::En) => "Loading...",
+
+            // 模型分割 / 合并（llama-gguf-split）
+            (Key::BtnSplitModel, &Language::Zh) => "分割模型",
+            (Key::BtnSplitModel, &Language::En) => "Split Model",
+            (Key::BtnMergeModel, &Language::Zh) => "合并模型",
+            (Key::BtnMergeModel, &Language::En) => "Merge Model",
+            (Key::SplitDialogTitle, &Language::Zh) => "分割模型",
+            (Key::SplitDialogTitle, &Language::En) => "Split Model",
+            (Key::MergeDialogTitle, &Language::Zh) => "合并模型",
+            (Key::MergeDialogTitle, &Language::En) => "Merge Model",
+            (Key::SplitMaxSizeLabel, &Language::Zh) => "每个分片最大大小:",
+            (Key::SplitMaxSizeLabel, &Language::En) => "Max Size per Shard:",
+            (Key::SplitMaxSizeHint, &Language::Zh) => "支持 G / M 单位，例如 20G、1500M",
+            (Key::SplitMaxSizeHint, &Language::En) => "Supports G / M units, e.g. 20G, 1500M",
+            (Key::SplitOutputHint, &Language::Zh) => {
+                "分片写入模型所在目录，文件名自动追加 -00001-of-000NN.gguf"
+            }
+            (Key::SplitOutputHint, &Language::En) => {
+                "Shards are written next to the model with a -00001-of-000NN.gguf suffix"
+            }
+            (Key::MergeOutputNameLabel, &Language::Zh) => "合并后文件名:",
+            (Key::MergeOutputNameLabel, &Language::En) => "Merged File Name:",
+            (Key::MergeShardCountLabel, &Language::Zh) => "分片数量:",
+            (Key::MergeShardCountLabel, &Language::En) => "Shard Count:",
+            (Key::BtnStartSplit, &Language::Zh) => "开始分割",
+            (Key::BtnStartSplit, &Language::En) => "Start Split",
+            (Key::BtnStartMerge, &Language::Zh) => "开始合并",
+            (Key::BtnStartMerge, &Language::En) => "Start Merge",
+            (Key::ToolRunningSplit, &Language::Zh) => "正在分割模型...",
+            (Key::ToolRunningSplit, &Language::En) => "Splitting model...",
+            (Key::ToolRunningMerge, &Language::Zh) => "正在合并模型...",
+            (Key::ToolRunningMerge, &Language::En) => "Merging model...",
+            (Key::ToolDoneTitle, &Language::Zh) => "操作完成",
+            (Key::ToolDoneTitle, &Language::En) => "Operation Completed",
+            (Key::ToolErrorTitle, &Language::Zh) => "操作失败",
+            (Key::ToolErrorTitle, &Language::En) => "Operation Failed",
+            (Key::ToolCancelled, &Language::Zh) => "操作已取消",
+            (Key::ToolCancelled, &Language::En) => "Operation cancelled",
+            (Key::ToolNotFound, &Language::Zh) => {
+                "未找到 llama-gguf-split，请确认它位于 llama-server 同目录"
+            }
+            (Key::ToolNotFound, &Language::En) => {
+                "llama-gguf-split not found; make sure it is in the same folder as llama-server"
+            }
+            (Key::ToolTargetExists, &Language::Zh) => "目标文件已存在，请修改名称",
+            (Key::ToolTargetExists, &Language::En) => {
+                "Target file already exists; please choose another name"
+            }
+            (Key::ToolInvalidSize, &Language::Zh) => "分片大小格式无效",
+            (Key::ToolInvalidSize, &Language::En) => "Invalid shard size format",
+            (Key::ToolOutputLabel, &Language::Zh) => "输出位置:",
+            (Key::ToolOutputLabel, &Language::En) => "Output:",
+            (Key::ToolElapsed, &Language::Zh) => "已用时",
+            (Key::ToolElapsed, &Language::En) => "Elapsed",
 
             // 参数面板
             (Key::PanelParamsTitle, &Language::Zh) => "推理参数",
