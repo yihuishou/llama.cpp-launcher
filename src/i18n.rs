@@ -1243,14 +1243,20 @@ impl Key {
 
             (Key::CheckboxRpcMode, &Language::Zh) => "RPC 模式 (--rpc)",
             (Key::CheckboxRpcMode, &Language::En) => "RPC Mode (--rpc)",
-            (Key::CheckboxEnableWebClient, &Language::Zh) => "网页客户端 (--webui)",
-            (Key::CheckboxEnableWebClient, &Language::En) => "Web Client (--webui)",
+            (Key::CheckboxEnableWebClient, &Language::Zh) => "网页客户端 (--webui / --no-webui)",
+            (Key::CheckboxEnableWebClient, &Language::En) => {
+                "Web Client (--webui / --no-webui)"
+            }
             (Key::LabelWebUiPath, &Language::Zh) => "网页客户端静态文件目录 (--path):",
             (Key::LabelWebUiPath, &Language::En) => "Web client static files (--path):",
             (Key::HelpWebUiPath, &Language::Zh) => "指定网页客户端 (Web UI) 前端文件的提供目录。留空使用 llama-server 二进制内置的 Web UI；填写目录 (如 tools/ui/dist) 后从该目录提供前端文件，无需重新编译 llama-server 即可更换网页客户端界面。",
             (Key::HelpWebUiPath, &Language::En) => "Directory to serve the Web UI frontend files from. Empty = use the Web UI embedded in the llama-server binary. Set a directory (e.g. tools/ui/dist) to serve your own frontend without recompiling llama-server.",
-            (Key::CheckboxLogTimestamps, &Language::Zh) => "日志时间戳 (--log-timestamps)",
-            (Key::CheckboxLogTimestamps, &Language::En) => "Log Timestamps (--log-timestamps)",
+            (Key::CheckboxLogTimestamps, &Language::Zh) => {
+                "日志时间戳 (--log-timestamps / --no-log-timestamps)"
+            }
+            (Key::CheckboxLogTimestamps, &Language::En) => {
+                "Log Timestamps (--log-timestamps / --no-log-timestamps)"
+            }
             (Key::LabelLogVerbosity, &Language::Zh) => "日志级别 (--log-verbosity):",
             (Key::LabelLogVerbosity, &Language::En) => "Log Level (--log-verbosity):",
             (Key::LogVerbosity0, &Language::Zh) => "0 通用",
@@ -1532,12 +1538,18 @@ impl Key {
             (Key::LabelReasoningBudget, &Language::En) => "Reasoning Budget (--reasoning-budget):",
             (Key::HintReasoningBudget, &Language::Zh) => "-1 = 不限制",
             (Key::HintReasoningBudget, &Language::En) => "-1 = unlimited",
-            (Key::LabelReasoningPreserve, &Language::Zh) => "保留思考 (--reasoning-preserve)",
-            (Key::LabelReasoningPreserve, &Language::En) => "Preserve Thinking (--reasoning-preserve):",
+            (Key::LabelReasoningPreserve, &Language::Zh) => {
+                "保留思考 (--reasoning-preserve / --no-reasoning-preserve)"
+            }
+            (Key::LabelReasoningPreserve, &Language::En) => {
+                "Preserve Thinking (--reasoning-preserve / --no-reasoning-preserve):"
+            }
             (Key::HelpReasoningPreserve, &Language::Zh) => "是否保留思考内容。开启 = 保留思考（--reasoning-preserve），关闭 = 不保留（--no-reasoning-preserve）。关闭上方「启用保留思考」开关则完全不发送该参数，由模型与模板决定默认行为。",
             (Key::HelpReasoningPreserve, &Language::En) => "Whether to preserve thinking. On = --reasoning-preserve, Off = --no-reasoning-preserve. If the enable switch above is off, the flag is omitted entirely and the model/template default applies.",
-            (Key::CheckboxJinja, &Language::Zh) => "Jinja 对话模板引擎 (--jinja)",
-            (Key::CheckboxJinja, &Language::En) => "Jinja Chat Template Engine (--jinja)",
+            (Key::CheckboxJinja, &Language::Zh) => "Jinja 对话模板引擎 (--jinja / --no-jinja)",
+            (Key::CheckboxJinja, &Language::En) => {
+                "Jinja Chat Template Engine (--jinja / --no-jinja)"
+            }
             (Key::LabelChatTemplate, &Language::Zh) => "对话模板 (--chat-template):",
             (Key::LabelChatTemplate, &Language::En) => "Chat Template (--chat-template):",
             (Key::HintChatTemplate, &Language::Zh) => "留空使用模型内置模板",
@@ -1642,8 +1654,12 @@ impl Key {
             (Key::LabelSamplerSeq, &Language::En) => "Sampler sequence (--sampler-seq):",
 
             // ── 长上下文 / 提示缓存 ──
-            (Key::CheckboxCachePrompt, &Language::Zh) => "提示缓存 (--cache-prompt)",
-            (Key::CheckboxCachePrompt, &Language::En) => "Prompt Cache (--cache-prompt)",
+            (Key::CheckboxCachePrompt, &Language::Zh) => {
+                "提示缓存 (--cache-prompt / --no-cache-prompt)"
+            }
+            (Key::CheckboxCachePrompt, &Language::En) => {
+                "Prompt Cache (--cache-prompt / --no-cache-prompt)"
+            }
             (Key::LabelCacheReuse, &Language::Zh) => "缓存复用分块 (--cache-reuse):",
             (Key::LabelCacheReuse, &Language::En) => "Cache Reuse Chunk (--cache-reuse):",
             (Key::CheckboxContextShift, &Language::Zh) => "上下文移位 (--context-shift)",
@@ -1789,10 +1805,14 @@ impl Key {
             (Key::HelpSpecNgramModNMatch, &Language::En) => "ngram-mod lookup length",
             (Key::SectionKvmem, &Language::Zh) => "KVMem 分层缓存",
             (Key::SectionKvmem, &Language::En) => "KVMem Tiered Cache",
-            (Key::LabelKvmemEnabled, &Language::Zh) => "启用 KVMem (--kvmem)",
-            (Key::LabelKvmemEnabled, &Language::En) => "Enable KVMem (--kvmem)",
-            (Key::LabelKvmemTrace, &Language::Zh) => "诊断日志 (--kvmem-trace)",
-            (Key::LabelKvmemTrace, &Language::En) => "Diagnostics Trace (--kvmem-trace)",
+            (Key::LabelKvmemEnabled, &Language::Zh) => "启用 KVMem (--kvmem / --no-kvmem)",
+            (Key::LabelKvmemEnabled, &Language::En) => "Enable KVMem (--kvmem / --no-kvmem)",
+            (Key::LabelKvmemTrace, &Language::Zh) => {
+                "诊断日志 (--kvmem-trace / --no-kvmem-trace)"
+            }
+            (Key::LabelKvmemTrace, &Language::En) => {
+                "Diagnostics Trace (--kvmem-trace / --no-kvmem-trace)"
+            }
             (Key::LabelKvmemBudget, &Language::Zh) => "GPU 工作集上限 (--kvmem-budget):",
             (Key::LabelKvmemBudget, &Language::En) => "GPU Working Set Budget (--kvmem-budget):",
             (Key::LabelKvmemBlockTokens, &Language::Zh) => "块大小 (--kvmem-block-tokens):",
@@ -1933,8 +1953,12 @@ impl Key {
             (Key::EnableWarmup, &Language::En) => "Enable Warmup",
             (Key::EnableContBatching, &Language::Zh) => "启用连续批处理",
             (Key::EnableContBatching, &Language::En) => "Enable Cont Batching",
-            (Key::CheckboxKvOffload, &Language::Zh) => "K/V 缓存卸载到 GPU (--kv-offload)",
-            (Key::CheckboxKvOffload, &Language::En) => "KV Cache Offload to GPU (--kv-offload)",
+            (Key::CheckboxKvOffload, &Language::Zh) => {
+                "K/V 缓存卸载到 GPU (--kv-offload / --no-kv-offload)"
+            }
+            (Key::CheckboxKvOffload, &Language::En) => {
+                "KV Cache Offload to GPU (--kv-offload / --no-kv-offload)"
+            }
             (Key::HintKvOffload, &Language::Zh) => "默认开启",
             (Key::HintKvOffload, &Language::En) => "(default: on)",
             (Key::LabelCacheTypeK, &Language::Zh) => "K 缓存类型 (--cache-type-k):",
@@ -1949,8 +1973,12 @@ impl Key {
             (Key::BtnCalcKvCache, &Language::En) => "Calculate KV Cache Space",
             (Key::LabelKvCacheResult, &Language::Zh) => "KV缓存可用空间：",
             (Key::LabelKvCacheResult, &Language::En) => "Available Cache:",
-            (Key::CheckboxKvUnified, &Language::Zh) => "统一键值缓存 (--kv-unified)",
-            (Key::CheckboxKvUnified, &Language::En) => "Unified KV cache (--kv-unified)",
+            (Key::CheckboxKvUnified, &Language::Zh) => {
+                "统一键值缓存 (--kv-unified / --no-kv-unified)"
+            }
+            (Key::CheckboxKvUnified, &Language::En) => {
+                "Unified KV cache (--kv-unified / --no-kv-unified)"
+            }
             (Key::CheckboxSwaFull, &Language::Zh) => "完整滑动窗口 (--swa-full)",
             (Key::CheckboxSwaFull, &Language::En) => "Full Sliding Window (--swa-full)",
             (Key::LabelKvCacheRatio, &Language::Zh) => "KV 缓存比例:",
@@ -2352,12 +2380,16 @@ impl Key {
             (Key::AdvPrio, &Language::En) => "Process priority (--prio):",
             (Key::AdvPrioHint, &Language::Zh) => "设置 llama-server 进程的 CPU 调度优先级：-1 把资源让给其他程序，0 为默认，1 / 2 / 3 依次提高。填 0 表示不发送该参数。",
             (Key::AdvPrioHint, &Language::En) => "Sets the CPU scheduling priority of llama-server: -1 yields to other programs, 0 is default, 1 / 2 / 3 raise it. 0 means the parameter is not sent.",
-            (Key::AdvWarmup, &Language::Zh) => "启动预热 (--warmup)",
-            (Key::AdvWarmup, &Language::En) => "Warmup on start (--warmup)",
+            (Key::AdvWarmup, &Language::Zh) => "启动预热 (--warmup / --no-warmup)",
+            (Key::AdvWarmup, &Language::En) => "Warmup on start (--warmup / --no-warmup)",
             (Key::AdvWarmupHint, &Language::Zh) => "开启：发送 --warmup，服务启动后先跑一次预热，之后的正式请求响应更快，代价是启动稍慢。关闭：发送 --no-warmup，启动更快、首次请求略慢。若关闭上方「启用启动预热」开关，则完全不发送该参数，由 llama.cpp 使用自身默认值。",
             (Key::AdvWarmupHint, &Language::En) => "On: sends --warmup so the server warms up after start, making later requests faster at the cost of slower startup. Off: sends --no-warmup for a faster start but a slightly slower first request. If the enable switch above is off, the flag is omitted entirely and llama.cpp uses its own default.",
-            (Key::AdvContBatching, &Language::Zh) => "连续批处理 (--cont-batching)",
-            (Key::AdvContBatching, &Language::En) => "Continuous batching (--cont-batching)",
+            (Key::AdvContBatching, &Language::Zh) => {
+                "连续批处理 (--cont-batching / --no-cont-batching)"
+            }
+            (Key::AdvContBatching, &Language::En) => {
+                "Continuous batching (--cont-batching / --no-cont-batching)"
+            }
             (Key::AdvContBatchingHint, &Language::Zh) => "开启：发送 --cont-batching，多个请求可以合并成批一起处理，并发场景吞吐更高。关闭：发送 --no-cont-batching，同一时间只处理一个请求，便于调试。若关闭上方「启用连续批处理」开关，则完全不发送该参数，由 llama.cpp 使用自身默认值。",
             (Key::AdvContBatchingHint, &Language::En) => "On: sends --cont-batching so requests can be batched together for higher throughput under concurrency. Off: sends --no-cont-batching so only one request is served at a time (handy for debugging). If the enable switch above is off, the flag is omitted entirely and llama.cpp uses its own default.",
             (Key::AdvGrammarFile, &Language::Zh) => "语法文件 (--grammar-file):",
@@ -2663,8 +2695,12 @@ impl Key {
             // 多模态参数
             (Key::Multimodal, &Language::Zh) => "多模态",
             (Key::Multimodal, &Language::En) => "Multimodal",
-            (Key::LabelMmprojAuto, &Language::Zh) => "多模态投影文件 (--mmproj-auto):",
-            (Key::LabelMmprojAuto, &Language::En) => "Multimodal Projector (--mmproj-auto):",
+            (Key::LabelMmprojAuto, &Language::Zh) => {
+                "多模态投影文件 (--mmproj-auto / --no-mmproj / --no-mmproj-auto):"
+            }
+            (Key::LabelMmprojAuto, &Language::En) => {
+                "Multimodal Projector (--mmproj-auto / --no-mmproj / --no-mmproj-auto):"
+            }
             (Key::MmprojAuto, &Language::Zh) => "自动检测",
             (Key::MmprojAuto, &Language::En) => "Auto",
             (Key::MmprojOff, &Language::Zh) => "关闭",
@@ -2675,8 +2711,12 @@ impl Key {
             (Key::MmprojOffloadOn, &Language::En) => "On",
             (Key::MmprojOffloadOff, &Language::Zh) => "关闭",
             (Key::MmprojOffloadOff, &Language::En) => "Off",
-            (Key::LabelMmprojOffload, &Language::Zh) => "投影 GPU 卸载 (--mmproj-offload):",
-            (Key::LabelMmprojOffload, &Language::En) => "Projector GPU Offload (--mmproj-offload):",
+            (Key::LabelMmprojOffload, &Language::Zh) => {
+                "投影 GPU 卸载 (--mmproj-offload / --no-mmproj-offload):"
+            }
+            (Key::LabelMmprojOffload, &Language::En) => {
+                "Projector GPU Offload (--mmproj-offload / --no-mmproj-offload):"
+            }
             (Key::LabelMmprojDevice, &Language::Zh) => "投影设备 (--mmproj-device):",
             (Key::LabelMmprojDevice, &Language::En) => "Projector Device (--mmproj-device):",
             (Key::LabelImageMinTokens, &Language::Zh) => "图片最小 Token (--image-min-tokens):",
@@ -2886,4 +2926,15 @@ impl Key {
 /// 翻译函数 - 类型安全地获取翻译字符串
 pub fn t(key: Key, lang: &Language) -> &'static str {
     key.translate(lang)
+}
+
+/// 外层「启用」开关的帮助文案：说明该开关会把哪些参数拼进启动命令。
+///
+/// `args` 为命令行参数清单（如 `--warmup / --no-warmup`），原样插入括号内。
+/// 仅用于不带参数说明的「启用 xxx」开关，避免与已有的详细 HelpXxx 文案重复。
+pub fn arg_hint(args: &str, lang: &Language) -> String {
+    match lang {
+        Language::Zh => format!("启用拼接 ({args}) 参数"),
+        Language::En => format!("When on, sends ({args})."),
+    }
 }

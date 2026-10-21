@@ -311,6 +311,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_reasoning, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableReasoning, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--reasoning", lang));
             });
             if settings.enable_reasoning {
                 ui.indent("reasoning_opt", |ui| {
@@ -337,6 +338,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_reasoning_format, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableReasoningFormat, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--reasoning-format", lang));
             });
             if settings.enable_reasoning_format {
                 ui.indent("reasoning_format_opt", |ui| {
@@ -367,6 +369,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_reasoning_effort, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableReasoningEffort, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--reasoning-effort", lang));
             });
             if settings.enable_reasoning_effort {
                 let effort_vals = [
@@ -406,6 +409,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_reasoning_preserve, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableReasoningPreserve, lang));
+                helper::help_button_inline(
+                    ui,
+                    &i18n::arg_hint("--reasoning-preserve / --no-reasoning-preserve", lang),
+                );
             });
             if settings.enable_reasoning_preserve {
                 ui.indent("reasoning_preserve_opt", |ui| {
@@ -424,6 +431,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_reasoning_budget, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableReasoningBudget, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--reasoning-budget", lang));
             });
             if settings.enable_reasoning_budget {
                 ui.indent("reasoning_budget_opt", |ui| {
@@ -457,6 +465,13 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_jinja, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableJinja, lang));
+                helper::help_button_inline(
+                    ui,
+                    &i18n::arg_hint(
+                        "--jinja / --no-jinja / --chat-template / --chat-template-file",
+                        lang,
+                    ),
+                );
             });
             if settings.enable_jinja {
                 ui.indent("jinja_opt", |ui| {
@@ -565,6 +580,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_tensor_read_lazy, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableTensorReadLazy, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--lazy-mode", lang));
             });
             if settings.enable_tensor_read_lazy {
                 ui.indent("tensor_read_lazy_opt", |ui| {
@@ -593,6 +609,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_split_mode, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableSplitMode, lang));
+                helper::help_button_inline(
+                    ui,
+                    &i18n::arg_hint("--split-mode / --tensor-split", lang),
+                );
             });
             if settings.enable_split_mode {
                 ui.indent("split_mode_opt", |ui| {
@@ -679,6 +699,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_override_tensor, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableOverrideTensor, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--override-tensor", lang));
             });
             if settings.enable_override_tensor {
                 ui.indent("override_tensor_opt", |ui| {
@@ -742,6 +763,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_numa, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableNuma, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--numa", lang));
             });
             if settings.enable_numa {
                 ui.indent("numa_opt", |ui| {
@@ -768,6 +790,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_cpu_mask, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableCpuMask, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--cpu-mask", lang));
             });
             if settings.enable_cpu_mask {
                 ui.indent("cpu_mask_opt", |ui| {
@@ -783,6 +806,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_cpu_range, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableCpuRange, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--cpu-range", lang));
             });
             if settings.enable_cpu_range {
                 ui.indent("cpu_range_opt", |ui| {
@@ -798,6 +822,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_cpu_mask_batch, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableCpuMaskBatch, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--cpu-mask-batch", lang));
             });
             if settings.enable_cpu_mask_batch {
                 ui.indent("cpu_mask_batch_opt", |ui| {
@@ -813,6 +838,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_cpu_range_batch, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableCpuRangeBatch, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--cpu-range-batch", lang));
             });
             if settings.enable_cpu_range_batch {
                 ui.indent("cpu_range_batch_opt", |ui| {
@@ -828,6 +854,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_main_gpu, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableMainGpu, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--main-gpu", lang));
             });
             if settings.enable_main_gpu {
                 ui.indent("main_gpu_opt", |ui| {
@@ -1037,6 +1064,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_load_mode, "", accent);
             ui.label(i18n::t(i18n::Key::EnableLoadMode, lang));
+            helper::help_button_inline(ui, &i18n::arg_hint("--load-mode", lang));
         });
         if settings.enable_load_mode {
             ui.indent("load_mode_opt", |ui| {
@@ -1065,6 +1093,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_cache_prompt, "", accent);
             ui.label(i18n::t(i18n::Key::EnableCachePrompt, lang));
+            helper::help_button_inline(
+                ui,
+                &i18n::arg_hint("--cache-prompt / --no-cache-prompt", lang),
+            );
         });
         if settings.enable_cache_prompt {
             ui.indent("cache_prompt_opt", |ui| {
@@ -1078,6 +1110,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_cache_reuse, "", accent);
             ui.label(i18n::t(i18n::Key::EnableCacheReuse, lang));
+            helper::help_button_inline(ui, &i18n::arg_hint("--cache-reuse", lang));
         });
         if settings.enable_cache_reuse {
             ui.indent("cache_reuse_opt", |ui| {
@@ -1096,6 +1129,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_context_shift, "", accent);
             ui.label(i18n::t(i18n::Key::EnableContextShift, lang));
+            helper::help_button_inline(ui, &i18n::arg_hint("--context-shift", lang));
         });
         if settings.enable_context_shift {
             ui.indent("context_shift_opt", |ui| {
@@ -1137,6 +1171,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_kv_offload, "", accent);
             ui.label(i18n::t(i18n::Key::EnableKvOffload, lang));
+            helper::help_button_inline(ui, &i18n::arg_hint("--kv-offload / --no-kv-offload", lang));
         });
         if settings.enable_kv_offload {
             ui.indent("kv_offload_opt", |ui| {
@@ -1220,6 +1255,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_kv_unified, "", accent);
             ui.label(i18n::t(i18n::Key::EnableKvUnified, lang));
+            helper::help_button_inline(ui, &i18n::arg_hint("--kv-unified / --no-kv-unified", lang));
         });
         if settings.enable_kv_unified {
             ui.indent("kv_unified_opt", |ui| {
@@ -1241,6 +1277,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_ctx_checkpoints, "", accent);
             ui.label(i18n::t(i18n::Key::EnableCtxCheckpoints, lang));
+            helper::help_button_inline(ui, &i18n::arg_hint("--ctx-checkpoints", lang));
         });
         if settings.enable_ctx_checkpoints {
             ui.indent("ctx_checkpoints_opt", |ui| {
@@ -1259,6 +1296,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_checkpoint_min_step, "", accent);
             ui.label(i18n::t(i18n::Key::EnableCheckpointMinStep, lang));
+            helper::help_button_inline(ui, &i18n::arg_hint("--checkpoint-min-step", lang));
         });
         if settings.enable_checkpoint_min_step {
             ui.indent("checkpoint_min_step_opt", |ui| {
@@ -1837,6 +1875,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_mmproj_auto, "", accent);
             ui.label(i18n::t(i18n::Key::EnableMmprojAuto, lang));
+            helper::help_button_inline(
+                ui,
+                &i18n::arg_hint("--mmproj-auto / --no-mmproj / --no-mmproj-auto", lang),
+            );
         });
         if settings.enable_mmproj_auto {
             ui.indent("mmproj_auto_opt", |ui| {
@@ -1862,6 +1904,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
         ui.horizontal(|ui| {
             widgets::toggle(ui, &mut settings.enable_mmproj_offload, "", accent);
             ui.label(i18n::t(i18n::Key::EnableMmprojOffload, lang));
+            helper::help_button_inline(
+                ui,
+                &i18n::arg_hint("--mmproj-offload / --no-mmproj-offload", lang),
+            );
         });
         if settings.enable_mmproj_offload {
             ui.indent("mmproj_offload_opt", |ui| {
@@ -2730,6 +2776,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_warmup, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableWarmup, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--warmup / --no-warmup", lang));
             });
             if settings.enable_warmup {
                 ui.indent("warmup_opt", |ui| {
@@ -2743,6 +2790,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_cont_batching, "", accent);
                 ui.label(i18n::t(i18n::Key::EnableContBatching, lang));
+                helper::help_button_inline(
+                    ui,
+                    &i18n::arg_hint("--cont-batching / --no-cont-batching", lang),
+                );
             });
             if settings.enable_cont_batching {
                 ui.indent("cont_batching_opt", |ui| {
@@ -2787,6 +2838,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.horizontal(|ui| {
                 widgets::toggle(ui, &mut settings.enable_pooling, "", accent);
                 ui.label(i18n::t(i18n::Key::EnablePooling, lang));
+                helper::help_button_inline(ui, &i18n::arg_hint("--pooling", lang));
             });
             if settings.enable_pooling {
                 ui.indent("pooling_opt", |ui| {
