@@ -687,11 +687,13 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         ui.label(i18n::t(i18n::Key::LabelNCpuMoe, lang));
                         ui.add(egui::DragValue::new(&mut settings.n_cpu_moe).range(0..=256));
                         ui.small(i18n::t(i18n::Key::HintNCpuMoe, lang));
+                        ui.small(i18n::default_hint("0", lang));
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelNCpuFfn, lang));
                         ui.add(egui::DragValue::new(&mut settings.n_cpu_ffn).range(0..=256));
                         ui.small(i18n::t(i18n::Key::HintNCpuFfn, lang));
+                        ui.small(i18n::default_hint("0", lang));
                     });
                 });
             }
@@ -1151,13 +1153,13 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             ui.indent("cache_ram_opt", |ui| {
                 ui.horizontal(|ui| {
                     ui.label(i18n::t(i18n::Key::AdvCacheRam, lang));
-                    helper::help_button_inline(ui, i18n::t(i18n::Key::AdvCacheRamValueHint, lang));
                     ui.add(
                         egui::DragValue::new(&mut settings.cache_ram)
                             .range(-1..=1048576)
                             .speed(512),
                     );
                     ui.label("MiB");
+                    helper::help_button_inline(ui, i18n::t(i18n::Key::AdvCacheRamValueHint, lang));
                 });
             });
         }
@@ -1288,6 +1290,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             .range(1..=256)
                             .speed(1),
                     );
+                    ui.small(i18n::default_hint("32", lang));
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCtxCheckpoints, lang));
                 });
             });
@@ -1307,6 +1310,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                             .range(0..=8192)
                             .speed(64),
                     );
+                    ui.small(i18n::default_hint("8192", lang));
                     helper::help_button_inline(ui, i18n::t(i18n::Key::HelpCheckpointMinStep, lang));
                 });
             });
@@ -1336,6 +1340,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0..=1048576)
                                 .speed(256),
                         );
+                        ui.small(i18n::default_hint("0", lang));
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemBudget, lang));
                     });
                     ui.horizontal(|ui| {
@@ -1345,6 +1350,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(16..=8192)
                                 .speed(16),
                         );
+                        ui.small(i18n::default_hint("128", lang));
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::HelpKvmemBlockTokens, lang),
@@ -1357,6 +1363,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0..=1048576)
                                 .speed(128),
                         );
+                        ui.small(i18n::default_hint("0", lang));
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::HelpKvmemSinkTokens, lang),
@@ -1369,6 +1376,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0..=65536)
                                 .speed(16),
                         );
+                        ui.small(i18n::default_hint("256", lang));
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::HelpKvmemGenReserve, lang),
@@ -1384,6 +1392,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0.0..=1.0)
                                 .speed(0.01),
                         );
+                        ui.small(i18n::default_hint("0.50", lang));
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemGpuRatio, lang));
                     });
                     ui.horizontal(|ui| {
@@ -1394,6 +1403,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .speed(1.0),
                         );
                         ui.label("GiB");
+                        ui.small(i18n::default_hint("0", lang));
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemCpuGb, lang));
                     });
                 });
@@ -1406,6 +1416,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0..=1048576)
                                 .speed(128),
                         );
+                        ui.small(i18n::default_hint("0", lang));
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::HelpKvmemRecentTokens, lang),
@@ -1418,6 +1429,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0..=4096)
                                 .speed(8),
                         );
+                        ui.small(i18n::default_hint("64", lang));
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::HelpKvmemQueryLast, lang),
@@ -1430,6 +1442,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0..=65536)
                                 .speed(16),
                         );
+                        ui.small(i18n::default_hint("512", lang));
                         helper::help_button_inline(
                             ui,
                             i18n::t(i18n::Key::HelpKvmemQueryMaxTokens, lang),
@@ -1496,6 +1509,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .speed(1.0),
                         );
                         ui.label("GiB");
+                        ui.small(i18n::default_hint("0", lang));
                         helper::help_button_inline(ui, i18n::t(i18n::Key::HelpKvmemNvmeGb, lang));
                     });
                     ui.horizontal(|ui| {
@@ -2113,6 +2127,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .range(0..=32768)
                     .speed(1),
             );
+            ui.small(i18n::default_hint("0", lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpImageTokens, lang));
         });
         // 图片最大 Token --image-max-tokens
@@ -2123,6 +2138,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .range(0..=32768)
                     .speed(1),
             );
+            ui.small(i18n::default_hint("0", lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpImageTokens, lang));
         });
         // 批次最大 Token --mtmd-batch-max-tokens
@@ -2133,6 +2149,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .range(1..=32768)
                     .speed(1),
             );
+            ui.small(i18n::default_hint("1024", lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpMtmdBatch, lang));
         });
         ui.separator();
@@ -2145,6 +2162,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .speed(0.1)
                     .fixed_decimals(1),
             );
+            ui.small(i18n::default_hint("4.0", lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpVideoFps, lang));
         });
         // 时间戳间隔 --video-timestamp-interval
@@ -2155,6 +2173,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     .range(0..=60000)
                     .speed(100),
             );
+            ui.small(i18n::default_hint("5000", lang));
             helper::help_button_inline(ui, i18n::t(i18n::Key::HelpVideoTimestamp, lang));
         });
         // FFmpeg 目录 --video-ffmpeg-dir
@@ -2239,6 +2258,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .step_by(0.01)
                         .show_value(true),
                 );
+                ui.small(i18n::default_hint("0", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvFrequencyPenaltyHint, lang));
             });
             // 重复惩罚窗口（--repeat-last-n）
@@ -2249,6 +2269,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1..=65536)
                         .speed(16),
                 );
+                ui.small(i18n::default_hint("-1", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRepeatLastNHint, lang));
             });
             // DRY 采样（--dry-*，multiplier > 0 时整组生效）
@@ -2259,6 +2280,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .step_by(0.01)
                         .show_value(true),
                 );
+                ui.small(i18n::default_hint("0", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvDryHint, lang));
             });
             if settings.dry_multiplier > 0.0 {
@@ -2518,6 +2540,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0.0..=1.0)
                                 .speed(0.01),
                         );
+                        ui.small(i18n::default_hint("0.10", lang));
                     });
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelMirostatEnt, lang));
@@ -2526,6 +2549,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0.0..=20.0)
                                 .speed(0.1),
                         );
+                        ui.small(i18n::default_hint("5.00", lang));
                     });
                 });
             }
@@ -2552,6 +2576,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                                 .range(0.0..=2.0)
                                 .speed(0.05),
                         );
+                        ui.small(i18n::default_hint("1.0", lang));
                     });
                 });
             }
@@ -2633,6 +2658,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(0.0..=1000.0)
                         .speed(0.01),
                 );
+                ui.small(i18n::default_hint("1.0", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeScaleHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2642,6 +2668,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(0.0..=1.0e9)
                         .speed(1000.0),
                 );
+                ui.small(i18n::default_hint("0", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeFreqBaseHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2651,6 +2678,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(0.0..=1000.0)
                         .speed(0.01),
                 );
+                ui.small(i18n::default_hint("0", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvRopeFreqScaleHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2660,6 +2688,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(0..=10_000_000)
                         .speed(1024),
                 );
+                ui.small(i18n::default_hint("0", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnOrigCtxHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2669,6 +2698,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1.0..=100.0)
                         .speed(0.01),
                 );
+                ui.small(i18n::default_hint("-1", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnExtFactorHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2678,6 +2708,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1.0..=100.0)
                         .speed(0.01),
                 );
+                ui.small(i18n::default_hint("-1", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnAttnFactorHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2687,6 +2718,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1.0..=1000.0)
                         .speed(0.01),
                 );
+                ui.small(i18n::default_hint("-1", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnBetaSlowHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2696,6 +2728,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1.0..=1000.0)
                         .speed(0.01),
                 );
+                ui.small(i18n::default_hint("-1", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvYarnBetaFastHint, lang));
             });
         },
@@ -2743,6 +2776,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1..=604800)
                         .speed(30),
                 );
+                ui.small(i18n::default_hint("-1", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvSleepIdleHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2752,6 +2786,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1..=256)
                         .speed(1),
                 );
+                ui.small(i18n::default_hint("-1", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvThreadsHttpHint, lang));
             });
             ui.horizontal(|ui| {
@@ -2819,6 +2854,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         .range(-1..=3)
                         .speed(1),
                 );
+                ui.small(i18n::default_hint("0", lang));
                 helper::help_button_inline(ui, i18n::t(i18n::Key::AdvPrioHint, lang));
             });
         },

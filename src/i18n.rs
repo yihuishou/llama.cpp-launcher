@@ -2290,8 +2290,8 @@ impl Key {
             (Key::SectionAdvLoading, &Language::En) => "Advanced loading & performance",
             (Key::SectionAdvEmbedding, &Language::Zh) => "嵌入与重排",
             (Key::SectionAdvEmbedding, &Language::En) => "Embedding & rerank",
-            (Key::AdvCacheRamEnable, &Language::Zh) => "启用提示词缓存限制 (--cache-ram)",
-            (Key::AdvCacheRamEnable, &Language::En) => "Enable Prompt Cache Limit (--cache-ram)",
+            (Key::AdvCacheRamEnable, &Language::Zh) => "启用提示词缓存限制",
+            (Key::AdvCacheRamEnable, &Language::En) => "Enable Prompt Cache Limit",
             (Key::AdvCacheRam, &Language::Zh) => "缓存内存上限 (--cache-ram):",
             (Key::AdvCacheRam, &Language::En) => "--cache-ram",
             (Key::AdvCacheRamHint, &Language::Zh) => "开启后，处理过的提示词会缓存进内存，下次遇到相同开头可直接复用、省掉重复计算——反复追问同一份长文档时提速最明显。打开开关后填写可用内存上限。",
@@ -2936,5 +2936,16 @@ pub fn arg_hint(args: &str, lang: &Language) -> String {
     match lang {
         Language::Zh => format!("启用拼接 ({args}) 参数"),
         Language::En => format!("When on, sends ({args})."),
+    }
+}
+
+/// 数值型参数的默认值提示：等于该值时不会拼进启动命令。
+///
+/// `default` 为默认值的显示文本（如 `0`、`-1`、`0.50`），原样插入。
+/// 仅用于「取默认值即跳过拼接」的参数，渲染为控件后的小字。
+pub fn default_hint(default: &str, lang: &Language) -> String {
+    match lang {
+        Language::Zh => format!("默认 {default}（不拼接）"),
+        Language::En => format!("default {default} (omitted)"),
     }
 }
