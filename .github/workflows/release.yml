@@ -144,9 +144,75 @@ jobs:
           name: llama-cpp-launcher-linux-${{ matrix.arch }}
           path: dist/
 
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            arch: x86_64
+          - target: aarch64-apple-darwin
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare .app bundle
+        run: |
+          # 从 Cargo.toml 读取版本号
+          VERSION=$(awk -F '"' '/^\[package\]/ {p=1} p && /^version/ {print $2; exit}' Cargo.toml | tr -d '\n\r')
+          echo "检测到版本号: $VERSION"
+
+          APP_NAME="LlamaLauncher"
+          APP_DIR="dist/${APP_NAME}.app"
+          mkdir -p "${APP_DIR}/Contents/MacOS" "${APP_DIR}/Contents/Resources"
+
+          # 可执行文件
+          cp "target/${{ matrix.target }}/release/llama_cpp_launcher" "${APP_DIR}/Contents/MacOS/llama_cpp_launcher"
+          chmod +x "${APP_DIR}/Contents/MacOS/llama_cpp_launcher"
+
+          # Info.plist（应用名/标识/版本，与主程序 app_id 保持一致）
+          cat > "${APP_DIR}/Contents/Info.plist" << PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>Llama Launcher</string>
+            <key>CFBundleDisplayName</key><string>Llama Launcher</string>
+            <key>CFBundleIdentifier</key><string>com.yihuishou.llama_cpp_launcher</string>
+            <key>CFBundleVersion</key><string>${VERSION}</string>
+            <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+            <key>CFBundleExecutable</key><string>llama_cpp_launcher</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          PLIST
+
+          # ditto 打包成 zip，保留可执行权限与 .app 目录结构
+          ZIP_NAME="llama_cpp_launcher_v${VERSION}_macos_${{ matrix.arch }}.app.zip"
+          ditto -c -k --keepParent "${APP_DIR}" "dist/${ZIP_NAME}"
+          rm -rf "${APP_DIR}"
+
+          echo "已创建: ${ZIP_NAME}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llama-cpp-launcher-macos-${{ matrix.arch }}
+          path: dist/
 
   release:
-    needs: [ build-windows, build-windows-arm64, build-linux ]
+    needs: [ build-windows, build-windows-arm64, build-linux, build-macos ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -175,6 +241,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: llama-cpp-launcher-linux-aarch64
+          path: dist/
+
+      - name: Download macOS x86_64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: llama-cpp-launcher-macos-x86_64
+          path: dist/
+
+      - name: Download macOS ARM64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: llama-cpp-launcher-macos-arm64
           path: dist/
 
 

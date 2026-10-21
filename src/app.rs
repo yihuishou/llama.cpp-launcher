@@ -1169,7 +1169,16 @@ fn open_web_client_url(host: &str, port: u16) {
     shell_execute::open_url(&url);
 }
 
-#[cfg(not(target_os = "windows"))]
+// macOS 没有 xdg-open，用 open 交给 LaunchServices
+#[cfg(target_os = "macos")]
+fn open_web_client_url(host: &str, port: u16) {
+    use std::process::Command;
+    let actual_host = if host == "0.0.0.0" { "127.0.0.1" } else { host };
+    let url = format!("http://{}:{}", actual_host, port);
+    let _ = Command::new("open").arg(&url).spawn();
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 fn open_web_client_url(host: &str, port: u16) {
     use std::process::Command;
     let actual_host = if host == "0.0.0.0" { "127.0.0.1" } else { host };
@@ -1183,7 +1192,14 @@ pub(crate) fn open_repo_url() {
     shell_execute::open_url("https://github.com/yihuishou/llama.cpp-launcher");
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+pub(crate) fn open_repo_url() {
+    use std::process::Command;
+    let url = "https://github.com/yihuishou/llama.cpp-launcher";
+    let _ = Command::new("open").arg(url).spawn();
+}
+
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 pub(crate) fn open_repo_url() {
     use std::process::Command;
     let url = "https://github.com/yihuishou/llama.cpp-launcher";

@@ -98,3 +98,32 @@ Terminal=false
 
     Ok(())
 }
+
+/// 在用户桌面创建指向可执行文件的符号链接（macOS）
+///
+/// macOS 没有 .lnk 概念；桌面符号链接在 Finder 中双击即可启动。
+/// 若日后改为 .app 分发，链接指向 .app 内的可执行文件仍然有效。
+#[cfg(target_os = "macos")]
+pub fn create_desktop_shortcut() -> Result<(), String> {
+    use std::os::unix::fs::symlink;
+
+    // 1. 获取可执行文件路径
+    let exe_path = std::env::current_exe().map_err(|e| format!("获取可执行文件路径失败：{}", e))?;
+
+    // 2. 获取桌面路径
+    let desktop_dir = dirs::desktop_dir().ok_or_else(|| "无法获取桌面路径".to_string())?;
+
+    // 3. 构造快捷方式路径（国际化名称，无扩展名）
+    let name = get_shortcut_name();
+    let shortcut_path: PathBuf = desktop_dir.join(name);
+
+    // 4. 先清理同名旧链接，避免 symlink 已存在时报错
+    if shortcut_path.symlink_metadata().is_ok() {
+        std::fs::remove_file(&shortcut_path).map_err(|e| format!("删除旧快捷方式失败：{}", e))?;
+    }
+
+    // 5. 创建符号链接
+    symlink(&exe_path, &shortcut_path).map_err(|e| format!("创建快捷方式失败：{}", e))?;
+
+    Ok(())
+}
