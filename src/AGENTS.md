@@ -17,7 +17,7 @@ src 根下 12 个顶层单文件模块：app 外壳、i18n、下载/自更新、
 - kv_cache.rs: GgufInfo（gguf-rs 解析 GGUF 头）+ calc_kv_cache_space / calc_max_context / calc_and_format（facade）
 - geo.rs: should_use_mirror_first() 地理位置检测 → 镜像源优先级（有内联测试）
 - net_proxy.rs: build_agent()（ureq：30s 连接超时、无总超时、系统代理、USER_AGENT）+ CHUNK_SIZE + ERR_NETWORK
-- shortcut.rs: create_desktop_shortcut（shortcuts-rs，locale-aware 名称）
+- shortcut.rs: create_desktop_shortcut（Windows .lnk / Linux .desktop / macOS 符号链接，locale-aware 名称）+ ensure_linux_integration（启动时后台自愈 .desktop 与 autostart 的 Exec/Icon、迁移 locale 文件名）
 - spacing_debugger.rs: SpacingDebugger（debug_mode：记录控件 rect → 悬浮高亮 + 四方向间距标尺）
 
 ## CONVENTIONS

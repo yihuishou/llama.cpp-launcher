@@ -32,7 +32,7 @@ root/
 ├── src/geo.rs              # 地理位置检测（镜像源优先级）
 ├── src/net_proxy.rs        # ureq Agent（连接超时 + 系统代理）
 ├── src/spacing_debugger.rs # UI 间距调试工具
-└── src/shortcut.rs         # Windows 快捷方式 (.lnk) 创建
+└── src/shortcut.rs         # 快捷方式创建（.lnk/.desktop）+ Linux 集成自愈
 ```
 
 ## WHERE TO LOOK
@@ -44,7 +44,7 @@ root/
 | Server/RPC生命周期、日志                | src/engine/AGENTS.md   | 状态机 + 进程管理 + log聚合                 |
 | AppSettings/Preset/GpuLayersMode | src/config/settings.rs | 配置结构体 + Defaults + 读写              |
 | i18n键映射 (zh/en)                  | src/i18n.rs            | Key enum + t() 函数，所有 UI 文本入口       |
-| Windows快捷方式 (.lnk)               | src/shortcut.rs        | shortcuts-rs 封装                    |
+| 快捷方式（.lnk/.desktop）与 Linux 自愈    | src/shortcut.rs        | shortcuts-rs + .desktop 重写         |
 | App结构、菜单与标签路由                    | src/app.rs             | LlamaLauncherApp::ui, tab_selected |
 | llama.cpp 下载                      | src/downloader.rs      | 官方/镜像源，变体选择，进度跟踪             |
 | 应用自更新                          | src/updater.rs         | Windows 热更新，版本检查，waiter 进程    |

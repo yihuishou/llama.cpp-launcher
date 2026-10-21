@@ -156,6 +156,9 @@ impl LlamaLauncherApp {
         // 同步日志开关状态到全局标志
         crate::set_log_to_file(settings.log_to_file);
 
+        // 放到后台：修复失败不影响启动，`gio`/`update-desktop-database` 慢也不会卡首帧
+        std::thread::spawn(crate::shortcut::ensure_linux_integration);
+
         let build_log = BuildLog::default();
 
         Self {

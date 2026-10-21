@@ -126,17 +126,20 @@ jobs:
 
           mkdir -p dist
 
-          BINARY_NAME="llama_cpp_launcher_v${VERSION}_linux_${{ matrix.arch }}"
+          ARCHIVE_NAME="llama_cpp_launcher_v${VERSION}_linux_${{ matrix.arch }}"
 
-          # 复制并重命名
-          cp "target/${{ matrix.target }}/release/llama_cpp_launcher" "dist/${BINARY_NAME}"
+          # 包内二进制使用固定文件名：桌面快捷方式 / XDG autostart 里存的是
+          # Exec=<绝对路径>，若二进制名带版本号，每次升级后旧路径都会失效。
+          # 版本号只体现在压缩包名上，解压覆盖后快捷方式始终有效。
+          cp "target/${{ matrix.target }}/release/llama_cpp_launcher" "dist/llama-cpp-launcher"
+          chmod +x "dist/llama-cpp-launcher"
 
           # 创建 tar.gz
           cd dist
-          tar czf "${BINARY_NAME}.tar.gz" "${BINARY_NAME}"
-          rm "${BINARY_NAME}"
+          tar czf "${ARCHIVE_NAME}.tar.gz" "llama-cpp-launcher"
+          rm "llama-cpp-launcher"
 
-          echo "已创建: ${BINARY_NAME}.tar.gz"
+          echo "已创建: ${ARCHIVE_NAME}.tar.gz（包内二进制名: llama-cpp-launcher）"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
