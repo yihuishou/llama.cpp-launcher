@@ -774,9 +774,9 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         let numa_vals = ["", "distribute", "isolate", "numactl"];
                         let numa_labels = [
                             i18n::t(i18n::Key::LoadModeAuto, lang),
-                            numa_vals[1],
-                            numa_vals[2],
-                            numa_vals[3],
+                            i18n::t(i18n::Key::NumaDistribute, lang),
+                            i18n::t(i18n::Key::NumaIsolate, lang),
+                            i18n::t(i18n::Key::NumaNumactl, lang),
                         ];
                         let mut numa_idx = numa_vals
                             .iter()
