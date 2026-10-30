@@ -1202,7 +1202,7 @@ impl Key {
             (Key::BtnCopyServiceFile, &Language::En) => "Copy to Clipboard",
             (Key::BtnSaveServiceFile, &Language::Zh) => "保存为文件",
             (Key::BtnSaveServiceFile, &Language::En) => "Save as File",
-            (Key::BtnBrowse, &Language::Zh) => "浏览...",
+            (Key::BtnBrowse, &Language::Zh) => "浏览…",
             (Key::BtnBrowse, &Language::En) => "Browse...",
             (Key::BtnAutoDetect, &Language::Zh) => "自动检测",
             (Key::BtnAutoDetect, &Language::En) => "Auto Detect",
@@ -1361,7 +1361,7 @@ impl Key {
             (Key::PanelModelTitle, &Language::En) => "Model Management",
             (Key::LabelModelDir, &Language::Zh) => "模型文件夹:",
             (Key::LabelModelDir, &Language::En) => "Model Folder:",
-            (Key::BtnSelectFolder, &Language::Zh) => "浏览...",
+            (Key::BtnSelectFolder, &Language::Zh) => "浏览…",
             (Key::BtnSelectFolder, &Language::En) => "Browse...",
             (Key::BtnCreateModelDir, &Language::Zh) => "新建模型文件夹",
             (Key::BtnCreateModelDir, &Language::En) => "Create Model Folder",
@@ -1782,7 +1782,7 @@ impl Key {
             (Key::LabelCpuMaskBatch, &Language::En) => "CPU Mask Batch (--cpu-mask-batch):",
             (Key::LabelCpuRangeBatch, &Language::Zh) => "批处理 CPU 范围 (--cpu-range-batch):",
             (Key::LabelCpuRangeBatch, &Language::En) => "CPU Range Batch (--cpu-range-batch):",
-            (Key::BtnBrowseCert, &Language::Zh) => "浏览",
+            (Key::BtnBrowseCert, &Language::Zh) => "浏览…",
             (Key::BtnBrowseCert, &Language::En) => "Browse",
 
             // 推测解码 (Speculative Decoding)
