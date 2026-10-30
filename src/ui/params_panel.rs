@@ -1210,6 +1210,17 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
             });
             if settings.enable_cache_type_kv {
                 ui.indent("cache_type_kv_opt", |ui| {
+                    // 显示文案首字母大写（F32/Q8_0 等），iq4_nl 按惯例显示 IQ4_NL；命令行值保持小写
+                    let disp = |v: &str| -> String {
+                        if v == "iq4_nl" {
+                            return "IQ4_NL".to_string();
+                        }
+                        let mut c = v.chars();
+                        match c.next() {
+                            Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+                            None => String::new(),
+                        }
+                    };
                     // K 缓存类型：标签 + ❓提示框同一行
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::LabelCacheTypeK, lang));
@@ -1225,7 +1236,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
                         for k_type in &k_types {
                             let selected = settings.cache_type_k == *k_type;
-                            if ui.selectable_label(selected, *k_type).clicked() {
+                            if ui.selectable_label(selected, disp(k_type)).clicked() {
                                 settings.cache_type_k = k_type.to_string();
                             }
                         }
@@ -1245,7 +1256,7 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
 
                         for v_type in &v_types {
                             let selected = settings.cache_type_v == *v_type;
-                            if ui.selectable_label(selected, *v_type).clicked() {
+                            if ui.selectable_label(selected, disp(v_type)).clicked() {
                                 settings.cache_type_v = v_type.to_string();
                             }
                         }
@@ -2638,11 +2649,16 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                     ui.horizontal(|ui| {
                         ui.label(i18n::t(i18n::Key::AdvRopeScaling, lang));
                         let vals = ["none", "linear", "yarn"];
+                        let labels = [
+                            i18n::t(i18n::Key::RopeScalingNone, lang),
+                            i18n::t(i18n::Key::RopeScalingLinear, lang),
+                            i18n::t(i18n::Key::RopeScalingYarn, lang),
+                        ];
                         let mut idx = vals
                             .iter()
                             .position(|v| *v == settings.rope_scaling)
                             .unwrap_or(0);
-                        widgets::segmented(ui, &vals, &mut idx, accent);
+                        widgets::segmented(ui, &labels, &mut idx, accent);
                         settings.rope_scaling = vals[idx].to_string();
                         helper::help_button_inline(
                             ui,
@@ -2883,10 +2899,10 @@ pub fn ui(ui: &mut egui::Ui, settings: &mut AppSettings, lang: &i18n::Language) 
                         let vals = ["none", "mean", "cls", "last", "rank"];
                         let labels = [
                             i18n::t(i18n::Key::PoolingNone, lang),
-                            vals[1],
-                            vals[2],
-                            vals[3],
-                            vals[4],
+                            i18n::t(i18n::Key::PoolingMean, lang),
+                            i18n::t(i18n::Key::PoolingCls, lang),
+                            i18n::t(i18n::Key::PoolingLast, lang),
+                            i18n::t(i18n::Key::PoolingRank, lang),
                         ];
                         let mut idx = vals
                             .iter()
